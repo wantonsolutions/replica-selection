@@ -23,6 +23,8 @@ def build(bld):
 	'model/raid-client.cc',
 	'model/raid-server.cc',
 	'model/raid.cc',
+	'model/rpc-client.cc',
+	'model/rpc-server.cc',
         'helper/bulk-send-helper.cc',
         'helper/on-off-helper.cc',
         'helper/packet-sink-helper.cc',
@@ -31,6 +33,7 @@ def build(bld):
         'helper/three-gpp-http-helper.cc',
     'helper/d-redundancy-helper.cc',
 	'helper/raid-helper.cc',
+	'helper/rpc-helper.cc',
         ]
 
     applications_test = bld.create_ns3_module_test_library('applications')
@@ -61,6 +64,8 @@ def build(bld):
 	'model/d-redundancy-server.h',
 	'model/raid-client.h',
 	'model/raid-server.h',
+	'model/rpc-client.h',
+	'model/rpc-server.h',
         'helper/bulk-send-helper.h',
         'helper/on-off-helper.h',
         'helper/packet-sink-helper.h',
@@ -69,6 +74,7 @@ def build(bld):
         'helper/three-gpp-http-helper.h',
     'helper/d-redundancy-helper.h',
 	'helper/raid-helper.h',
+	'helper/rpc-helper.h',
 	'model/raid.h'
         ]
     
