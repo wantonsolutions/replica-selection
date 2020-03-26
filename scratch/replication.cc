@@ -86,26 +86,26 @@ const char *ParallelString = "Parallel";
 //\Globals
 
 
-//----------------------------------------------ECHO Client----------------------------------------------------
-void InstallEchoClientAttributes(UdpEchoClientHelper *echoClient, int maxpackets, double interval, int packetsize)
+//----------------------------------------------RPC Client----------------------------------------------------
+void InstallRpcClientAttributes(RpcClientHelper *rpcClient, int maxpackets, double interval, int packetsize)
 {
-  echoClient->SetAttribute("MaxPackets", UintegerValue(maxpackets));
-  echoClient->SetAttribute("Interval", TimeValue(Seconds(interval)));
-  echoClient->SetAttribute("PacketSize", UintegerValue(packetsize));
+  rpcClient->SetAttribute("MaxPackets", UintegerValue(maxpackets));
+  rpcClient->SetAttribute("Interval", TimeValue(Seconds(interval)));
+  rpcClient->SetAttribute("PacketSize", UintegerValue(packetsize));
 }
 
-void InstallRandomEchoClientTransmissions(float start, float stop, int clientIndex, UdpEchoClientHelper *echoClient, NodeContainer nodes, Address addresses[NODES], uint16_t Ports[NODES], int trafficMatrix[NODES][NODES])
+void InstallRandomRpcClientTransmissions(float start, float stop, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes, Address addresses[NODES], uint16_t Ports[NODES], int trafficMatrix[NODES][NODES])
 {
   
-  ApplicationContainer clientApps = echoClient->Install(nodes.Get(clientIndex));
+  ApplicationContainer clientApps = rpcClient->Install(nodes.Get(clientIndex));
   clientApps.Start(Seconds(start));
   clientApps.Stop(Seconds(stop));
-  Ptr<UdpEchoClient> ech = DynamicCast<UdpEchoClient>(clientApps.Get(0));
-  ech->SetDistribution(UdpEchoClient::nodist);
+  Ptr<RpcClient> ech = DynamicCast<RpcClient>(clientApps.Get(0));
+  ech->SetDistribution(RpcClient::nodist);
   ech->SetIntervalRatio(IntervalRatio);
   ech->SetParallel(false);
 
-  Ptr<UdpEchoClient> uec = DynamicCast<UdpEchoClient>(clientApps.Get(0));
+  Ptr<RpcClient> uec = DynamicCast<RpcClient>(clientApps.Get(0));
 
   //Convert Addresses
   ////TODO Start here, trying to convert one set of pointers to another.
@@ -123,24 +123,24 @@ void InstallRandomEchoClientTransmissions(float start, float stop, int clientInd
   uec->SetAllAddresses(addrs, ports, tm, NODES);
 }
 
-void InstallUniformEchoClientTransmissions(float start, float stop, float gap, int clientIndex, UdpEchoClientHelper *echoClient, NodeContainer nodes)
+void InstallUniformRpcClientTransmissions(float start, float stop, float gap, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes)
 {
   for (float base = start; base < stop; base += gap)
   {
-    ApplicationContainer clientApps = echoClient->Install(nodes.Get(clientIndex));
+    ApplicationContainer clientApps = rpcClient->Install(nodes.Get(clientIndex));
     clientApps.Start(Seconds(base));
     base += gap;
     clientApps.Stop(Seconds(base));
   }
 }
 
-void SetupModularRandomEchoClient(float start, float stop, uint16_t Ports[NODES], Address addresses[NODES], int tm[NODES][NODES], NodeContainer nodes, int clientIndex, double interval, int packetsize, int maxpackets)
+void SetupModularRandomRpcClient(float start, float stop, uint16_t Ports[NODES], Address addresses[NODES], int tm[NODES][NODES], NodeContainer nodes, int clientIndex, double interval, int packetsize, int maxpackets)
 {
   //map clients to servers
   //NS_LOG_INFO("Starting Client Packet Size " << packetsize << " interval " << interval << " nPackets " << maxpackets );
-  UdpEchoClientHelper echoClient(addresses[0], int(Ports[0]));
-  InstallEchoClientAttributes(&echoClient, maxpackets, interval, packetsize);
-  InstallRandomEchoClientTransmissions(start, stop, clientIndex, &echoClient, nodes, addresses, Ports, tm);
+  RpcClientHelper rpcClient(addresses[0], int(Ports[0]));
+  InstallRpcClientAttributes(&rpcClient, maxpackets, interval, packetsize);
+  InstallRandomRpcClientTransmissions(start, stop, clientIndex, &rpcClient, nodes, addresses, Ports, tm);
 }
 
 void printTM(int tm[NODES][NODES])
@@ -192,17 +192,23 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
 void SetupTraffic(float clientStart, float clientStop, float serverStart, float serverStop, int NPackets, float interval, int packetsize, int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4InterfaceContainer *addresses, int mode, Address secondAddrs[NODES], uint16_t Ports[NODES]) {
   //For reference to this function check out SetupRandomCoverTraffic in pfattree.cc
   int clientIndex = 0;
-  int serverIndex = 1;
+  //int serverIndex = 1;
   //Setup Server
 
   //in this setup we are ignoring trafic matricies completely and just performing a send between a single client and a single server
 
-  ApplicationContainer serverApps;
-  UdpEchoServerHelper echoServer(serverport);
-  serverApps = echoServer.Install(nodes.Get(serverIndex));
+
+  //Install an RPC server on each endpoint
+  for (int i = 0; i < numNodes; i++) {
+    ApplicationContainer serverApps;
+    RpcServerHelper rpcServer(serverport);
+    serverApps = rpcServer.Install(nodes.Get(i));
+		serverApps.Start (Seconds (serverStart));
+		serverApps.Stop (Seconds (clientStop));
+  }
 
   //Setup client 
-  SetupModularRandomEchoClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, clientIndex, interval, packetsize, NPackets);
+  SetupModularRandomRpcClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, clientIndex, interval, packetsize, NPackets);
 }
 
 
@@ -274,7 +280,7 @@ int main(int argc, char *argv[])
   //printf("Cover - NPackets %d, baseInterval %f packetSize %d \n",CoverNPackets,CoverInterval,CoverPacketSize);
 
   Time::SetResolution(Time::NS);
-  LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_WARN);
+  LogComponentEnable("RpcClientApplication", LOG_LEVEL_WARN);
   LogComponentEnable("DRedundancyClientApplication", LOG_LEVEL_WARN);
   if (debug)
   {
@@ -282,8 +288,8 @@ int main(int argc, char *argv[])
     LogComponentEnable("DRedundancyServerApplication", LOG_LEVEL_INFO);
     LogComponentEnable("RaidClientApplication", LOG_LEVEL_INFO);
     LogComponentEnable("RaidServerApplication", LOG_LEVEL_INFO);
-    LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
-    LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
+    LogComponentEnable("RpcClientApplication", LOG_LEVEL_INFO);
+    LogComponentEnable("RpcServerApplication", LOG_LEVEL_INFO);
     LogComponentEnable("VarClients", LOG_LEVEL_INFO);
   }
 
@@ -356,15 +362,15 @@ int main(int argc, char *argv[])
   PointToPointHelper pointToPoint2;
 
   TrafficControlHelper tch;
-  int linkrate = 1;
-  int queuedepth = 1;
+  int linkrate = 10;
+  int queuedepth = 100;
 
   pointToPoint.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue(std::to_string(queuedepth) + "p"));
-  pointToPoint.SetDeviceAttribute("DataRate", StringValue(std::to_string(linkrate) + "Gbps"));
+  pointToPoint.SetDeviceAttribute("DataRate", StringValue(std::to_string(linkrate) + "Mbps"));
   pointToPoint.SetChannelAttribute("Delay", StringValue("1.0us"));
   ////
   pointToPoint2.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue(std::to_string(queuedepth) + "p"));
-  pointToPoint2.SetDeviceAttribute("DataRate", StringValue(std::to_string(linkrate) + "Gbps"));
+  pointToPoint2.SetDeviceAttribute("DataRate", StringValue(std::to_string(linkrate) + "Mbps"));
   pointToPoint2.SetChannelAttribute("Delay", StringValue("1.0us"));
 
   uint16_t handle = tch.SetRootQueueDisc("ns3::FifoQueueDisc");
@@ -450,7 +456,7 @@ int main(int argc, char *argv[])
   float serverStart = 0.0;
   float clientStart = 0.0;
 
-  float clientStop = 0.001;
+  float clientStop = 0.01;
 
   float duration = clientStop;
 
@@ -478,7 +484,7 @@ int main(int argc, char *argv[])
   //HACK REMOVE
   int PacketSize = 1472;
   //float Rate = 1.0 / ((PARALLEL * (float(linkrate) * (1000000000.0))) / (float(PacketSize) * 8.0));
-  float Rate = 1.0 / (((float(linkrate) * (1000000000.0))) / (float(PacketSize) * 8.0));
+  float Rate = 1.0 / (((float(linkrate) * (1000000.0))) / (float(PacketSize) * 8.0));
   float MaxInterval = Rate * 1.0;
   printf("Rate %f\n", Rate);
   ClientProtocolInterval = MaxInterval;
@@ -491,11 +497,11 @@ int main(int argc, char *argv[])
   serverApps.Start(Seconds(serverStart));
   serverApps.Stop(Seconds(duration));
 
-    Ipv4InterfaceContainer *node2edgePtr = new Ipv4InterfaceContainer[NODES];
-    for (int i = 0; i < NODES; i++)
-    {
-      node2edgePtr[i] = node2edge[i];
-    }
+  Ipv4InterfaceContainer *node2edgePtr = new Ipv4InterfaceContainer[NODES];
+  for (int i = 0; i < NODES; i++)
+  {
+    node2edgePtr[i] = node2edge[i];
+  }
 
 
   SetupTraffic(

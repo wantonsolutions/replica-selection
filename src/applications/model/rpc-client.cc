@@ -408,8 +408,14 @@ void RpcClient::Send(void)
   if (m_parallel == true) {
     m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses_parallel[(2 * rand()) % m_numPeers][rand() % 3]), m_peerPort));
   } else {
+    //Send to a random node on a random part of a parallel fat tree
     //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[(2 * rand()) % m_numPeers]), m_peerPort));
-    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[1]), m_peerPort));
+
+    //Send to node 1
+    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[1]), m_peerPort));
+
+    //Send to a random node assumes that all server nodes have a service running
+    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rand() % m_numPeers]), m_peerPort));
   }
 
   // \send to a random server
@@ -420,19 +426,10 @@ void RpcClient::Send(void)
   if (Ipv4Address::IsMatchingType(m_peerAddress))
   {
     NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent packet "<< m_sent << " of size " << m_size << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddress) << " port " << m_peerPort);
+  } else {
+    NS_LOG_INFO("Error Address not supported");
   }
-  else if (Ipv6Address::IsMatchingType(m_peerAddress))
-  {
-    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent " << m_size << " bytes to " << Ipv6Address::ConvertFrom(m_peerAddress) << " port " << m_peerPort);
-  }
-  else if (InetSocketAddress::IsMatchingType(m_peerAddress))
-  {
-    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent " << m_size << " bytes to " << InetSocketAddress::ConvertFrom(m_peerAddress).GetIpv4() << " port " << InetSocketAddress::ConvertFrom(m_peerAddress).GetPort());
-  }
-  else if (Inet6SocketAddress::IsMatchingType(m_peerAddress))
-  {
-    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent " << m_size << " bytes to " << Inet6SocketAddress::ConvertFrom(m_peerAddress).GetIpv6() << " port " << Inet6SocketAddress::ConvertFrom(m_peerAddress).GetPort());
-  }
+
   //printf("Sent %d , count %d\n",m_sent, m_count);
   if (m_sent < m_count)
   {

@@ -16,7 +16,7 @@ function runExperiment () {
 	incRate=$9
 	filename=exp_$7_$1-$2-$3-$4-$5-$6-$8-$9
 
-#./waf --visualize --run "scratch/pfattree" --command-template="gdb --args"
+./waf --run "scratch/replication"
 #./waf --run "scratch/replication" --command-template="gdb %s"
 
 ./waf --run \
@@ -84,7 +84,7 @@ elif [[ $1 == "DvUDP" ]]; then
     rate=0.99
     dataDir=queuelat
 	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "echo" 0 "data/$dataDir/echo_$datetime" $rate
-	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "dred" 1 "data/$dataDir/dred_$datetime" $rate
+	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "dred" 1 "data/$dataDir/dred_$datetime" $rate
 	ln -sf "echo_$datetime.dat" "data/$dataDir/echo_latest.dat"
 	ln -sf "dred_$datetime.dat" "data/$dataDir/dred_latest.dat"
 	ln -sf "echo_$datetime.csv" "data/$dataDir/echo_latest.csv"
