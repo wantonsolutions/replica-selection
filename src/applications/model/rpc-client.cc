@@ -28,6 +28,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/trace-source-accessor.h"
 #include "rpc-client.h"
+#include "rpc.h"
 
 //#include "ns3/lte-pdcp-tag.h"
 #include "ns3/ipv4-packet-info-tag.h"
@@ -353,11 +354,27 @@ void RpcClient::SetAllAddresses(Address *addresses, uint16_t *ports, int **traff
   return;
 }
 
+
+//For now all replicas live in the same location because there are no replicas
+void PopulateReplicasNoReplicas(RPCHeader *rpch) {
+  for( int i =0; i< MAX_REPLICAS; i++) {
+    rpch->Replicas[i] = rpch->RequestID;
+  }
+}
+
 void RpcClient::Send(void)
 {
   NS_LOG_FUNCTION(this);
 
   NS_ASSERT(m_sendEvent.IsExpired());
+
+  //Constuct RPC Request Packet
+  RPCHeader rpch;
+  rpch.PacketID = 0;
+  //Determine the RPC request Type for now set it to random
+  rpch.RequestID = rand() % m_numPeers;
+  PopulateReplicasNoReplicas(&rpch);
+  SetFill((uint8_t*)&rpch,sizeof(RPCHeader),sizeof(RPCHeader));
 
   Ptr<Packet> p;
   if (m_dataSize)
@@ -396,10 +413,11 @@ void RpcClient::Send(void)
   p->AddPacketTag(idtag);
   m_requests[m_sent % REQUEST_BUFFER_SIZE] = Simulator::Now();
 
-  // inserting values by using [] operator
-  //umap["GeeksforGeeks"] = 10;
-  //umap["Practice"] = 20;
-  //umap["Contribute"] = 30;
+
+
+
+  //Find Replicas of the RPC
+
 
   m_txTrace(p);
 
@@ -415,7 +433,14 @@ void RpcClient::Send(void)
     //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[1]), m_peerPort));
 
     //Send to a random node assumes that all server nodes have a service running
-    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rand() % m_numPeers]), m_peerPort));
+    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rand() % m_numPeers]), m_peerPort));
+
+    //Send to a node specified in the RPC header. In this case there is only one becasue there are no middle boxes
+    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rpch.RequestID]), m_peerPort));
+
+    //Test breakage
+    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[(rpch.RequestID+1) % m_numPeers]), m_peerPort));
+
   }
 
   // \send to a random server
@@ -423,9 +448,9 @@ void RpcClient::Send(void)
   m_socket->Send(p);
 
   ++m_sent;
-  if (Ipv4Address::IsMatchingType(m_peerAddress))
+  if (Ipv4Address::IsMatchingType(m_peerAddresses[rpch.RequestID]))
   {
-    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent packet "<< m_sent << " of size " << m_size << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddress) << " port " << m_peerPort);
+    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent packet "<< m_sent << " of size " << m_size << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddresses[rpch.RequestID]) << " port " << m_peerPort);
   } else {
     NS_LOG_INFO("Error Address not supported");
   }
@@ -499,6 +524,7 @@ void RpcClient::HandleRead(Ptr<Socket> socket)
       //NS_LOG_INFO("timestamp index " << idtag.GetSenderTimestamp().GetNanoSeconds());
       //int requestIndex = int(idtag.GetSenderTimestamp().GetNanoSeconds()) % REQUEST_BUFFER_SIZE;
       int requestIndex = int(idtag.GetRecvIf()) % REQUEST_BUFFER_SIZE;
+      //TODO each packet should just be timestamped rather than keeping track of each request.
       Time difference = Simulator::Now() - m_requests[requestIndex];
       //NS_LOG_WARN(difference.GetNanoSeconds());
       //

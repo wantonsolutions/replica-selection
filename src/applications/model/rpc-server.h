@@ -51,6 +51,9 @@ public:
   RpcServer ();
   virtual ~RpcServer ();
 
+  void AddRpc(int rpc_id);
+  bool CanServiceRPC(int rpc_id);
+
 protected:
   virtual void DoDispose (void);
 
@@ -72,6 +75,8 @@ private:
   Ptr<Socket> m_socket; //!< IPv4 Socket
   Ptr<Socket> m_socket6; //!< IPv6 Socket
   Address m_local; //!< local multicast address
+
+  std::vector<int> m_serviceable_rpcs;
 };
 
 } // namespace ns3

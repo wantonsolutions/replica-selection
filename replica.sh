@@ -2,7 +2,7 @@
 
 echo "Hello Experiment"
 
-debug=false
+debug=true
 
 function runExperiment () {
 	cpnp=$1
@@ -16,7 +16,7 @@ function runExperiment () {
 	incRate=$9
 	filename=exp_$7_$1-$2-$3-$4-$5-$6-$8-$9
 
-./waf --run "scratch/replication"
+#./waf --visualize --run "scratch/replication"
 #./waf --run "scratch/replication" --command-template="gdb %s"
 
 ./waf --run \

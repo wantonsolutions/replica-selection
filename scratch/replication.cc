@@ -191,7 +191,7 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
 
 void SetupTraffic(float clientStart, float clientStop, float serverStart, float serverStop, int NPackets, float interval, int packetsize, int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4InterfaceContainer *addresses, int mode, Address secondAddrs[NODES], uint16_t Ports[NODES]) {
   //For reference to this function check out SetupRandomCoverTraffic in pfattree.cc
-  int clientIndex = 0;
+  //int clientIndex = 0;
   //int serverIndex = 1;
   //Setup Server
 
@@ -205,10 +205,18 @@ void SetupTraffic(float clientStart, float clientStop, float serverStart, float 
     serverApps = rpcServer.Install(nodes.Get(i));
 		serverApps.Start (Seconds (serverStart));
 		serverApps.Stop (Seconds (clientStop));
+
+    //Each server gets exactly 1 RPC to serve
+
+    Ptr<RpcServer> server = DynamicCast<RpcServer>(serverApps.Get(0));
+    server->AddRpc(i);
+
   }
 
-  //Setup client 
-  SetupModularRandomRpcClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, clientIndex, interval, packetsize, NPackets);
+  //Setup clients on every node
+  for (int i = 0; i < numNodes; i++) {
+    SetupModularRandomRpcClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, i, interval, packetsize, NPackets);
+  }
 }
 
 
@@ -363,7 +371,7 @@ int main(int argc, char *argv[])
 
   TrafficControlHelper tch;
   int linkrate = 10;
-  int queuedepth = 100;
+  int queuedepth = 1;
 
   pointToPoint.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue(std::to_string(queuedepth) + "p"));
   pointToPoint.SetDeviceAttribute("DataRate", StringValue(std::to_string(linkrate) + "Mbps"));

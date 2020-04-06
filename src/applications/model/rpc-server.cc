@@ -29,8 +29,10 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
+#include <algorithm>
 
 #include "rpc-server.h"
+#include "rpc.h"
 
 namespace ns3 {
 
@@ -63,6 +65,19 @@ RpcServer::~RpcServer()
   NS_LOG_FUNCTION (this);
   m_socket = 0;
   m_socket6 = 0;
+}
+
+void
+RpcServer::AddRpc(int rpc_id) {
+  m_serviceable_rpcs.push_back(rpc_id);
+}
+
+bool
+RpcServer::CanServiceRPC(int rpc_id) {
+  if (std::find(m_serviceable_rpcs.begin(), m_serviceable_rpcs.end(), rpc_id) != m_serviceable_rpcs.end())
+		return true;
+	else
+    return false;
 }
 
 void
@@ -161,15 +176,24 @@ RpcServer::HandleRead (Ptr<Socket> socket)
 			       InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
 			       InetSocketAddress::ConvertFrom (from).GetPort ());
 		}
-	      else if (Inet6SocketAddress::IsMatchingType (from))
+	      else
 		{
-		  NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<
-			       Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
-			       Inet6SocketAddress::ConvertFrom (from).GetPort ());
+		  NS_LOG_INFO ("UNSUPPORTED PROTOCOL IPV6");
 		}
 
       //packet->RemoveAllPacketTags ();
       //packet->RemoveAllByteTags ();
+
+      //Check if the service asked for by the client is available on the server
+      RPCHeader rpch;
+      packet->CopyData((uint8_t*)&rpch,sizeof(RPCHeader));
+
+      if (CanServiceRPC(rpch.RequestID)) {
+        NS_LOG_WARN("Able to service request id " << rpch.RequestID << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
+      } else {
+        NS_LOG_WARN("Unable to service request id " << rpch.RequestID << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
+      }
+
 
       NS_LOG_LOGIC ("Echoing packet");
       socket->SendTo (packet, 0, from);
@@ -180,11 +204,9 @@ RpcServer::HandleRead (Ptr<Socket> socket)
 			       InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
 			       InetSocketAddress::ConvertFrom (from).GetPort ());
 		}
-	      else if (Inet6SocketAddress::IsMatchingType (from))
+	      else
 		{
-		  NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server sent " << packet->GetSize () << " bytes to " <<
-			       Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
-			       Inet6SocketAddress::ConvertFrom (from).GetPort ());
+		  NS_LOG_INFO ("DOING NOTHING UNSUPPORTED PROTOCL");
 		}
     }
 }
