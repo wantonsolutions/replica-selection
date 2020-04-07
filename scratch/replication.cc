@@ -94,7 +94,8 @@ void InstallRpcClientAttributes(RpcClientHelper *rpcClient, int maxpackets, doub
   rpcClient->SetAttribute("PacketSize", UintegerValue(packetsize));
 }
 
-void InstallRandomRpcClientTransmissions(float start, float stop, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes, Address addresses[NODES], uint16_t Ports[NODES], int trafficMatrix[NODES][NODES], uint32_t *global_packets_sent)
+void InstallRandomRpcClientTransmissions(float start, float stop, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes, Address addresses[NODES], uint16_t Ports[NODES], int trafficMatrix[NODES][NODES], uint32_t *global_packets_sent,
+std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad)
 {
   
   ApplicationContainer clientApps = rpcClient->Install(nodes.Get(clientIndex));
@@ -122,6 +123,8 @@ void InstallRandomRpcClientTransmissions(float start, float stop, int clientInde
   //uec->SetAllAddresses(addrs, ports, tm, PARALLEL, NODES);
   uec->SetAllAddresses(addrs, ports, tm, NODES);
   uec->SetGlobalPackets(global_packets_sent);
+  uec->SetRpcServices(rpcServices);
+  uec->SetGlobalSeverLoad(serverLoad);
 }
 
 void InstallUniformRpcClientTransmissions(float start, float stop, float gap, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes)
@@ -135,13 +138,14 @@ void InstallUniformRpcClientTransmissions(float start, float stop, float gap, in
   }
 }
 
-void SetupModularRandomRpcClient(float start, float stop, uint16_t Ports[NODES], Address addresses[NODES], int tm[NODES][NODES], NodeContainer nodes, int clientIndex, double interval, int packetsize, int maxpackets, uint32_t * global_packets_sent)
+void SetupModularRandomRpcClient(float start, float stop, uint16_t Ports[NODES], Address addresses[NODES], int tm[NODES][NODES], NodeContainer nodes, int clientIndex, double interval, int packetsize, int maxpackets, uint32_t * global_packets_sent,
+std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad)
 {
   //map clients to servers
   //NS_LOG_INFO("Starting Client Packet Size " << packetsize << " interval " << interval << " nPackets " << maxpackets );
   RpcClientHelper rpcClient(addresses[0], int(Ports[0]));
   InstallRpcClientAttributes(&rpcClient, maxpackets, interval, packetsize);
-  InstallRandomRpcClientTransmissions(start, stop, clientIndex, &rpcClient, nodes, addresses, Ports, tm, global_packets_sent);
+  InstallRandomRpcClientTransmissions(start, stop, clientIndex, &rpcClient, nodes, addresses, Ports, tm, global_packets_sent, rpcServices, serverLoad);
 }
 
 void printTM(int tm[NODES][NODES])
@@ -192,7 +196,10 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
 
 void SetupTraffic(float clientStart, float clientStop, float serverStart, float serverStop, int NPackets, float interval, int packetsize, 
 int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4InterfaceContainer *addresses, int mode, Address secondAddrs[NODES], uint16_t Ports[NODES],
-uint32_t * global_packets_sent, std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad) {
+uint32_t * global_packets_sent, 
+std::vector<std::vector<int>> rpcReplicas, 
+std::vector<std::vector<int>> rpcServices, 
+uint64_t ** serverLoad) {
   //For reference to this function check out SetupRandomCoverTraffic in pfattree.cc
   //int clientIndex = 0;
   //int serverIndex = 1;
@@ -221,7 +228,7 @@ uint32_t * global_packets_sent, std::vector<std::vector<int>> rpcServices, uint6
 
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++) {
-    SetupModularRandomRpcClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, i, interval, packetsize, NPackets, global_packets_sent);
+    SetupModularRandomRpcClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, i, interval, packetsize, NPackets, global_packets_sent, rpcReplicas,serverLoad);
   }
 }
 
@@ -488,10 +495,25 @@ int main(int argc, char *argv[])
   populateTrafficMatrix(trafficMatrix, pattern);
 
   //Create Server RPC database
-  std::vector<std::vector<int>> serviceLocations(NODES, std::vector<int>(0));
+  std::vector<std::vector<int>> servicesPerServer(NODES, std::vector<int>(0));
   for(int i=0;i<NODES;i++) {
-    serviceLocations[i].push_back(i);
+    //Each server serves their own ID's RPC
+    servicesPerServer[i].push_back(i);
+    //TODO build a few functions to populate this with different patterns
   }
+
+  //Create Client Database for servers - each index is an RPC. This is an
+  //inverted index of the servers. If a client wants to find which servers can
+  //service RPC x it can lookup rpcReplicas[x] and get back each of the
+  //corresponding servers
+  std::vector<std::vector<int>> rpcReplicas(NODES, std::vector<int>(0));
+  for(int i=0;i<NODES;i++){
+    for (uint j=0;j<servicesPerServer[i].size();j++) {
+      rpcReplicas[servicesPerServer[i][j]].push_back(i);
+    }
+  }
+
+
 
   //Create Server Load Global
   uint64_t* serverLoad = (uint64_t*) malloc(NODES * sizeof(uint64_t));
@@ -553,7 +575,8 @@ int main(int argc, char *argv[])
       Ports,
       &global_packets_sent,
       //RPC Globals
-      serviceLocations,
+      servicesPerServer,
+      rpcReplicas,
       &serverLoad
       );
 

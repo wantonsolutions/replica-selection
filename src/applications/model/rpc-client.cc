@@ -358,6 +358,14 @@ void RpcClient::SetGlobalPackets(uint32_t * global_packets) {
   m_global_sent = global_packets;
 }
 
+void RpcClient::SetRpcServices(std::vector<std::vector<int>> rpcServices) {
+  m_rpc_server_replicas = rpcServices;
+}
+
+void RpcClient::SetGlobalSeverLoad(uint64_t **serverLoad) {
+  m_serverLoad = serverLoad;
+}
+
 //For now all replicas live in the same location because there are no replicas
 void PopulateReplicasNoReplicas(RPCHeader *rpch) {
   for( int i =0; i< MAX_REPLICAS; i++) {
