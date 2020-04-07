@@ -201,10 +201,14 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       RPCHeader rpch;
       packet->CopyData((uint8_t*)&rpch,sizeof(RPCHeader));
 
+      for (int i =0; i < MAX_REPLICAS; i++) {
+        NS_LOG_WARN("Service also servicable by " << rpch.Replicas[i]);
+      }
+
       if (CanServiceRPC(rpch.RequestID)) {
-        NS_LOG_WARN("Able to service request id " << rpch.RequestID << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
+        NS_LOG_WARN("Able to service request id " << rpch.RequestID << " on server " << m_id << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
       } else {
-        NS_LOG_WARN("Unable to service request id " << rpch.RequestID << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
+        NS_LOG_WARN("Unable to service request id " << rpch.RequestID << " on server " << m_id << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
       }
 
 

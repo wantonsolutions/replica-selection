@@ -24,6 +24,7 @@
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
+#include "rpc.h"
 
 #define REQUEST_BUFFER_SIZE 16777216
 namespace ns3 {
@@ -156,6 +157,11 @@ public:
   void SetGlobalPackets(uint32_t * global_packets);
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
   void SetGlobalSeverLoad(uint64_t **serverLoad);
+
+
+
+ void PopulateReplicasNoReplicas(RPCHeader *rpch);
+ void PopulateReplicasReplicas(RPCHeader *rpch);
 
 
   void SendRandomSingleServer();

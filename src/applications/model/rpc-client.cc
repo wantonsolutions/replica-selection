@@ -367,9 +367,20 @@ void RpcClient::SetGlobalSeverLoad(uint64_t **serverLoad) {
 }
 
 //For now all replicas live in the same location because there are no replicas
-void PopulateReplicasNoReplicas(RPCHeader *rpch) {
+void RpcClient::PopulateReplicasNoReplicas(RPCHeader *rpch) {
   for( int i =0; i< MAX_REPLICAS; i++) {
     rpch->Replicas[i] = rpch->RequestID;
+  }
+}
+
+void RpcClient::PopulateReplicasReplicas(RPCHeader *rpch) {
+  int rpc_service = rpch->RequestID;
+  if (m_rpc_server_replicas[rpc_service].size() > MAX_REPLICAS) {
+    NS_LOG_WARN("Error too many replicas for a single RPC header packet");
+  }
+  for( uint i =0; i< m_rpc_server_replicas[rpc_service].size(); i++) {
+    Ipv4Address addr = Ipv4Address::ConvertFrom(m_peerAddresses[m_rpc_server_replicas[rpc_service][i]]);
+    rpch->Replicas[i] = addr.Get();
   }
 }
 
@@ -381,10 +392,12 @@ void RpcClient::Send(void)
 
   //Constuct RPC Request Packet
   RPCHeader rpch;
+  bzero((char *)&rpch,sizeof(rpch));
   rpch.PacketID = 0;
   //Determine the RPC request Type for now set it to random
   rpch.RequestID = rand() % m_numPeers;
-  PopulateReplicasNoReplicas(&rpch);
+  //PopulateReplicasNoReplicas(&rpch);
+  PopulateReplicasReplicas(&rpch);
   SetFill((uint8_t*)&rpch,sizeof(RPCHeader),sizeof(RPCHeader));
 
   Ptr<Packet> p;
@@ -447,7 +460,7 @@ void RpcClient::Send(void)
     //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rand() % m_numPeers]), m_peerPort));
 
     //Send to a node specified in the RPC header. In this case there is only one becasue there are no middle boxes
-    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rpch.RequestID]), m_peerPort));
+    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rpch.RequestID]), m_peerPort));
 
     //Test breakage
     //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[(rpch.RequestID+1) % m_numPeers]), m_peerPort));
