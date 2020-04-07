@@ -245,6 +245,24 @@ void translateIp(int base, int *a, int *b, int *c, int *d)
   return;
 }
 
+//Replication Placement Strategies
+//No replication, each server performs exactly 1 RPC
+void replicationStrategy_noReplication(std::vector<std::vector<int>> *replicas) {
+  for(int i=0;i<NODES;i++) {
+    //Each server serves their own ID's RPC
+    (*replicas)[i].push_back(i);
+  }
+}
+
+//Replicate each service so that there are 2 instances of the RPC, and they live on oposite halfs ove the fat tree
+void replicationStrategy_crossCoreReplication(std::vector<std::vector<int>> *replicas) {
+  for(int i=0;i<NODES;i++) {
+    //Each server serves their own ID's RPC
+    (*replicas)[i].push_back(i);
+    (*replicas)[i].push_back((i + (NODES / 2)) % NODES);
+  }
+}
+
 int main(int argc, char *argv[])
 {
   CommandLine cmd;
@@ -496,11 +514,8 @@ int main(int argc, char *argv[])
 
   //Create Server RPC database
   std::vector<std::vector<int>> servicesPerServer(NODES, std::vector<int>(0));
-  for(int i=0;i<NODES;i++) {
-    //Each server serves their own ID's RPC
-    servicesPerServer[i].push_back(i);
-    //TODO build a few functions to populate this with different patterns
-  }
+  //replicationStrategy_noReplication(&servicesPerServer);
+  replicationStrategy_crossCoreReplication(&servicesPerServer);
 
   //Create Client Database for servers - each index is an RPC. This is an
   //inverted index of the servers. If a client wants to find which servers can
@@ -513,15 +528,11 @@ int main(int argc, char *argv[])
     }
   }
 
-
-
   //Create Server Load Global
   uint64_t* serverLoad = (uint64_t*) malloc(NODES * sizeof(uint64_t));
   for(int i=0;i<NODES;i++) {
     serverLoad[i]=0;
   }
-
-
 
 
   Ptr<MultichannelProbe> mcp = CreateObject<MultichannelProbe>(ProbeName);
