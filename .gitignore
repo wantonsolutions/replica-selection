@@ -28,6 +28,10 @@ wutils.pyc
 .waf*
 *.config
 
+plot/latqueue/dbcache.p
+src/parallel-protocols
+vim-sessions
+
 plot/randomCoverIncremental/dred
 plot/randomCoverIncremental/raid
 plot/randomCoverIncremental/dred

@@ -94,7 +94,7 @@ void InstallRpcClientAttributes(RpcClientHelper *rpcClient, int maxpackets, doub
   rpcClient->SetAttribute("PacketSize", UintegerValue(packetsize));
 }
 
-void InstallRandomRpcClientTransmissions(float start, float stop, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes, Address addresses[NODES], uint16_t Ports[NODES], int trafficMatrix[NODES][NODES])
+void InstallRandomRpcClientTransmissions(float start, float stop, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes, Address addresses[NODES], uint16_t Ports[NODES], int trafficMatrix[NODES][NODES], uint32_t *global_packets_sent)
 {
   
   ApplicationContainer clientApps = rpcClient->Install(nodes.Get(clientIndex));
@@ -121,6 +121,7 @@ void InstallRandomRpcClientTransmissions(float start, float stop, int clientInde
   //uec->SetAllAddresses((Address **)(addresses),(uint16_t **)(Ports),PARALLEL,NODES);
   //uec->SetAllAddresses(addrs, ports, tm, PARALLEL, NODES);
   uec->SetAllAddresses(addrs, ports, tm, NODES);
+  uec->SetGlobalPackets(global_packets_sent);
 }
 
 void InstallUniformRpcClientTransmissions(float start, float stop, float gap, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes)
@@ -134,13 +135,13 @@ void InstallUniformRpcClientTransmissions(float start, float stop, float gap, in
   }
 }
 
-void SetupModularRandomRpcClient(float start, float stop, uint16_t Ports[NODES], Address addresses[NODES], int tm[NODES][NODES], NodeContainer nodes, int clientIndex, double interval, int packetsize, int maxpackets)
+void SetupModularRandomRpcClient(float start, float stop, uint16_t Ports[NODES], Address addresses[NODES], int tm[NODES][NODES], NodeContainer nodes, int clientIndex, double interval, int packetsize, int maxpackets, uint32_t * global_packets_sent)
 {
   //map clients to servers
   //NS_LOG_INFO("Starting Client Packet Size " << packetsize << " interval " << interval << " nPackets " << maxpackets );
   RpcClientHelper rpcClient(addresses[0], int(Ports[0]));
   InstallRpcClientAttributes(&rpcClient, maxpackets, interval, packetsize);
-  InstallRandomRpcClientTransmissions(start, stop, clientIndex, &rpcClient, nodes, addresses, Ports, tm);
+  InstallRandomRpcClientTransmissions(start, stop, clientIndex, &rpcClient, nodes, addresses, Ports, tm, global_packets_sent);
 }
 
 void printTM(int tm[NODES][NODES])
@@ -189,7 +190,9 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
   printTM(tm);
 }
 
-void SetupTraffic(float clientStart, float clientStop, float serverStart, float serverStop, int NPackets, float interval, int packetsize, int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4InterfaceContainer *addresses, int mode, Address secondAddrs[NODES], uint16_t Ports[NODES]) {
+void SetupTraffic(float clientStart, float clientStop, float serverStart, float serverStop, int NPackets, float interval, int packetsize, 
+int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4InterfaceContainer *addresses, int mode, Address secondAddrs[NODES], uint16_t Ports[NODES],
+uint32_t * global_packets_sent, std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad) {
   //For reference to this function check out SetupRandomCoverTraffic in pfattree.cc
   //int clientIndex = 0;
   //int serverIndex = 1;
@@ -209,13 +212,16 @@ void SetupTraffic(float clientStart, float clientStop, float serverStart, float 
     //Each server gets exactly 1 RPC to serve
 
     Ptr<RpcServer> server = DynamicCast<RpcServer>(serverApps.Get(0));
-    server->AddRpc(i);
+    server->AssignRPC(rpcServices[i]);
+    server->SetGlobalLoad(serverLoad);
+    server->SetID(i);
+
 
   }
 
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++) {
-    SetupModularRandomRpcClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, i, interval, packetsize, NPackets);
+    SetupModularRandomRpcClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, i, interval, packetsize, NPackets, global_packets_sent);
   }
 }
 
@@ -463,10 +469,10 @@ int main(int argc, char *argv[])
   int coverserverport = 10;
   float serverStart = 0.0;
   float clientStart = 0.0;
-
   float clientStop = 0.01;
-
   float duration = clientStop;
+
+  uint32_t global_packets_sent = 0;
 
   Address IPS[NODES];
   uint16_t Ports[NODES];
@@ -476,9 +482,24 @@ int main(int argc, char *argv[])
       Ports[i] = uint16_t(coverserverport);
   }
 
+  //Create Traffic Matrix
   int trafficMatrix[NODES][NODES];
   int pattern = CROSS_CORE;
   populateTrafficMatrix(trafficMatrix, pattern);
+
+  //Create Server RPC database
+  std::vector<std::vector<int>> serviceLocations(NODES, std::vector<int>(0));
+  for(int i=0;i<NODES;i++) {
+    serviceLocations[i].push_back(i);
+  }
+
+  //Create Server Load Global
+  uint64_t* serverLoad = (uint64_t*) malloc(NODES * sizeof(uint64_t));
+  for(int i=0;i<NODES;i++) {
+    serverLoad[i]=0;
+  }
+
+
 
 
   Ptr<MultichannelProbe> mcp = CreateObject<MultichannelProbe>(ProbeName);
@@ -529,7 +550,12 @@ int main(int argc, char *argv[])
       node2edgePtr,
       mode,
       IPS,
-      Ports);
+      Ports,
+      &global_packets_sent,
+      //RPC Globals
+      serviceLocations,
+      &serverLoad
+      );
 
   Simulator::Run();
   Simulator::Destroy();

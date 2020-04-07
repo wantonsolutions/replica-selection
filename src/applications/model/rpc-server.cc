@@ -80,6 +80,19 @@ RpcServer::CanServiceRPC(int rpc_id) {
     return false;
 }
 
+void RpcServer::AssignRPC(std::vector<int> services) {
+  for (uint i =0; i< services.size(); i++) {
+    AddRpc(services[i]);
+  }
+}
+
+void RpcServer::SetGlobalLoad(uint64_t ** serverLoad) {
+  m_serverLoad = serverLoad;
+}
+void RpcServer::SetID(int id) {
+  m_id = id;
+}
+
 void
 RpcServer::DoDispose (void)
 {

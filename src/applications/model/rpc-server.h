@@ -51,8 +51,13 @@ public:
   RpcServer ();
   virtual ~RpcServer ();
 
-  void AddRpc(int rpc_id);
   bool CanServiceRPC(int rpc_id);
+  void AddRpc(int rpc_id);
+  void AssignRPC(std::vector<int> services);
+
+  void SetGlobalLoad(uint64_t ** serverLoad);
+  void SetID(int id);
+
 
 protected:
   virtual void DoDispose (void);
@@ -75,6 +80,10 @@ private:
   Ptr<Socket> m_socket; //!< IPv4 Socket
   Ptr<Socket> m_socket6; //!< IPv6 Socket
   Address m_local; //!< local multicast address
+
+  uint64_t **m_serverLoad; // global server load
+  int m_id; //localID
+
 
   std::vector<int> m_serviceable_rpcs;
 };

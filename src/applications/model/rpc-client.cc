@@ -354,6 +354,9 @@ void RpcClient::SetAllAddresses(Address *addresses, uint16_t *ports, int **traff
   return;
 }
 
+void RpcClient::SetGlobalPackets(uint32_t * global_packets) {
+  m_global_sent = global_packets;
+}
 
 //For now all replicas live in the same location because there are no replicas
 void PopulateReplicasNoReplicas(RPCHeader *rpch) {
@@ -448,9 +451,10 @@ void RpcClient::Send(void)
   m_socket->Send(p);
 
   ++m_sent;
+  ++(*m_global_sent);
   if (Ipv4Address::IsMatchingType(m_peerAddresses[rpch.RequestID]))
   {
-    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent packet "<< m_sent << " of size " << m_size << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddresses[rpch.RequestID]) << " port " << m_peerPort);
+    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent local packet "<< m_sent << " gloabal packet " << *m_global_sent << " of size " << m_size << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddresses[rpch.RequestID]) << " port " << m_peerPort);
   } else {
     NS_LOG_INFO("Error Address not supported");
   }

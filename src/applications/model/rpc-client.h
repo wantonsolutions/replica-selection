@@ -153,6 +153,7 @@ public:
 
   void SetAllAddresses(Address *addresses, uint16_t *ports, int **tm, uint32_t numPeers);
   void SetAllAddressesParallel(Address **addresses, uint16_t **ports, int **trafficMatrix, uint8_t parallel, uint32_t numPeers);
+  void SetGlobalPackets(uint32_t * global_packets);
 
 
   void SendRandomSingleServer();
@@ -197,6 +198,7 @@ private:
   uint8_t *m_data; //!< packet payload data
 
   uint32_t m_sent; //!< Counter for sent packets
+  uint32_t *m_global_sent;
   uint32_t m_rec; //!< Counter for recevied packets
   Ptr<Socket> m_socket; //!< Socket
   Address m_peerAddress; //!< Remote peer address
