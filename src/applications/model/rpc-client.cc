@@ -384,6 +384,33 @@ void RpcClient::PopulateReplicasReplicas(RPCHeader *rpch) {
   }
 }
 
+
+void RpcClient::SetReplicationStrategy(int strategy){
+  m_selection_strategy = strategy;
+}
+
+ int RpcClient::replicaSelectionStrategy_firstIndex(int rpc){
+   return m_rpc_server_replicas[rpc][0];
+ }
+ int RpcClient::replicaSelectionStrategy_random(int rpc) {
+   int randomReplica = rand()%m_rpc_server_replicas[rpc].size();
+   return m_rpc_server_replicas[rpc][randomReplica];
+ }
+
+ int RpcClient::replicaSelectionStrategy_minimumLoad(int rpc){
+   uint64_t minLoad = UINT64_MAX;
+   uint64_t minReplica;
+   for (uint i = 0; i < m_rpc_server_replicas[rpc].size();i++) {
+     int replica = m_rpc_server_replicas[rpc][i];
+     if (*m_serverLoad[replica] < minLoad){
+       minLoad = *m_serverLoad[replica];
+       minReplica = replica;
+     }
+   }
+   return minReplica;
+ }
+
+
 void RpcClient::Send(void)
 {
   NS_LOG_FUNCTION(this);
@@ -460,7 +487,23 @@ void RpcClient::Send(void)
     //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rand() % m_numPeers]), m_peerPort));
 
     //Send to a node specified in the RPC header. In this case there is only one becasue there are no middle boxes
-    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rpch.RequestID]), m_peerPort));
+
+    int replica;
+    switch (m_selection_strategy) {
+      case noReplica:
+        replica = replicaSelectionStrategy_firstIndex(rpch.RequestID);
+        break;
+      case randomReplica:
+        replica = replicaSelectionStrategy_random(rpch.RequestID);
+        break;
+      case minimumReplica:
+        replica = replicaSelectionStrategy_random(rpch.RequestID);
+        break;
+      default:
+        NS_LOG_WARN("The selection strategy " << m_selection_strategy << " is invalid ");
+    }
+    //int replica = replicaSelectionStrategy_minimumLoad(rpch.RequestID);
+    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[replica]), m_peerPort));
 
     //Test breakage
     //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[(rpch.RequestID+1) % m_numPeers]), m_peerPort));

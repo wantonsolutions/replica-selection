@@ -2,7 +2,7 @@
 
 echo "Hello Experiment"
 
-debug=true
+debug=false
 
 function runExperiment () {
 	cpnp=$1
@@ -67,7 +67,7 @@ echo $1
 
 #packetSize=1472
 packetSize=64
-totalPackets=1000
+totalPackets=10000
 #packetSize=1000
 
 
@@ -83,14 +83,32 @@ elif [[ $1 == "DvUDP" ]]; then
 	echo "D redundancy vs UDP"
     rate=0.99
     dataDir=queuelat
-	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "echo" 0 "data/$dataDir/echo_$datetime" $rate
-	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "dred" 1 "data/$dataDir/dred_$datetime" $rate
+	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "Single Server" 0 "data/$dataDir/echo_$datetime" $rate
+	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "echo" 0 "data/$dataDir/echo_$datetime" $rate
+	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "Random 2 (Replicas)" 1 "data/$dataDir/dred_$datetime" $rate
 	ln -sf "echo_$datetime.dat" "data/$dataDir/echo_latest.dat"
 	ln -sf "dred_$datetime.dat" "data/$dataDir/dred_latest.dat"
 	ln -sf "echo_$datetime.csv" "data/$dataDir/echo_latest.csv"
 	ln -sf "dred_$datetime.csv" "data/$dataDir/dred_latest.csv"
 	ln -sf "echo_$datetime.config" "data/$dataDir/echo_latest.config"
 	ln -sf "dred_$datetime.config" "data/$dataDir/dred_latest.config"
+
+	cd plot/latqueue
+	./plot.sh
+	exit 0
+elif [[ $1 == "repstrat" ]]; then
+	echo "testing replication strategy"
+    rate=0.99
+    dataDir=queuelat
+	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "single" 0 "data/$dataDir/single_$datetime" $rate
+	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "echo" 0 "data/$dataDir/echo_$datetime" $rate
+	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "random" 1 "data/$dataDir/random_$datetime" $rate
+	ln -sf "single_$datetime.dat" "data/$dataDir/single_latest.dat"
+	ln -sf "random_$datetime.dat" "data/$dataDir/random_latest.dat"
+	ln -sf "single_$datetime.csv" "data/$dataDir/single_latest.csv"
+	ln -sf "random_$datetime.csv" "data/$dataDir/random_latest.csv"
+	ln -sf "single_$datetime.config" "data/$dataDir/single_latest.config"
+	ln -sf "random_$datetime.config" "data/$dataDir/random_latest.config"
 
 	cd plot/latqueue
 	./plot.sh

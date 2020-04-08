@@ -125,6 +125,10 @@ std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad)
   uec->SetGlobalPackets(global_packets_sent);
   uec->SetRpcServices(rpcServices);
   uec->SetGlobalSeverLoad(serverLoad);
+  
+
+  //Fix this should be checked prior to executing
+  uec->SetReplicationStrategy(mode);
 }
 
 void InstallUniformRpcClientTransmissions(float start, float stop, float gap, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes)
@@ -401,7 +405,7 @@ int main(int argc, char *argv[])
   PointToPointHelper pointToPoint2;
 
   TrafficControlHelper tch;
-  int linkrate = 10;
+  int linkrate = 100;
   int queuedepth = 1;
 
   pointToPoint.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue(std::to_string(queuedepth) + "p"));

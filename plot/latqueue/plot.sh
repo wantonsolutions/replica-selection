@@ -7,8 +7,9 @@ dataDir="/home/ssgrant/workspace/ns-allinone-3.29/replica-selection/ns-3.29/data
 #python latency.py *997.dat *997.csv
 #python latency.py *995.dat *995.csv
 #python latency.py $dataDir/*999.dat $dataDir/*999.csv
-python latency.py $dataDir/echo_latest.dat $dataDir/echo_latest.csv
-#python latency.py $dataDir/*latest.dat $dataDir/*latest.csv
+#python latency.py $dataDir/echo_latest.dat $dataDir/echo_latest.csv
+#python latency.py $dataDir/dred_latest.dat $dataDir/dred_latest.csv
+python latency.py $dataDir/*latest.dat $dataDir/*latest.csv
 
 #python latency.py *991.dat *991.csv
 #python latency.py exp_debug*

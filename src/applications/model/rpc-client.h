@@ -148,15 +148,25 @@ public:
 	  exponential = 3,
 	  possion = 4
   };
+
+  enum selectionStrategy
+  {
+    noReplica = 0,
+    randomReplica = 1,
+    minimumReplica = 2,
+  };
+
   void SetDistribution(enum distribution dist);
   Time SetInterval();
   void SetIntervalRatio(double ratio);
+
 
   void SetAllAddresses(Address *addresses, uint16_t *ports, int **tm, uint32_t numPeers);
   void SetAllAddressesParallel(Address **addresses, uint16_t **ports, int **trafficMatrix, uint8_t parallel, uint32_t numPeers);
   void SetGlobalPackets(uint32_t * global_packets);
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
   void SetGlobalSeverLoad(uint64_t **serverLoad);
+  void SetReplicationStrategy(int strategy);
 
 
 
@@ -164,8 +174,9 @@ public:
  void PopulateReplicasReplicas(RPCHeader *rpch);
 
 
-  void SendRandomSingleServer();
-
+ int replicaSelectionStrategy_firstIndex(int rpc);
+ int replicaSelectionStrategy_random(int rpc);
+ int replicaSelectionStrategy_minimumLoad(int rpc);
 
 
 
@@ -227,6 +238,8 @@ private:
 
   uint64_t **m_serverLoad; // global server load
   std::vector<std::vector<int>> m_rpc_server_replicas;
+  int m_selection_strategy;
+
 
       
 
