@@ -210,21 +210,26 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       } else {
         NS_LOG_INFO("Unable to service request id " << rpch.RequestID << " on server " << m_id << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
       }
-      ScheduleResponse(MicroSeconds(10), socket, packet, from);
+
+      //Calculate server load
+      int load = 10;
+      (*m_serverLoad)[m_id] += load; //make a distribution in the future
+      ScheduleResponse(MicroSeconds(((*m_serverLoad)[m_id])), socket, packet, from, load);
 
     }
 }
 
 
-void RpcServer::ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet, Address from)
+void RpcServer::ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet, Address from, int load)
 {
   NS_LOG_FUNCTION(this << dt);
-  Simulator::Schedule(dt, &RpcServer::SendResponse, this, socket, packet, from);
+  Simulator::Schedule(dt, &RpcServer::SendResponse, this, socket, packet, from, load);
 }
 
 void
-RpcServer::SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from) {
+RpcServer::SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from,int load) {
       NS_LOG_LOGIC ("Responding with original Packet");
+      (*m_serverLoad)[m_id] -= load;
       socket->SendTo (packet, 0, from);
 
 	      if (InetSocketAddress::IsMatchingType (from))

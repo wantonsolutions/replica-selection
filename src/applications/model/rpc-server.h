@@ -77,8 +77,8 @@ private:
   void HandleRead (Ptr<Socket> socket);
 
 
-  void SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from);
-  void ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet, Address from);
+  void SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from, int load);
+  void ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet, Address from, int load);
 
   uint16_t m_port; //!< Port on which we listen for incoming packets.
   Ptr<Socket> m_socket; //!< IPv4 Socket
