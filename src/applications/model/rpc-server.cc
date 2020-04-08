@@ -210,9 +210,21 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       } else {
         NS_LOG_INFO("Unable to service request id " << rpch.RequestID << " on server " << m_id << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
       }
+      ScheduleResponse(MicroSeconds(10), socket, packet, from);
+
+    }
+}
 
 
-      NS_LOG_LOGIC ("Echoing packet");
+void RpcServer::ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet, Address from)
+{
+  NS_LOG_FUNCTION(this << dt);
+  Simulator::Schedule(dt, &RpcServer::SendResponse, this, socket, packet, from);
+}
+
+void
+RpcServer::SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from) {
+      NS_LOG_LOGIC ("Responding with original Packet");
       socket->SendTo (packet, 0, from);
 
 	      if (InetSocketAddress::IsMatchingType (from))
@@ -225,7 +237,6 @@ RpcServer::HandleRead (Ptr<Socket> socket)
 		{
 		  NS_LOG_INFO ("DOING NOTHING UNSUPPORTED PROTOCL");
 		}
-    }
 }
 
 } // Namespace ns3

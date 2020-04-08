@@ -76,15 +76,17 @@ private:
    */
   void HandleRead (Ptr<Socket> socket);
 
+
+  void SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from);
+  void ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet, Address from);
+
   uint16_t m_port; //!< Port on which we listen for incoming packets.
   Ptr<Socket> m_socket; //!< IPv4 Socket
   Ptr<Socket> m_socket6; //!< IPv6 Socket
   Address m_local; //!< local multicast address
 
-  uint64_t **m_serverLoad; // global server load
   int m_id; //localID
-
-
+  uint64_t **m_serverLoad; // global server load
   std::vector<int> m_serviceable_rpcs;
 };
 
