@@ -510,6 +510,8 @@ cindex = 0
 maxlat = 0
 minlat = 999999
 
+
+i=7
 for name in filedict:
             
             sname = name.split("/")
@@ -527,7 +529,8 @@ for name in filedict:
                 maxlat = maxlatT
             if minlatT < minlat:
                 minlat = minlatT
-            plt.hist(mslat,1000, normed=1, histtype='step', cumulative=True, label=finalname, linewidth=3.5)
+            plt.hist(mslat,1000, normed=1, histtype='step', cumulative=True, label=finalname, linewidth=i)
+            i=i-2
             #plt.plot(ptime,plat,'g--',color=tmpcolor[cindex],label=finalname)
             cindex = cindex + 1
 
@@ -547,7 +550,9 @@ plt.xlabel("Time us", fontweight='bold')
 lgd = plt.legend(ncol=3,loc="lower center",bbox_to_anchor=(0.50,-0.20))
 #plt.ylabel("Total Packets (Round Trip)")
 #plt.title("Replica Selection Strategy: single vs 2-Random (No-Server-Load)",fontweight='bold')
-plt.title("Replica Selection Strategy: single vs 2-Random (10us Server Load)",fontweight='bold')
+#plt.title("Replica Selection Strategy: single vs 2-Random (10us Server Load)",fontweight='bold')
+#plt.title("Replica Selection Strategy: single, min, random (10us Server Load)",fontweight='bold')
+plt.title("Replica Selection Strategy: single, min, random 1Gbps",fontweight='bold')
 plt.tight_layout(rect=(0,0.1,1,1))
 plt.savefig("Replica.png")
 

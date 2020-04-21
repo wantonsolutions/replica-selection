@@ -101,14 +101,17 @@ elif [[ $1 == "repstrat" ]]; then
     rate=0.99
     dataDir=queuelat
 	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "single" 0 "data/$dataDir/single_$datetime" $rate
-	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "echo" 0 "data/$dataDir/echo_$datetime" $rate
-	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "random" 1 "data/$dataDir/random_$datetime" $rate
+	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "random" 1 "data/$dataDir/random_$datetime" $rate
+	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "minimum" 2 "data/$dataDir/minimum_$datetime" $rate
 	ln -sf "single_$datetime.dat" "data/$dataDir/single_latest.dat"
 	ln -sf "random_$datetime.dat" "data/$dataDir/random_latest.dat"
+	ln -sf "minimum_$datetime.dat" "data/$dataDir/minimum_latest.dat"
 	ln -sf "single_$datetime.csv" "data/$dataDir/single_latest.csv"
 	ln -sf "random_$datetime.csv" "data/$dataDir/random_latest.csv"
+	ln -sf "minimum_$datetime.csv" "data/$dataDir/minimum_latest.csv"
 	ln -sf "single_$datetime.config" "data/$dataDir/single_latest.config"
 	ln -sf "random_$datetime.config" "data/$dataDir/random_latest.config"
+	ln -sf "minimum_$datetime.config" "data/$dataDir/minimum_latest.config"
 
 	cd plot/latqueue
 	./plot.sh

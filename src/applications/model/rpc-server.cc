@@ -183,6 +183,9 @@ RpcServer::HandleRead (Ptr<Socket> socket)
   Address from;
   while ((packet = socket->RecvFrom (from)))
     {
+      if(m_id == 666) {
+        NS_LOG_WARN("MIDDDLE BOX!!\n");
+      }
 	      if (InetSocketAddress::IsMatchingType (from))
 		{
 		  NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<

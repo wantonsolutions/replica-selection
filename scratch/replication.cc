@@ -86,6 +86,31 @@ const char *ParallelString = "Parallel";
 //\Globals
 
 
+//// Custom Routing
+static void
+AddInternetStack (Ptr<Node> node)
+{
+  //ARP
+  Ptr<ArpL3Protocol> arp = CreateObject<ArpL3Protocol> ();
+  node->AggregateObject (arp);
+  //IPV4
+  Ptr<Ipv4L3Protocol> ipv4 = CreateObject<Ipv4L3Protocol> ();
+  //Routing for Ipv4
+  Ptr<Ipv4StaticRouting> ipv4Routing = CreateObject<Ipv4StaticRouting> ();
+  ipv4->SetRoutingProtocol (ipv4Routing);
+  node->AggregateObject (ipv4);
+  node->AggregateObject (ipv4Routing);
+  //ICMP
+  Ptr<Icmpv4L4Protocol> icmp = CreateObject<Icmpv4L4Protocol> ();
+  node->AggregateObject (icmp);
+  //UDP
+  Ptr<UdpL4Protocol> udp = CreateObject<UdpL4Protocol> ();
+  node->AggregateObject (udp);
+  //Traffic Control
+  Ptr<TrafficControlLayer> tc = CreateObject<TrafficControlLayer> ();
+  node->AggregateObject (tc);
+}
+
 //----------------------------------------------RPC Client----------------------------------------------------
 void InstallRpcClientAttributes(RpcClientHelper *rpcClient, int maxpackets, double interval, int packetsize)
 {
@@ -198,6 +223,17 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
   printTM(tm);
 }
 
+void SetupMiddleBoxes(float start, float stop, NodeContainer core) {
+    ApplicationContainer replicaRouterApps;
+    RpcServerHelper rpcServer(10);
+    replicaRouterApps = rpcServer.Install(core.Get(1));
+		replicaRouterApps.Start (Seconds (start));
+		replicaRouterApps.Stop (Seconds (stop));
+
+    Ptr<RpcServer> server = DynamicCast<RpcServer>(replicaRouterApps.Get(0));
+    server->SetID(666);
+}
+
 void SetupTraffic(float clientStart, float clientStop, float serverStart, float serverStop, int NPackets, float interval, int packetsize, 
 int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4InterfaceContainer *addresses, int mode, Address secondAddrs[NODES], uint16_t Ports[NODES],
 uint32_t * global_packets_sent, 
@@ -277,6 +313,8 @@ int main(int argc, char *argv[])
   Config::SetDefault("ns3::Ipv4GlobalRouting::RespondToInterfaceEvents", BooleanValue(true));
 
   //Command Line argument debugging code
+
+
   cmd.AddValue(CoverNPacketsString, "Number of packets for the cover to echo", CoverNPackets);
   cmd.AddValue(CoverIntervalString, "Interval at which cover traffic broadcasts", CoverInterval);
   cmd.AddValue(CoverPacketSizeString, "The Size of the packet used by the cover traffic", CoverPacketSize);
@@ -293,9 +331,9 @@ int main(int argc, char *argv[])
   cmd.AddValue(DebugString, "Print all log level info statements for all clients", debug);
   cmd.AddValue(ModeString, "The Composition of the clients ECHO=0 DRED=1 RAID=2", mode);
 
-  printf("Parsing");
   cmd.Parse(argc, argv);
-  printf("Done Pares");
+
+
   //mode = DRED;
   //
   //Open a file to write out manifest
@@ -405,8 +443,8 @@ int main(int argc, char *argv[])
   PointToPointHelper pointToPoint2;
 
   TrafficControlHelper tch;
-  int linkrate = 100;
-  int queuedepth = 1;
+  int linkrate = 1000;
+  int queuedepth = 50;
 
   pointToPoint.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue(std::to_string(queuedepth) + "p"));
   pointToPoint.SetDeviceAttribute("DataRate", StringValue(std::to_string(linkrate) + "Mbps"));
@@ -593,7 +631,9 @@ int main(int argc, char *argv[])
       servicesPerServer,
       rpcReplicas,
       &serverLoad
-      );
+  );
+
+  //SetupMiddleBoxes(clientStart,duration,core);
 
   Simulator::Run();
   Simulator::Destroy();

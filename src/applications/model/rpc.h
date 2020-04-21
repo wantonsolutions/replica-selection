@@ -16,8 +16,8 @@ namespace ns3 {
 
 
 struct RPCHeader {
-  uint16_t RequestID;
-  uint16_t PacketID;
+  uint16_t RequestID; //RPC ID 
+  uint16_t PacketID; //Sequence Number
   uint32_t Replicas[MAX_REPLICAS]; //IP addresses of replicas
 };
 
