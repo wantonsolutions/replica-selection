@@ -22,6 +22,7 @@
 #include "ns3/applications-module.h"
 #include "ns3/multichannel-probe-module.h"
 #include "ns3/testmodule-module.h"
+#include "ns3/ipv4-conga-routing-helper.h"
 
 #include <string>
 #include <fstream>
@@ -87,29 +88,68 @@ const char *ParallelString = "Parallel";
 
 
 //// Custom Routing
-static void
-AddInternetStack (Ptr<Node> node)
+
+void
+CreateAndAggregateObjectFromTypeId (Ptr<Node> node, const std::string typeId)
 {
-  //ARP
-  Ptr<ArpL3Protocol> arp = CreateObject<ArpL3Protocol> ();
-  node->AggregateObject (arp);
-  //IPV4
-  Ptr<Ipv4L3Protocol> ipv4 = CreateObject<Ipv4L3Protocol> ();
-  //Routing for Ipv4
-  Ptr<Ipv4StaticRouting> ipv4Routing = CreateObject<Ipv4StaticRouting> ();
-  ipv4->SetRoutingProtocol (ipv4Routing);
-  node->AggregateObject (ipv4);
-  node->AggregateObject (ipv4Routing);
-  //ICMP
-  Ptr<Icmpv4L4Protocol> icmp = CreateObject<Icmpv4L4Protocol> ();
-  node->AggregateObject (icmp);
-  //UDP
-  Ptr<UdpL4Protocol> udp = CreateObject<UdpL4Protocol> ();
-  node->AggregateObject (udp);
-  //Traffic Control
-  Ptr<TrafficControlLayer> tc = CreateObject<TrafficControlLayer> ();
-  node->AggregateObject (tc);
+  ObjectFactory factory;
+  factory.SetTypeId (typeId);
+  Ptr<Object> protocol = factory.Create <Object> ();
+  node->AggregateObject (protocol);
 }
+//Derrived from Internet stack helper
+static void AddInternetStack (Ptr <Node> node){
+
+      ObjectFactory m_tcpFactory;
+      Ipv4RoutingHelper *m_routing;
+
+      m_tcpFactory.SetTypeId ("ns3::TcpL4Protocol");
+      Ipv4StaticRoutingHelper staticRouting;
+      Ipv4GlobalRoutingHelper globalRouting;
+      Ipv4CongaRoutingHelper congaRouting;
+      Ipv4ListRoutingHelper listRouting;
+      //The entire point of this routine is to add this call
+      listRouting.Add (congaRouting, 1);
+      //Change complete
+      listRouting.Add (staticRouting, 0);
+      listRouting.Add (globalRouting, -10);
+      m_routing = listRouting.Copy();
+
+
+
+      if (node->GetObject<Ipv4> () != 0)
+        {
+          NS_FATAL_ERROR ("InternetStackHelper::Install (): Aggregating " 
+                          "an InternetStack to a node with an existing Ipv4 object");
+          return;
+        }
+
+      CreateAndAggregateObjectFromTypeId (node, "ns3::ArpL3Protocol");
+      CreateAndAggregateObjectFromTypeId (node, "ns3::Ipv4L3Protocol");
+      CreateAndAggregateObjectFromTypeId (node, "ns3::Icmpv4L4Protocol");
+
+      //Ptr<ArpL3Protocol> arp = node->GetObject<ArpL3Protocol> ();
+      //NS_ASSERT (arp);
+      //arp->SetAttribute ("RequestJitter", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
+
+      // Set routing
+      Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
+      Ptr<Ipv4RoutingProtocol> ipv4Routing = m_routing->Create (node);
+      ipv4->SetRoutingProtocol (ipv4Routing);
+
+      CreateAndAggregateObjectFromTypeId (node, "ns3::TrafficControlLayer");
+      CreateAndAggregateObjectFromTypeId (node, "ns3::UdpL4Protocol");
+      node->AggregateObject (m_tcpFactory.Create<Object> ());
+      Ptr<PacketSocketFactory> factory = CreateObject<PacketSocketFactory> ();
+      node->AggregateObject (factory);
+
+      Ptr<ArpL3Protocol> arp = node->GetObject<ArpL3Protocol> ();
+      Ptr<TrafficControlLayer> tc = node->GetObject<TrafficControlLayer> ();
+      NS_ASSERT (arp);
+      NS_ASSERT (tc);
+      arp->SetTrafficControl (tc);
+}
+
 
 //----------------------------------------------RPC Client----------------------------------------------------
 void InstallRpcClientAttributes(RpcClientHelper *rpcClient, int maxpackets, double interval, int packetsize)
@@ -433,11 +473,36 @@ int main(int argc, char *argv[])
   //
 
   
-  InternetStackHelper stack;
-  stack.Install (nodes);
-  stack.Install (edge);
-  stack.Install (agg);
-  stack.Install (core);
+  //InternetStackHelper stack;
+  //stack.Install (nodes);
+
+  //Ipv4CongaRoutingHelper conga;
+  //Ipv4ListRoutingHelper list;
+  //list.Add (conga, 10);
+  //stack.SetRoutingHelper(list);
+
+  //stack.Install (edge);
+  //stack.Install (agg);
+  //stack.Install (core);
+
+
+  NodeContainer::Iterator i;
+  for (i = nodes.Begin(); i != nodes.End(); ++i) {
+      NS_LOG_WARN("Installing " << (*i)->GetId());
+      AddInternetStack(*i);
+  }
+  for (i = edge.Begin(); i != edge.End(); ++i) {
+      NS_LOG_WARN("Installing " << (*i)->GetId());
+      AddInternetStack(*i);
+  }
+  for (i = agg.Begin(); i != agg.End(); ++i) {
+      NS_LOG_WARN("Installing " << (*i)->GetId());
+      AddInternetStack(*i);
+  }
+  for (i = core.Begin(); i != core.End(); ++i) {
+      NS_LOG_WARN("Installing " << (*i)->GetId());
+      AddInternetStack(*i);
+  }
 
   PointToPointHelper pointToPoint;
   PointToPointHelper pointToPoint2;
@@ -484,7 +549,7 @@ int main(int argc, char *argv[])
       tch.Install(ndc_node2edge[n].Get(1));
   }
 
-
+  printf("Connecting Topology");
   //connect edges to agg
   for (int pod = 0; pod < PODS; pod++) {
       for (int edgeS = 0; edgeS < EDGE; edgeS++) {

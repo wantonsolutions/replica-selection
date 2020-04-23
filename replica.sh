@@ -75,34 +75,13 @@ if [[ $1 == "debug" ]];then
 	echo "debugging"
 	runExperiment 0 1.0 128 $totalPackets 1.0 $packetSize "debug" 0 0.9
 	exit 0
-elif [[ $1 == "incrementalIntervals" ]]; then
-	echo "running incremental intervals trial"
-	IncrementalIntervals
-	exit 0
-elif [[ $1 == "DvUDP" ]]; then
-	echo "D redundancy vs UDP"
-    rate=0.99
-    dataDir=queuelat
-	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "Single Server" 0 "data/$dataDir/echo_$datetime" $rate
-	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "echo" 0 "data/$dataDir/echo_$datetime" $rate
-	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "Random 2 (Replicas)" 1 "data/$dataDir/dred_$datetime" $rate
-	ln -sf "echo_$datetime.dat" "data/$dataDir/echo_latest.dat"
-	ln -sf "dred_$datetime.dat" "data/$dataDir/dred_latest.dat"
-	ln -sf "echo_$datetime.csv" "data/$dataDir/echo_latest.csv"
-	ln -sf "dred_$datetime.csv" "data/$dataDir/dred_latest.csv"
-	ln -sf "echo_$datetime.config" "data/$dataDir/echo_latest.config"
-	ln -sf "dred_$datetime.config" "data/$dataDir/dred_latest.config"
-
-	cd plot/latqueue
-	./plot.sh
-	exit 0
-elif [[ $1 == "repstrat" ]]; then
+else
 	echo "testing replication strategy"
     rate=0.99
     dataDir=queuelat
 	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "single" 0 "data/$dataDir/single_$datetime" $rate
-	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "random" 1 "data/$dataDir/random_$datetime" $rate
-	#RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "minimum" 2 "data/$dataDir/minimum_$datetime" $rate
+	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "random" 1 "data/$dataDir/random_$datetime" $rate
+	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "minimum" 2 "data/$dataDir/minimum_$datetime" $rate
 	ln -sf "single_$datetime.dat" "data/$dataDir/single_latest.dat"
 	ln -sf "random_$datetime.dat" "data/$dataDir/random_latest.dat"
 	ln -sf "minimum_$datetime.dat" "data/$dataDir/minimum_latest.dat"
@@ -116,17 +95,5 @@ elif [[ $1 == "repstrat" ]]; then
 	cd plot/latqueue
 	./plot.sh
 	exit 0
-elif [[ $1 == "DvUDP-I" ]]; then
-	echo "D redundancy vs UDP"
-	#runExperiment 1 1.0 128 500 1.0 4096 "dred" 0 data/backoff/echo3.dat
-	for i in `seq  0.999 -0.002 0.99`; do
-		runExperiment 1 1.0 128 $totalPackets 1.0 $packetSize "dred" 1 $i &
-		sleep 3
-		runExperiment 1 1.0 128 $totalPackets 1.0 $packetSize "echo" 0 $i &
-		sleep 3
-	done
-	#mv *.dat data/variableRate/
-	exit 0
-	
 fi
 
