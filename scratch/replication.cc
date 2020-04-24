@@ -22,7 +22,8 @@
 #include "ns3/applications-module.h"
 #include "ns3/multichannel-probe-module.h"
 #include "ns3/testmodule-module.h"
-#include "ns3/ipv4-conga-routing-helper.h"
+//#include "ns3/ipv4-conga-routing-helper.h"
+#include "ns3/ipv4-doppelganger-routing-helper.h"
 
 #include <string>
 #include <fstream>
@@ -106,10 +107,10 @@ static void AddInternetStack (Ptr <Node> node){
       m_tcpFactory.SetTypeId ("ns3::TcpL4Protocol");
       Ipv4StaticRoutingHelper staticRouting;
       Ipv4GlobalRoutingHelper globalRouting;
-      Ipv4CongaRoutingHelper congaRouting;
+      Ipv4DoppelgangerRoutingHelper doppelgangerRouting;
       Ipv4ListRoutingHelper listRouting;
       //The entire point of this routine is to add this call
-      listRouting.Add (congaRouting, 1);
+      listRouting.Add (doppelgangerRouting, 1);
       //Change complete
       listRouting.Add (staticRouting, 0);
       listRouting.Add (globalRouting, -10);
