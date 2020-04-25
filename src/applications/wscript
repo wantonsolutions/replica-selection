@@ -25,7 +25,6 @@ def build(bld):
 	'model/raid.cc',
 	'model/rpc-client.cc',
 	'model/rpc-server.cc',
-    'model/rpc.cc',
         'helper/bulk-send-helper.cc',
         'helper/on-off-helper.cc',
         'helper/packet-sink-helper.cc',
@@ -77,7 +76,6 @@ def build(bld):
 	'helper/raid-helper.h',
 	'helper/rpc-helper.h',
 	'model/raid.h',
-    'model/rpc.h'
         ]
     
     if (bld.env['ENABLE_EXAMPLES']):

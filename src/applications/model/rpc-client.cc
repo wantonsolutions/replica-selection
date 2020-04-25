@@ -28,7 +28,8 @@
 #include "ns3/uinteger.h"
 #include "ns3/trace-source-accessor.h"
 #include "rpc-client.h"
-#include "rpc.h"
+#include "ns3/ipv4-doppelganger-tag.h"
+
 
 //#include "ns3/lte-pdcp-tag.h"
 #include "ns3/ipv4-packet-info-tag.h"
@@ -384,6 +385,17 @@ void RpcClient::PopulateReplicasReplicas(RPCHeader *rpch) {
   }
 }
 
+void RpcClient::PopulateReplicasReplicas(Ipv4DoppelgangerTag *idgt) {
+  int rpc_service = idgt->GetRequestID();
+  if (m_rpc_server_replicas[rpc_service].size() > MAX_REPLICAS) {
+    NS_LOG_WARN("Error too many replicas for a single RPC header packet");
+  }
+  for( uint i =0; i< m_rpc_server_replicas[rpc_service].size(); i++) {
+    Ipv4Address addr = Ipv4Address::ConvertFrom(m_peerAddresses[m_rpc_server_replicas[rpc_service][i]]);
+    idgt->SetReplica(i,addr.Get());
+  }
+}
+
 
 void RpcClient::SetReplicationStrategy(int strategy){
   m_selection_strategy = strategy;
@@ -418,14 +430,18 @@ void RpcClient::Send(void)
   NS_ASSERT(m_sendEvent.IsExpired());
 
   //Constuct RPC Request Packet
+  /*
   RPCHeader rpch;
   bzero((char *)&rpch,sizeof(rpch));
   rpch.PacketID = 0;
   //Determine the RPC request Type for now set it to random
-  rpch.RequestID = rand() % m_numPeers;
+  /rpch.RequestID = rand() % m_numPeers;
   //PopulateReplicasNoReplicas(&rpch);
   PopulateReplicasReplicas(&rpch);
   SetFill((uint8_t*)&rpch,sizeof(RPCHeader),sizeof(RPCHeader));
+  */
+
+
 
   Ptr<Packet> p;
   if (m_dataSize)
@@ -454,6 +470,13 @@ void RpcClient::Send(void)
   // call to the trace sinks before the packet is actually sent,
   // so that tags added to the packet can be sent as well
   //
+
+
+  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
+  ipv4DoppelgangerTag.SetPacketID(0);
+  ipv4DoppelgangerTag.SetRequestID(rand() % m_numPeers);
+  PopulateReplicasReplicas(&ipv4DoppelgangerTag);
+  p->AddPacketTag(ipv4DoppelgangerTag);
 
   //PdcpTag idtag;
   Ipv4PacketInfoTag idtag;
@@ -491,13 +514,13 @@ void RpcClient::Send(void)
     int replica;
     switch (m_selection_strategy) {
       case noReplica:
-        replica = replicaSelectionStrategy_firstIndex(rpch.RequestID);
+        replica = replicaSelectionStrategy_firstIndex(ipv4DoppelgangerTag.GetRequestID());
         break;
       case randomReplica:
-        replica = replicaSelectionStrategy_random(rpch.RequestID);
+        replica = replicaSelectionStrategy_random(ipv4DoppelgangerTag.GetRequestID());
         break;
       case minimumReplica:
-        replica = replicaSelectionStrategy_random(rpch.RequestID);
+        replica = replicaSelectionStrategy_random(ipv4DoppelgangerTag.GetRequestID());
         break;
       default:
         NS_LOG_WARN("The selection strategy " << m_selection_strategy << " is invalid ");
@@ -516,9 +539,9 @@ void RpcClient::Send(void)
 
   ++m_sent;
   ++(*m_global_sent);
-  if (Ipv4Address::IsMatchingType(m_peerAddresses[rpch.RequestID]))
+  if (Ipv4Address::IsMatchingType(m_peerAddresses[ipv4DoppelgangerTag.GetRequestID()]))
   {
-    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent local packet "<< m_sent << " gloabal packet " << *m_global_sent << " of size " << m_size << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddresses[rpch.RequestID]) << " port " << m_peerPort);
+    NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent local packet "<< m_sent << " gloabal packet " << *m_global_sent << " of size " << m_size << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddresses[ipv4DoppelgangerTag.GetRequestID()]) << " port " << m_peerPort);
   } else {
     NS_LOG_INFO("Error Address not supported");
   }

@@ -186,405 +186,60 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
 {
 
   NS_LOG_WARN("HELLO CORE WE ARE NOW ROUTING!!");
-  //printf("Hello from the congo!\n");
-
 
   NS_ASSERT (m_ipv4->GetInterfaceForDevice (idev) >= 0);
 
   Ptr<Packet> packet = ConstCast<Packet> (p);
-
   Ipv4Address destAddress = header.GetDestination();
-
-  // Doppelganger routing only supports unicast
-  if (destAddress.IsMulticast() || destAddress.IsBroadcast()) {
-    NS_LOG_ERROR (this << " Doppelganger routing only supports unicast");
-    ecb (packet, header, Socket::ERROR_NOROUTETOHOST);
-    return false;
-  }
-
-  // Check if input device supports IP forwarding
-  uint32_t iif = m_ipv4->GetInterfaceForDevice (idev);
-  if (m_ipv4->IsForwarding (iif) == false) {
-    NS_LOG_ERROR (this << " Forwarding disabled for this interface");
-    ecb (packet, header, Socket::ERROR_NOROUTETOHOST);
-    return false;
-  }
 
   // Packet arrival time
   Time now = Simulator::Now ();
+  std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntries (destAddress);
 
-  // Extract the flow id
+  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
+  bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
+
+  if (found) {
+    //printf("Found the packet tag\n");
+    NS_LOG_WARN("We have a packet tag!!");
+  } else {
+    //printf("where on earth is this pacekt tag\n");
+    NS_LOG_WARN("Packet Has no tag");
+  }
+
+  //printf("we are routing in the west!!\n");
+  return false;
+  /*
   uint32_t flowId = 0;
   FlowIdTag flowIdTag;
   bool flowIdFound = packet->PeekPacketTag(flowIdTag);
   if (!flowIdFound)
   {
-    NS_LOG_ERROR (this << " Doppelganger routing cannot extract the flow id");
+    NS_LOG_ERROR (this << " Conga routing cannot extract the flow id");
     ecb (packet, header, Socket::ERROR_NOROUTETOHOST);
     return false;
   }
+
   flowId = flowIdTag.GetFlowId ();
+  uint32_t selectedPort = routeEntries[flowId % routeEntries.size ()].port;
+  */
 
-  std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntries (destAddress);
+  uint32_t selectedPort = routeEntries[rand() % routeEntries.size ()].port;
 
-  if (routeEntries.empty ())
-  {
-    NS_LOG_ERROR (this << " Doppelganger routing cannot find routing entry");
-    ecb (packet, header, Socket::ERROR_NOROUTETOHOST);
-    return false;
-  }
+  // 4. Construct Doppelganger Header for the packet
+  //ipv4DoppelgangerTag.SetLbTag (selectedPort);
+  //ipv4DoppelgangerTag.SetCe (0);
 
-  // Dev use
-  if (m_ecmpMode)
-  {
-    uint32_t selectedPort = routeEntries[flowId % routeEntries.size ()].port;
-    Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
-    ucb (route, packet, header);
-  }
+  // Piggyback the feedback information
+  //ipv4DoppelgangerTag.SetFbLbTag (fbLbTag);
+  //ipv4DoppelgangerTag.SetFbMetric (fbMetric);
+  packet->AddPacketTag(ipv4DoppelgangerTag);
 
-  // Turn on DRE event scheduler if it is not running
-  if (!m_dreEvent.IsRunning ())
-  {
-    NS_LOG_LOGIC (this << " Doppelganger routing restarts dre event scheduling");
-    m_dreEvent = Simulator::Schedule(m_tdre, &Ipv4DoppelgangerRouting::DreEvent, this);
-  }
 
-  // Turn on aging event scheduler if it is not running
-  if (!m_agingEvent.IsRunning ())
-  {
-    NS_LOG_LOGIC (this << "Doppelganger routing restarts aging event scheduling");
-    m_agingEvent = Simulator::Schedule(m_agingTime / 4, &Ipv4DoppelgangerRouting::AgingEvent, this);
-  }
+  Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
+  ucb (route, packet, header);
 
-  // First, check if this switch if leaf switch
-  if (m_isLeaf)
-  {
-    // If the switch is leaf switch, two possible situations
-    // 1. The sender is connected to this leaf switch
-    // 2. The receiver is connected to this leaf switch
-    // We can distinguish it by checking whether the packet has DoppelgangerTag
-    Ipv4DoppelgangerTag ipv4DoppelgangerTag;
-    bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
-
-    if (!found)
-    {
-      uint32_t selectedPort;
-
-      // When sending a new packet
-      // Build an empty Doppelganger header (as the packet tag)
-      // Determine the port and fill the header fields
-
-      Ipv4DoppelgangerRouting::PrintDreTable ();
-      Ipv4DoppelgangerRouting::PrintDoppelgangerToLeafTable ();
-      Ipv4DoppelgangerRouting::PrintFlowletTable ();
-
-      // Determine the dest switch leaf id
-      std::map<Ipv4Address, uint32_t>::iterator itr = m_ipLeafIdMap.find(destAddress);
-      if (itr == m_ipLeafIdMap.end ())
-      {
-        NS_LOG_ERROR (this << " Doppelganger routing cannot find leaf switch id");
-        ecb (packet, header, Socket::ERROR_NOROUTETOHOST);
-        return false;
-      }
-      uint32_t destLeafId = itr->second;
-
-      // Check piggyback information
-      std::map<uint32_t, std::map<uint32_t, FeedbackInfo> >::iterator fbItr =
-          m_doppelgangerFromLeafTable.find (destLeafId);
-
-      uint32_t fbLbTag = LOOPBACK_PORT;
-      uint32_t fbMetric = 0;
-
-      // Piggyback according to round robin and favoring those that has been changed
-      if (fbItr != m_doppelgangerFromLeafTable.end ())
-      {
-        std::map<uint32_t, FeedbackInfo>::iterator innerFbItr = (fbItr->second).begin ();
-        std::advance (innerFbItr, m_feedbackIndex++ % (fbItr->second).size ()); // round robin
-
-        if ((innerFbItr->second).change == false)  // prefer the changed ones
-        {
-          for (unsigned loopIndex = 0; loopIndex < (fbItr->second).size (); loopIndex ++) // prevent infinite looping
-          {
-            if (++innerFbItr == (fbItr->second).end ()) {
-              innerFbItr = (fbItr->second).begin (); // start from the beginning
-            }
-            if ((innerFbItr->second).change == true)
-            {
-              break;
-            }
-          }
-        }
-
-        fbLbTag = innerFbItr->first;
-        fbMetric = (innerFbItr->second).ce;
-        (innerFbItr->second).change = false;
-      }
-
-      // Port determination logic:
-      // Firstly, check the flowlet table to see whether there is existing flowlet
-      // If not hit, determine the port based on the congestion degree of the link
-
-      // Flowlet table look up
-      struct Flowlet *flowlet = NULL;
-
-      // If the flowlet table entry is valid, return the port
-      std::map<uint32_t, struct Flowlet *>::iterator flowletItr = m_flowletTable.find (flowId);
-      if (flowletItr != m_flowletTable.end ())
-      {
-        flowlet = flowletItr->second;
-        if (flowlet != NULL && // Impossible in normal cases
-            now - flowlet->activeTime <= m_flowletTimeout)
-        {
-          // Do not forget to update the flowlet active time
-          flowlet->activeTime = now;
-
-          // Return the port information used for routing routine to select the port
-          selectedPort = flowlet->port;
-
-          // Construct Doppelganger Header for the packet
-          ipv4DoppelgangerTag.SetLbTag (selectedPort);
-          ipv4DoppelgangerTag.SetCe (0);
-
-          // Piggyback the feedback information
-          ipv4DoppelgangerTag.SetFbLbTag (fbLbTag);
-          ipv4DoppelgangerTag.SetFbMetric (fbMetric);
-          packet->AddPacketTag(ipv4DoppelgangerTag);
-
-          // Update local dre
-          Ipv4DoppelgangerRouting::UpdateLocalDre (header, packet, selectedPort);
-
-          Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
-          ucb (route, packet, header);
-
-          NS_LOG_LOGIC (this << " Sending Doppelganger on leaf switch (flowlet hit): " << m_leafId << " - LbTag: " << selectedPort << ", CE: " << 0 << ", FbLbTag: " << fbLbTag << ", FbMetric: " << fbMetric);
-
-          return true;
-        }
-      }
-
-      NS_LOG_LOGIC (this << " Flowlet expires, calculate the new port");
-      // Not hit. Determine the port
-
-      // 1. Select port congestion information based on dest leaf switch id
-      std::map<uint32_t, std::map<uint32_t, std::pair<Time, uint32_t> > >::iterator
-          doppelgangerToLeafItr = m_doppelgangerToLeafTable.find (destLeafId);
-
-      // 2. Prepare the candidate port
-      // For a new flowlet, we pick the uplink port that minimizes the maximum of the local metric (from the local DREs)
-      // and the remote metric (from the Congestion-To-Leaf Table).
-      uint32_t minPortCongestion = (std::numeric_limits<uint32_t>::max)();
-
-      std::vector<uint32_t> portCandidates;
-      std::vector<DoppelgangerRouteEntry>::iterator routeEntryItr = routeEntries.begin ();
-
-      for ( ; routeEntryItr != routeEntries.end (); ++routeEntryItr)
-      {
-        uint32_t port = (*routeEntryItr).port;
-        uint32_t localCongestion = 0;
-        uint32_t remoteCongestion = 0;
-
-        std::map<uint32_t, uint32_t>::iterator localCongestionItr = m_XMap.find (port);
-        if (localCongestionItr != m_XMap.end ())
-        {
-          localCongestion = Ipv4DoppelgangerRouting::QuantizingX (port, localCongestionItr->second);
-        }
-
-        std::map<uint32_t, std::pair<Time, uint32_t> >::iterator remoteCongestionItr =
-            (doppelgangerToLeafItr->second).find (port);
-        if (remoteCongestionItr != (doppelgangerToLeafItr->second).end ())
-        {
-          remoteCongestion = (remoteCongestionItr->second).second;
-        }
-
-        uint32_t congestionDegree = std::max (localCongestion, remoteCongestion);
-
-        if (congestionDegree < minPortCongestion)
-        {
-          // Strictly better port
-          minPortCongestion = congestionDegree;
-          portCandidates.clear();
-          portCandidates.push_back(port);
-        }
-        if (congestionDegree == minPortCongestion)
-        {
-          // Equally good port
-          portCandidates.push_back(port);
-        }
-      }
-
-      // 3. Select one port from all those candidate ports
-      if (flowlet != NULL &&
-            std::find(portCandidates.begin (), portCandidates.end (), flowlet->port) != portCandidates.end ())
-      {
-        // Prefer the port cached in flowlet table
-        selectedPort = flowlet->port;
-        // Activate the flowlet entry again
-        flowlet->activeTime = now;
-      }
-      else
-      {
-        // If there are no cached ports, we randomly choose a good port
-        selectedPort = portCandidates[rand() % portCandidates.size ()];
-        if (flowlet == NULL)
-        {
-          struct Flowlet *newFlowlet = new Flowlet;
-          newFlowlet->port = selectedPort;
-          newFlowlet->activeTime = now;
-          m_flowletTable[flowId] = newFlowlet;
-        }
-        else
-        {
-          flowlet->port = selectedPort;
-          flowlet->activeTime = now;
-        }
-      }
-
-      // 4. Construct Doppelganger Header for the packet
-      ipv4DoppelgangerTag.SetLbTag (selectedPort);
-      ipv4DoppelgangerTag.SetCe (0);
-
-      // Piggyback the feedback information
-      ipv4DoppelgangerTag.SetFbLbTag (fbLbTag);
-      ipv4DoppelgangerTag.SetFbMetric (fbMetric);
-      packet->AddPacketTag(ipv4DoppelgangerTag);
-
-      // Update local dre
-      Ipv4DoppelgangerRouting::UpdateLocalDre (header, packet, selectedPort);
-
-      Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
-      ucb (route, packet, header);
-
-      NS_LOG_LOGIC (this << " Sending Doppelganger on leaf switch: " << m_leafId << " - LbTag: " << selectedPort << ", CE: " << 0 << ", FbLbTag: " << fbLbTag << ", FbMetric: " << fbMetric);
-
-      return true;
-    }
-    else
-    {
-      NS_LOG_LOGIC (this << " Receiving Doppelganger - LbTag: " << ipv4DoppelgangerTag.GetLbTag ()
-              << ", CE: " << ipv4DoppelgangerTag.GetCe ()
-              << ", FbLbTag: " << ipv4DoppelgangerTag.GetFbLbTag ()
-              << ", FbMetric: " << ipv4DoppelgangerTag.GetFbMetric ());
-
-      // Forwarding the packet to destination
-
-      // Determine the source switch leaf id
-      std::map<Ipv4Address, uint32_t>::iterator itr = m_ipLeafIdMap.find(header.GetSource ());
-      if (itr == m_ipLeafIdMap.end ())
-      {
-        NS_LOG_ERROR (this << " Doppelganger routing cannot find leaf switch id");
-        ecb (packet, header, Socket::ERROR_NOROUTETOHOST);
-        return false;
-      }
-      uint32_t sourceLeafId = itr->second;
-
-      // 1. Update the DoppelgangerFromLeafTable
-      std::map<uint32_t, std::map<uint32_t, FeedbackInfo> >::iterator fromLeafItr = m_doppelgangerFromLeafTable.find (sourceLeafId);
-
-      if (fromLeafItr == m_doppelgangerFromLeafTable.end ())
-      {
-        std::map<uint32_t, FeedbackInfo> newMap;
-        FeedbackInfo feedbackInfo;
-        feedbackInfo.ce = ipv4DoppelgangerTag.GetCe ();
-        feedbackInfo.change = true;
-        feedbackInfo.updateTime = Simulator::Now ();
-        newMap[ipv4DoppelgangerTag.GetLbTag ()] = feedbackInfo;
-        m_doppelgangerFromLeafTable[sourceLeafId] = newMap;
-      }
-      else
-      {
-        std::map<uint32_t, FeedbackInfo>::iterator innerItr = (fromLeafItr->second).find (ipv4DoppelgangerTag.GetLbTag ());
-        if (innerItr == (fromLeafItr->second).end ())
-        {
-          FeedbackInfo feedbackInfo;
-          feedbackInfo.ce = ipv4DoppelgangerTag.GetCe ();
-          feedbackInfo.change = true;
-          feedbackInfo.updateTime = Simulator::Now ();
-          (fromLeafItr->second)[ipv4DoppelgangerTag.GetLbTag ()] = feedbackInfo;
-        }
-        else
-        {
-          (innerItr->second).ce = ipv4DoppelgangerTag.GetCe ();
-          (innerItr->second).change = true;
-          (innerItr->second).updateTime = Simulator::Now ();
-        }
-      }
-
-      // 2. Update the DoppelgangerToLeafTable
-      if (ipv4DoppelgangerTag.GetFbLbTag () != LOOPBACK_PORT)
-      {
-        std::map<uint32_t, std::map<uint32_t, std::pair<Time, uint32_t> > >::iterator toLeafItr =
-            m_doppelgangerToLeafTable.find(sourceLeafId);
-        if (toLeafItr != m_doppelgangerToLeafTable.end ())
-        {
-          (toLeafItr->second)[ipv4DoppelgangerTag.GetFbLbTag ()] =
-              std::make_pair(Simulator::Now (), ipv4DoppelgangerTag.GetFbMetric ());
-        }
-        else
-        {
-          std::map<uint32_t, std::pair<Time, uint32_t> > newMap;
-          newMap[ipv4DoppelgangerTag.GetFbLbTag ()] =
-              std::make_pair(Simulator::Now (), ipv4DoppelgangerTag.GetFbMetric ());
-          m_doppelgangerToLeafTable[sourceLeafId] = newMap;
-        }
-      }
-
-      // Not necessary
-      // Remove the Doppelganger Header
-      packet->RemovePacketTag (ipv4DoppelgangerTag);
-
-      // Pick port using standard ECMP
-      uint32_t selectedPort = routeEntries[flowId % routeEntries.size ()].port;
-
-      Ipv4DoppelgangerRouting::UpdateLocalDre (header, packet, selectedPort);
-
-      Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
-      ucb (route, packet, header);
-
-      Ipv4DoppelgangerRouting::PrintDreTable ();
-      Ipv4DoppelgangerRouting::PrintDoppelgangerToLeafTable ();
-      Ipv4DoppelgangerRouting::PrintDoppelgangerFromLeafTable ();
-
-      return true;
-    }
-  }
-  else
-  {
-    // If the switch is spine switch
-    // Extract Doppelganger Header
-    Ipv4DoppelgangerTag ipv4DoppelgangerTag;
-    bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
-    if (!found)
-    {
-      NS_LOG_ERROR (this<< "Doppelganger routing cannot extract Doppelganger Header in spine switch");
-      ecb (p, header, Socket::ERROR_NOROUTETOHOST);
-      return false;
-    }
-
-    // Determine the port using standard ECMP
-    uint32_t selectedPort = routeEntries[flowId % routeEntries.size ()].port;
-
-    // Update local dre
-    uint32_t X = Ipv4DoppelgangerRouting::UpdateLocalDre (header, packet, selectedPort);
-
-    NS_LOG_LOGIC (this << " Forwarding Doppelganger packet, Quantized X on port: " << selectedPort
-            << " is: " << Ipv4DoppelgangerRouting::QuantizingX (selectedPort, X)
-            << ", LbTag in Doppelganger header is: " << ipv4DoppelgangerTag.GetLbTag ()
-            << ", CE in Doppelganger header is: " << ipv4DoppelgangerTag.GetCe ()
-            << ", packet size is: " << packet->GetSize ());
-
-    uint32_t quantizingX = Ipv4DoppelgangerRouting::QuantizingX (selectedPort, X);
-
-    // Compare the X with that in the Doppelganger Header
-    if (quantizingX > ipv4DoppelgangerTag.GetCe()) {
-      ipv4DoppelgangerTag.SetCe(quantizingX);
-      packet->ReplacePacketTag(ipv4DoppelgangerTag);
-    }
-
-    Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
-    ucb (route, packet, header);
-
-    return true;
-  }
+  return true;
 }
 
 void

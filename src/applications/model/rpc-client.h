@@ -24,7 +24,7 @@
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
-#include "rpc.h"
+#include "ns3/ipv4-doppelganger-tag.h"
 
 #define REQUEST_BUFFER_SIZE 16777216
 namespace ns3 {
@@ -172,6 +172,8 @@ public:
 
  void PopulateReplicasNoReplicas(RPCHeader *rpch);
  void PopulateReplicasReplicas(RPCHeader *rpch);
+
+ void PopulateReplicasReplicas(Ipv4DoppelgangerTag *idgt);
 
 
  int replicaSelectionStrategy_firstIndex(int rpc);

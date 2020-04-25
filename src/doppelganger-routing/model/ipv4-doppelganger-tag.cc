@@ -1,109 +1,119 @@
 #include "ipv4-doppelganger-tag.h"
+#include "ns3/log.h"
 
 namespace ns3
 {
 
-Ipv4DoppelgangerTag::Ipv4DoppelgangerTag () {}
+NS_LOG_COMPONENT_DEFINE("Ipv4DoppelgangerTag");
+
+Ipv4DoppelgangerTag::Ipv4DoppelgangerTag() {}
 
 TypeId
-Ipv4DoppelgangerTag::GetTypeId (void)
+Ipv4DoppelgangerTag::GetTypeId(void)
 {
-  static TypeId tid = TypeId ("ns3::Ipv4DoppelgangerTag")
-    .SetParent<Tag> ()
-    .SetGroupName ("Internet")
-    .AddConstructor<Ipv4DoppelgangerTag> ();
+  static TypeId tid = TypeId("ns3::Ipv4DoppelgangerTag")
+                          .SetParent<Tag>()
+                          .SetGroupName("Internet")
+                          .AddConstructor<Ipv4DoppelgangerTag>();
   return tid;
 }
 
-void
-Ipv4DoppelgangerTag::SetLbTag (uint32_t lbTag)
+void 
+Ipv4DoppelgangerTag::SetRequestID(uint16_t requestID)
 {
-  m_lbTag = lbTag;
+  m_requestID = requestID;
+}
+uint16_t
+Ipv4DoppelgangerTag::GetRequestID(void) const
+{
+  return m_requestID;
 }
 
-uint32_t
-Ipv4DoppelgangerTag::GetLbTag (void) const
+void Ipv4DoppelgangerTag::SetPacketID(uint16_t packetID)
 {
-  return m_lbTag;
+  m_packetID = packetID;
 }
 
-void
-Ipv4DoppelgangerTag::SetCe (uint32_t ce)
+uint16_t
+Ipv4DoppelgangerTag::GetPacketID(void) const
 {
-  m_ce = ce;
+  return m_packetID;
 }
 
-uint32_t
-Ipv4DoppelgangerTag::GetCe (void) const
+void Ipv4DoppelgangerTag::SetReplicas(uint32_t replicas[MAX_REPLICAS])
 {
-  return m_ce;
+  for (int i = 0; i < MAX_REPLICAS; i++)
+  {
+    m_replicas[i] = replicas[i];
+  }
 }
 
-void
-Ipv4DoppelgangerTag::SetFbLbTag (uint32_t fbLbTag)
-{
-  m_fbLbTag = fbLbTag;
-}
+  void 
+  Ipv4DoppelgangerTag::SetReplica(uint32_t index, uint32_t replicaAddress) {
+    if (index >= MAX_REPLICAS) {
+      NS_LOG_WARN("Unable to set replica, index " << index << " is out of range of MAX_REPLICAS " << MAX_REPLICAS);
+      return;
+    }
+    m_replicas[index] = replicaAddress;
+  }
 
-uint32_t
-Ipv4DoppelgangerTag::GetFbLbTag (void) const
-{
-  return m_fbLbTag;
-}
+  uint32_t
+  Ipv4DoppelgangerTag::GetReplica(uint32_t index){
+    if (index >= MAX_REPLICAS) {
+      NS_LOG_WARN("Unable to get replica, index " << index << " is out of range of MAX_REPLICAS " << MAX_REPLICAS);
+      return 0;
+    }
+    return m_replicas[index];
+  }
 
-void
-Ipv4DoppelgangerTag::SetFbMetric (uint32_t fbMetric)
+uint32_t *
+Ipv4DoppelgangerTag::GetReplicas(void) const
 {
-  m_fbMetric = fbMetric;
-}
-
-uint32_t
-Ipv4DoppelgangerTag::GetFbMetric (void) const
-{
-  return m_fbMetric;
+  return (uint32_t *)m_replicas;
 }
 
 TypeId
-Ipv4DoppelgangerTag::GetInstanceTypeId (void) const
+Ipv4DoppelgangerTag::GetInstanceTypeId(void) const
 {
-  return GetTypeId ();
+  return GetTypeId();
 }
 
 uint32_t
-Ipv4DoppelgangerTag::GetSerializedSize (void) const
+Ipv4DoppelgangerTag::GetSerializedSize(void) const
 {
-  return sizeof (uint32_t) +
-         sizeof (uint32_t) +
-         sizeof (uint32_t) +
-         sizeof (uint32_t);
+  return sizeof(uint16_t) +
+         sizeof(uint16_t) +
+         (sizeof(uint32_t) * MAX_REPLICAS);
 }
 
-void
-Ipv4DoppelgangerTag::Serialize (TagBuffer i) const
+void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
 {
-  i.WriteU32(m_lbTag);
-  i.WriteU32(m_ce);
-  i.WriteU32(m_fbLbTag);
-  i.WriteU32(m_fbMetric);
+  i.WriteU16(m_requestID);
+  i.WriteU16(m_packetID);
+  for (int itt = 0; itt < MAX_REPLICAS; itt++)
+  {
+    i.WriteU32(m_replicas[itt]);
+  }
 }
 
-void
-Ipv4DoppelgangerTag::Deserialize (TagBuffer i)
+void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
 {
-  m_lbTag = i.ReadU32 ();
-  m_ce = i.ReadU32 ();
-  m_fbLbTag = i.ReadU32 ();
-  m_fbMetric = i.ReadU32 ();
-
+  m_requestID = i.ReadU16();
+  m_packetID = i.ReadU16();
+  for (int itt = 0; itt < MAX_REPLICAS; itt++)
+  {
+    m_replicas[itt] = i.ReadU32();
+  }
 }
 
-void
-Ipv4DoppelgangerTag::Print (std::ostream &os) const
+void Ipv4DoppelgangerTag::Print(std::ostream &os) const
 {
-  os << "Lb Tag = " << m_lbTag;
-  os << "CE  = " << m_ce;
-  os << "Feedback Lb Tag = " << m_fbLbTag;
-  os << "Feedback Metric = " << m_fbMetric;
+  os << "request ID = " << m_requestID;
+  os << "packet ID  = " << m_packetID;
+  for (int itt = 0; itt < MAX_REPLICAS; itt++)
+  {
+    os << "Replica " << itt << " " << m_replicas[itt];
+  }
 }
 
-}
+} // namespace ns3

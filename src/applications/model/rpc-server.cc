@@ -32,7 +32,7 @@
 #include <algorithm>
 
 #include "rpc-server.h"
-#include "rpc.h"
+#include "ns3/ipv4-doppelganger-tag.h"
 
 namespace ns3 {
 
@@ -201,17 +201,25 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       //packet->RemoveAllByteTags ();
 
       //Check if the service asked for by the client is available on the server
-      RPCHeader rpch;
-      packet->CopyData((uint8_t*)&rpch,sizeof(RPCHeader));
 
-      for (int i =0; i < MAX_REPLICAS; i++) {
-        NS_LOG_INFO("Service also servicable by " << rpch.Replicas[i]);
+      Ipv4DoppelgangerTag doppelTag;
+      bool found = packet->PeekPacketTag(doppelTag);
+
+      if (found) {
+        NS_LOG_WARN("Found the packet tag on the end server");
+      } else {
+        NS_LOG_WARN("Packet arrived but it does not have the correct tag");
       }
 
-      if (CanServiceRPC(rpch.RequestID)) {
-        NS_LOG_INFO("Able to service request id " << rpch.RequestID << " on server " << m_id << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
+
+      for (int i =0; i < MAX_REPLICAS; i++) {
+        NS_LOG_INFO("Service also servicable by " << doppelTag.GetReplica(i));
+      }
+
+      if (CanServiceRPC(doppelTag.GetRequestID())) {
+        NS_LOG_INFO("Able to service request id " << doppelTag.GetRequestID() << " on server " << m_id << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
       } else {
-        NS_LOG_INFO("Unable to service request id " << rpch.RequestID << " on server " << m_id << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
+        NS_LOG_INFO("Unable to service request id " << doppelTag.GetRequestID() << " on server " << m_id << " for packet sent from  " << InetSocketAddress::ConvertFrom (from).GetIpv4 ());
       }
 
       //Calculate server load
