@@ -669,7 +669,8 @@ int main(int argc, char *argv[])
   ApplicationContainer serverApps;
 
   //HACK REMOVE
-  int PacketSize = 1472;
+  //int PacketSize = 1472;
+  int PacketSize = 1024;
   //float Rate = 1.0 / ((PARALLEL * (float(linkrate) * (1000000000.0))) / (float(PacketSize) * 8.0));
   float Rate = 1.0 / (((float(linkrate) * (1000000.0))) / (float(PacketSize) * 8.0));
   float MaxInterval = Rate * 1.0;
@@ -718,6 +719,8 @@ int main(int argc, char *argv[])
 
   //Assign attributes to routers in network
   LoadBallencingStrategy strat = none;
+  //LoadBallencingStrategy strat = minimumLoad;
+
   printf("setting custom load balencing strats\n");
   SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,serverLoad);
   SetDoppelgangerRoutingParameters(edge,strat,servicesPerServer,ipServerMap,serverLoad);

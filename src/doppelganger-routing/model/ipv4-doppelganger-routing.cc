@@ -192,12 +192,74 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
 Ptr<Ipv4Route>
 Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)
 {
+
+  //todo FIGURE OUT HOW TO MODIFY PACKET HEADERS HERE, OR POTENTIALLY IN A DIFFERENT LAYER
   NS_LOG_ERROR (this << " Doppelganger routing is not support for local routing output");
+
+
+
+  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
+  bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
+
+  if (found) {
+    //printf("Found the packet tag\n");
+    NS_LOG_WARN("We have a packet tag!!");
+  } else {
+    //printf("where on earth is this pacekt tag\n");
+    NS_LOG_WARN("Packet Has no tag");
+    return 0;
+  }
+
+    Ipv4Header ipv4Header;
+    /*
+    uint32_t headersize;
+    headersize = packet->PeekHeader(ipv4Header);
+    if (headersize > 0) {
+      printf("Found ipv4\n");
+      NS_LOG_WARN("We have an ipv4 packet header!!");
+    } else {
+      printf("no ipv4\n");
+      NS_LOG_WARN("Packet has no ipv4 header");
+      return 0;
+    }
+    */
+
+  //Here we need to consult the routing strategy that we are employing
+  switch (m_load_ballencing_strategy) {
+    case none:
+      //Don't do anything here, we use source routing in this case
+      break;
+    case minimumLoad: {
+      uint32_t* replicas;
+      replicas = ipv4DoppelgangerTag.GetReplicas();
+      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
+
+      Ipv4Address ipv4Addr = ipv4Header.GetDestination();
+      if(min_replica == ipv4Addr.Get()) {
+        //printf("replica is the same as the min!\n");
+      } else {
+        //printf("the best case replica has changed since source send\n");
+        packet->RemoveHeader(ipv4Header);
+        ipv4Addr.Set(min_replica);
+        ipv4Header.SetDestination(ipv4Addr);
+        packet->AddHeader(ipv4Header);
+      }
+
+      //printf("min_replica %d\n",min_replica);
+      break;
+    }
+    default:
+      NS_LOG_WARN("Unable to find load ballencing strategy");
+      break;
+  }
+
+
+
   //printf("welcome to the output congo\n");
   return 0;
 }
 
-
+//Returns the IP of a minuimum latency replica
  uint32_t
  Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(uint32_t ips[MAX_REPLICAS]){
    uint64_t minLoad = UINT64_MAX;
@@ -206,7 +268,7 @@ Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &head
      uint32_t serverIndex = m_server_ip_map[ips[i]];
      if (m_serverLoad[serverIndex] < minLoad){
        minLoad = m_serverLoad[serverIndex];
-       minReplica = serverIndex;
+       minReplica = ips[i];
      }
    }
    return minReplica;
@@ -229,30 +291,6 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   Time now = Simulator::Now ();
   std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntries (destAddress);
 
-  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
-  bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
-
-  if (found) {
-    //printf("Found the packet tag\n");
-    NS_LOG_WARN("We have a packet tag!!");
-  } else {
-    //printf("where on earth is this pacekt tag\n");
-    NS_LOG_WARN("Packet Has no tag");
-    return false;
-  }
-
-  //Here we need to consult the routing strategy that we are employing
-  switch (m_load_ballencing_strategy) {
-    case none:
-      //Don't do anything here, we use source routing in this case
-      break;
-    case minimumLoad:
-
-      break;
-    default:
-      NS_LOG_WARN("Unable to find load ballencing strategy");
-      break;
-  }
 
   //printf("we are routing in the west!!\n");
   return false;
@@ -280,7 +318,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   // Piggyback the feedback information
   //ipv4DoppelgangerTag.SetFbLbTag (fbLbTag);
   //ipv4DoppelgangerTag.SetFbMetric (fbMetric);
-  packet->AddPacketTag(ipv4DoppelgangerTag);
+  //packet->AddPacketTag(ipv4DoppelgangerTag);
 
 
   Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
