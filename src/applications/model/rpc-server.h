@@ -55,7 +55,7 @@ public:
   void AddRpc(int rpc_id);
   void AssignRPC(std::vector<int> services);
 
-  void SetGlobalLoad(uint64_t ** serverLoad);
+  void SetGlobalLoad(uint64_t * serverLoad);
   void SetID(int id);
 
 
@@ -86,7 +86,7 @@ private:
   Address m_local; //!< local multicast address
 
   int m_id; //localID
-  uint64_t **m_serverLoad; // global server load
+  uint64_t *m_serverLoad; // global server load
   std::vector<int> m_serviceable_rpcs;
 };
 

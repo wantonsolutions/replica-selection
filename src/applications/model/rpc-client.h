@@ -166,7 +166,7 @@ public:
   void SetGlobalPackets(uint32_t * global_packets);
 
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
-  void SetGlobalSeverLoad(uint64_t **serverLoad);
+  void SetGlobalSeverLoad(uint64_t *serverLoad);
   void SetReplicationStrategy(int strategy);
 
 
@@ -239,7 +239,7 @@ private:
   int **m_tm;          //Traffic Matrix 
 
 
-  uint64_t **m_serverLoad; // global server load
+  uint64_t *m_serverLoad; // global server load
   std::vector<std::vector<int>> m_rpc_server_replicas;
   int m_selection_strategy;
 

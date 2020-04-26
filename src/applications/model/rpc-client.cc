@@ -363,7 +363,7 @@ void RpcClient::SetRpcServices(std::vector<std::vector<int>> rpcServices) {
   m_rpc_server_replicas = rpcServices;
 }
 
-void RpcClient::SetGlobalSeverLoad(uint64_t **serverLoad) {
+void RpcClient::SetGlobalSeverLoad(uint64_t *serverLoad) {
   m_serverLoad = serverLoad;
 }
 
@@ -413,12 +413,12 @@ void RpcClient::SetReplicationStrategy(int strategy){
    uint64_t minLoad = UINT64_MAX;
    uint64_t minReplica;
    //printf("accessing min map for rpc %d\n", rpc);
-   printf("why is this not being built?\n");
+   //printf("why is this not being built?\n");
    for (uint i = 0; i < m_rpc_server_replicas[rpc].size();i++) {
      int replica = m_rpc_server_replicas[rpc][i];
-     printf("checking serverload for server ID %d\n", replica);
-     if ((*m_serverLoad)[replica] < minLoad){
-       minLoad = (*m_serverLoad)[replica];
+     //printf("checking serverload for server ID %d\n", replica);
+     if ((m_serverLoad)[replica] < minLoad){
+       minLoad = (m_serverLoad)[replica];
        minReplica = replica;
      }
      //printf("done loop server ID %d\n", replica);

@@ -31,7 +31,7 @@ function runExperiment () {
 	--Debug=$debug
 	--IntervalRatio=$incRate
     --ProbeName=$filename.csv
-	--ManifestName=$filename.config" #2>$filename.dat
+	--ManifestName=$filename.config" 2>$filename.dat
 }
 
 

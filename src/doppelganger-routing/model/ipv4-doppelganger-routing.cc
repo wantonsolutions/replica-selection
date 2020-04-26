@@ -176,7 +176,7 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
   void Ipv4DoppelgangerRouting::SetRpcServices(std::vector<std::vector<int>> rpcServices){
     m_rpc_server_replicas = rpcServices;
   }
-  void Ipv4DoppelgangerRouting::SetGlobalServerLoad(uint64_t **serverLoad){
+  void Ipv4DoppelgangerRouting::SetGlobalServerLoad(uint64_t *serverLoad){
     m_serverLoad = serverLoad;
   }
 
@@ -204,8 +204,8 @@ Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &head
    uint32_t minReplica;
    for (uint i = 0; i < MAX_REPLICAS;i++) {
      uint32_t serverIndex = m_server_ip_map[ips[i]];
-     if (*m_serverLoad[serverIndex] < minLoad){
-       minLoad = *m_serverLoad[serverIndex];
+     if (m_serverLoad[serverIndex] < minLoad){
+       minLoad = m_serverLoad[serverIndex];
        minReplica = serverIndex;
      }
    }

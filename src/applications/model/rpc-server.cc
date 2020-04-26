@@ -86,7 +86,7 @@ void RpcServer::AssignRPC(std::vector<int> services) {
   }
 }
 
-void RpcServer::SetGlobalLoad(uint64_t ** serverLoad) {
+void RpcServer::SetGlobalLoad(uint64_t * serverLoad) {
   m_serverLoad = serverLoad;
 }
 void RpcServer::SetID(int id) {
@@ -224,8 +224,8 @@ RpcServer::HandleRead (Ptr<Socket> socket)
 
       //Calculate server load
       int load = 10;
-      (*m_serverLoad)[m_id] += load; //make a distribution in the future
-      ScheduleResponse(MicroSeconds(((*m_serverLoad)[m_id])), socket, packet, from, load);
+      (m_serverLoad)[m_id] += load; //make a distribution in the future
+      ScheduleResponse(MicroSeconds(((m_serverLoad)[m_id])), socket, packet, from, load);
 
     }
 }
@@ -240,7 +240,7 @@ void RpcServer::ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet,
 void
 RpcServer::SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from,int load) {
       NS_LOG_LOGIC ("Responding with original Packet");
-      (*m_serverLoad)[m_id] -= load;
+      (m_serverLoad)[m_id] -= load;
       socket->SendTo (packet, 0, from);
 
 	      if (InetSocketAddress::IsMatchingType (from))

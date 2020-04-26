@@ -162,7 +162,7 @@ void InstallRpcClientAttributes(RpcClientHelper *rpcClient, int maxpackets, doub
 }
 
 void InstallRandomRpcClientTransmissions(float start, float stop, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes, Address addresses[NODES], uint16_t Ports[NODES], int trafficMatrix[NODES][NODES], uint32_t *global_packets_sent,
-std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad)
+std::vector<std::vector<int>> rpcServices, uint64_t * serverLoad)
 {
   
   ApplicationContainer clientApps = rpcClient->Install(nodes.Get(clientIndex));
@@ -198,7 +198,7 @@ std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad)
   uec->SetReplicationStrategy(mode);
 }
 
-void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t ** serverLoad) {
+void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad) {
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i) {
       NS_LOG_WARN("Installing parameters on" << (*i)->GetId());
@@ -229,7 +229,7 @@ void InstallUniformRpcClientTransmissions(float start, float stop, float gap, in
 }
 
 void SetupModularRandomRpcClient(float start, float stop, uint16_t Ports[NODES], Address addresses[NODES], int tm[NODES][NODES], NodeContainer nodes, int clientIndex, double interval, int packetsize, int maxpackets, uint32_t * global_packets_sent,
-std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad)
+std::vector<std::vector<int>> rpcServices, uint64_t * serverLoad)
 {
   //map clients to servers
   //NS_LOG_INFO("Starting Client Packet Size " << packetsize << " interval " << interval << " nPackets " << maxpackets );
@@ -289,7 +289,7 @@ int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4Int
 uint32_t * global_packets_sent, 
 std::vector<std::vector<int>> rpcReplicas, 
 std::vector<std::vector<int>> rpcServices, 
-uint64_t ** serverLoad) {
+uint64_t * serverLoad) {
   //For reference to this function check out SetupRandomCoverTraffic in pfattree.cc
   //int clientIndex = 0;
   //int serverIndex = 1;
@@ -713,16 +713,16 @@ int main(int argc, char *argv[])
       //RPC Globals
       servicesPerServer,
       rpcReplicas,
-      &serverLoad
+      serverLoad
   );
 
   //Assign attributes to routers in network
   LoadBallencingStrategy strat = none;
   printf("setting custom load balencing strats\n");
-  SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,&serverLoad);
-  SetDoppelgangerRoutingParameters(edge,strat,servicesPerServer,ipServerMap,&serverLoad);
-  SetDoppelgangerRoutingParameters(agg,strat,servicesPerServer,ipServerMap,&serverLoad);
-  SetDoppelgangerRoutingParameters(core,strat,servicesPerServer,ipServerMap,&serverLoad);
+  SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,serverLoad);
+  SetDoppelgangerRoutingParameters(edge,strat,servicesPerServer,ipServerMap,serverLoad);
+  SetDoppelgangerRoutingParameters(agg,strat,servicesPerServer,ipServerMap,serverLoad);
+  SetDoppelgangerRoutingParameters(core,strat,servicesPerServer,ipServerMap,serverLoad);
   printf("done setting custom load ballencing\n");
 
 

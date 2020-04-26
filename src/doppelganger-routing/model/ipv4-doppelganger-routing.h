@@ -64,7 +64,7 @@ public:
   //Doppelganger routing
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
   void SetIPServerMap(std::map<uint32_t,uint32_t> ip_map);
-  void SetGlobalServerLoad(uint64_t **serverLoad);
+  void SetGlobalServerLoad(uint64_t *serverLoad);
   void SetLoadBallencingStrategy(LoadBallencingStrategy strategy);
 
 
@@ -132,7 +132,7 @@ private:
 
 
   // global server load
-  uint64_t **m_serverLoad;                             
+  uint64_t *m_serverLoad;                             
   //replica locations
   std::vector<std::vector<int>> m_rpc_server_replicas;
   //Ip to replica index
