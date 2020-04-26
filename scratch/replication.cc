@@ -264,17 +264,6 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
   printTM(tm);
 }
 
-void SetupMiddleBoxes(float start, float stop, NodeContainer core) {
-    ApplicationContainer replicaRouterApps;
-    RpcServerHelper rpcServer(10);
-    replicaRouterApps = rpcServer.Install(core.Get(1));
-		replicaRouterApps.Start (Seconds (start));
-		replicaRouterApps.Stop (Seconds (stop));
-
-    Ptr<RpcServer> server = DynamicCast<RpcServer>(replicaRouterApps.Get(0));
-    server->SetID(666);
-}
-
 void SetupTraffic(float clientStart, float clientStop, float serverStart, float serverStop, int NPackets, float interval, int packetsize, 
 int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4InterfaceContainer *addresses, int mode, Address secondAddrs[NODES], uint16_t Ports[NODES],
 uint32_t * global_packets_sent, 
@@ -699,7 +688,6 @@ int main(int argc, char *argv[])
       &serverLoad
   );
 
-  //SetupMiddleBoxes(clientStart,duration,core);
 
   Simulator::Run();
   Simulator::Destroy();
