@@ -24,6 +24,7 @@
 #include "ns3/testmodule-module.h"
 //#include "ns3/ipv4-conga-routing-helper.h"
 #include "ns3/ipv4-doppelganger-routing-helper.h"
+#include "ns3/ipv4-doppelganger-routing.h"
 
 #include <string>
 #include <fstream>
@@ -195,6 +196,25 @@ std::vector<std::vector<int>> rpcServices, uint64_t ** serverLoad)
 
   //Fix this should be checked prior to executing
   uec->SetReplicationStrategy(mode);
+}
+
+void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t ** serverLoad) {
+  NodeContainer::Iterator i;
+  for (i = nodes.Begin(); i != nodes.End(); ++i) {
+      NS_LOG_WARN("Installing parameters on" << (*i)->GetId());
+      Ptr<Ipv4> ipv4 = (*i)->GetObject<Ipv4> ();
+      Ptr<Ipv4RoutingProtocol> routingProtocol = ipv4->GetRoutingProtocol();
+
+      Ptr<Ipv4ListRouting> list = DynamicCast<Ipv4ListRouting>(routingProtocol);
+      int16_t routing_priority=0;
+      Ptr<Ipv4DoppelgangerRouting> doppelRouter = DynamicCast<Ipv4DoppelgangerRouting>(list->GetRoutingProtocol(0,routing_priority));
+      doppelRouter->SetRpcServices(rpcServices);
+      doppelRouter->SetIPServerMap(ipServerMap);
+      doppelRouter->SetGlobalServerLoad(serverLoad);
+      doppelRouter->SetLoadBallencingStrategy(strat);
+      //Start here we need to get the list routing protocol
+  }
+
 }
 
 void InstallUniformRpcClientTransmissions(float start, float stop, float gap, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes)
@@ -628,7 +648,15 @@ int main(int argc, char *argv[])
   //Create Server Load Global
   uint64_t* serverLoad = (uint64_t*) malloc(NODES * sizeof(uint64_t));
   for(int i=0;i<NODES;i++) {
+    printf("setting server load for server %d\n", i);
     serverLoad[i]=0;
+  }
+  //Create IP map to server index
+  std::map<uint32_t, uint32_t> ipServerMap;
+  for (int i=0; i<NODES; i++) {
+    Ipv4Address addr = Ipv4Address::ConvertFrom(IPS[i]);
+    uint32_t ip_address = addr.Get();
+    ipServerMap.insert(std::pair<uint32_t,uint32_t>(ip_address,i));
   }
 
 
@@ -687,6 +715,16 @@ int main(int argc, char *argv[])
       rpcReplicas,
       &serverLoad
   );
+
+  //Assign attributes to routers in network
+  LoadBallencingStrategy strat = none;
+  printf("setting custom load balencing strats\n");
+  SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,&serverLoad);
+  SetDoppelgangerRoutingParameters(edge,strat,servicesPerServer,ipServerMap,&serverLoad);
+  SetDoppelgangerRoutingParameters(agg,strat,servicesPerServer,ipServerMap,&serverLoad);
+  SetDoppelgangerRoutingParameters(core,strat,servicesPerServer,ipServerMap,&serverLoad);
+  printf("done setting custom load ballencing\n");
+
 
 
   Simulator::Run();

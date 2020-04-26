@@ -171,6 +171,24 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
   return route;
 }
 
+/* BEGIN DoppleGanger Routing */
+
+  void Ipv4DoppelgangerRouting::SetRpcServices(std::vector<std::vector<int>> rpcServices){
+    m_rpc_server_replicas = rpcServices;
+  }
+  void Ipv4DoppelgangerRouting::SetGlobalServerLoad(uint64_t **serverLoad){
+    m_serverLoad = serverLoad;
+  }
+
+  void Ipv4DoppelgangerRouting::SetIPServerMap(std::map<uint32_t,uint32_t> ip_map){
+    m_server_ip_map = ip_map;
+  }
+
+  void Ipv4DoppelgangerRouting::SetLoadBallencingStrategy(LoadBallencingStrategy strat) {
+    m_load_ballencing_strategy = strat;
+  }
+/* END DoppleGanger Routing function additions*/
+
 Ptr<Ipv4Route>
 Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)
 {
@@ -178,6 +196,21 @@ Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &head
   //printf("welcome to the output congo\n");
   return 0;
 }
+
+
+ uint32_t
+ Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(uint32_t ips[MAX_REPLICAS]){
+   uint64_t minLoad = UINT64_MAX;
+   uint32_t minReplica;
+   for (uint i = 0; i < MAX_REPLICAS;i++) {
+     uint32_t serverIndex = m_server_ip_map[ips[i]];
+     if (*m_serverLoad[serverIndex] < minLoad){
+       minLoad = *m_serverLoad[serverIndex];
+       minReplica = serverIndex;
+     }
+   }
+   return minReplica;
+ }
 
 bool
 Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
@@ -205,6 +238,20 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   } else {
     //printf("where on earth is this pacekt tag\n");
     NS_LOG_WARN("Packet Has no tag");
+    return false;
+  }
+
+  //Here we need to consult the routing strategy that we are employing
+  switch (m_load_ballencing_strategy) {
+    case none:
+      //Don't do anything here, we use source routing in this case
+      break;
+    case minimumLoad:
+
+      break;
+    default:
+      NS_LOG_WARN("Unable to find load ballencing strategy");
+      break;
   }
 
   //printf("we are routing in the west!!\n");

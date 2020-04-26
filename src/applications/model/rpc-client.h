@@ -164,6 +164,7 @@ public:
   void SetAllAddresses(Address *addresses, uint16_t *ports, int **tm, uint32_t numPeers);
   void SetAllAddressesParallel(Address **addresses, uint16_t **ports, int **trafficMatrix, uint8_t parallel, uint32_t numPeers);
   void SetGlobalPackets(uint32_t * global_packets);
+
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
   void SetGlobalSeverLoad(uint64_t **serverLoad);
   void SetReplicationStrategy(int strategy);

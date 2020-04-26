@@ -31,7 +31,7 @@ function runExperiment () {
 	--Debug=$debug
 	--IntervalRatio=$incRate
     --ProbeName=$filename.csv
-	--ManifestName=$filename.config" 2>$filename.dat
+	--ManifestName=$filename.config" #2>$filename.dat
 }
 
 
@@ -75,6 +75,14 @@ if [[ $1 == "debug" ]];then
 	echo "debugging"
 	runExperiment 0 1.0 128 $totalPackets 1.0 $packetSize "debug" 0 0.9
 	exit 0
+elif [[ $1 == "single" ]];then
+	echo "running a single run (likely for testing)"
+    rate=0.99
+    dataDir=queuelat
+	RunAndMove 0 1.0 128 $totalPackets 1.0 $packetSize "single" 2 "data/$dataDir/single_$datetime" $rate
+	ln -sf "single_$datetime.dat" "data/$dataDir/single_latest.dat"
+	ln -sf "single_$datetime.csv" "data/$dataDir/single_latest.csv"
+	ln -sf "single_$datetime.config" "data/$dataDir/single_latest.config"
 else
 	echo "testing replication strategy"
     rate=0.99
