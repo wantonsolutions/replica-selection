@@ -181,6 +181,16 @@ public:
  int replicaSelectionStrategy_random(int rpc);
  int replicaSelectionStrategy_minimumLoad(int rpc);
 
+ void SetPacketSizeDistribution(std::vector<uint32_t>);
+ std::vector<uint32_t> GetPacketSizeDistribution();
+
+ void SetTransmitionDistribution(std::vector<uint32_t>);
+ std::vector<uint32_t> GetPacketTransmissionDistribution();
+
+ void SetRPCDistribution(std::vector<uint32_t>);
+ std::vector<uint32_t> GetRPCDistribution();
+
+
 
 
 
@@ -242,6 +252,11 @@ private:
   uint64_t *m_serverLoad; // global server load
   std::vector<std::vector<int>> m_rpc_server_replicas;
   int m_selection_strategy;
+
+  std::vector<uint32_t> m_packet_size_distribution;
+  std::vector<uint32_t> m_transmission_distribution;;
+  std::vector<uint32_t> m_rpc_request_distribution;
+
 
 
       

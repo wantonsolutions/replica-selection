@@ -518,7 +518,8 @@ int main(int argc, char *argv[])
   PointToPointHelper pointToPoint2;
 
   TrafficControlHelper tch;
-  int linkrate = 1000;
+  //int linkrate = 1000;
+  int linkrate = 100;
   int queuedepth = 50;
 
   pointToPoint.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue(std::to_string(queuedepth) + "p"));
@@ -670,7 +671,7 @@ int main(int argc, char *argv[])
 
   //HACK REMOVE
   //int PacketSize = 1472;
-  int PacketSize = 1024;
+  int PacketSize = 5000;
   //float Rate = 1.0 / ((PARALLEL * (float(linkrate) * (1000000000.0))) / (float(PacketSize) * 8.0));
   float Rate = 1.0 / (((float(linkrate) * (1000000.0))) / (float(PacketSize) * 8.0));
   float MaxInterval = Rate * 1.0;
@@ -718,8 +719,8 @@ int main(int argc, char *argv[])
   );
 
   //Assign attributes to routers in network
-  LoadBallencingStrategy strat = none;
-  //LoadBallencingStrategy strat = minimumLoad;
+  //LoadBallencingStrategy strat = none;
+  LoadBallencingStrategy strat = minimumLoad;
 
   printf("setting custom load balencing strats\n");
   SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,serverLoad);
@@ -748,3 +749,50 @@ int main(int argc, char *argv[])
 // has been demonstrated.
 //
 //
+
+
+#include <random>
+//Distributions This should be moved to a seperate file
+std::vector<uint32_t> uniform_distirbution(uint32_t size, uint32_t min, uint32_t max) {
+  std::vector<uint32_t> uniform_sample;
+  std::default_random_engine generator;
+  std::uniform_int_distribution<uint32_t> distribution(min,max);
+
+  for (uint32_t i=0; i< size;i++) {
+    uniform_sample.push_back(distribution(generator));
+  }
+  return uniform_sample;
+}
+
+//This function returns an aproximate normal sample of integers. If the mean
+//and the STD are too small the array will cluster to a small number of
+//integers
+std::vector<uint32_t> normal_distribution(uint32_t size, double mean, double std) {
+  std::vector<uint32_t> normal_sample;
+  std::default_random_engine generator;
+  std::normal_distribution<double> distribution(mean,std);
+
+  int tmp_value;
+  for (uint32_t i=0; i< size;i++) {
+    tmp_value = (int) distribution(generator);
+    if (tmp_value < 0) {
+      NS_LOG_WARN("Normal distribution should only generate positive numbers (setting value to 0 and breaking distribution)");
+      tmp_value = 0;
+    }
+    normal_sample.push_back((uint32_t) tmp_value);
+  }
+  return normal_sample;
+}
+
+//The multiplier is used to shift the distribution from the range [0,1] out to
+//further numbers. The value of the multiplier is also the max value
+std::vector<uint32_t> exponential_distribution(uint32_t size, double lambda, double multiplier) {
+  std::vector<uint32_t> exponential_sample;
+  std::default_random_engine generator;
+  std::exponential_distribution<double> distribution(lambda);
+
+  for (uint32_t i=0;i<size;i++) {
+    exponential_sample.push_back(distribution(generator) * multiplier);
+  }
+  return exponential_sample;
+}

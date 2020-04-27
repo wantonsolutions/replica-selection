@@ -427,6 +427,29 @@ void RpcClient::SetReplicationStrategy(int strategy){
    return minReplica;
  }
 
+ void RpcClient::SetPacketSizeDistribution(std::vector<uint32_t> packetSizes) {
+   m_packet_size_distribution = packetSizes;
+ }
+ std::vector<uint32_t> RpcClient::GetPacketSizeDistribution() {
+   return m_packet_size_distribution;
+ }
+
+ void RpcClient::SetTransmitionDistribution(std::vector<uint32_t> transmissionDistribution) {
+   m_transmission_distribution = transmissionDistribution;
+ }
+
+ std::vector<uint32_t> RpcClient::GetPacketTransmissionDistribution() {
+   return m_transmission_distribution;
+ }
+
+ void RpcClient::SetRPCDistribution(std::vector<uint32_t> rpcDistribution) {
+   m_rpc_request_distribution = rpcDistribution;
+ }
+
+ std::vector<uint32_t> RpcClient::GetRPCDistribution() {
+   return m_rpc_request_distribution;
+ }
+
 
 void RpcClient::Send(void)
 {
