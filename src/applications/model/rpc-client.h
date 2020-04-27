@@ -139,16 +139,6 @@ public:
   void SetParallel(bool parallel);
 
 // Custom types
-// Distribution refers to different distributions of interval delays, and of packet sizes
-  enum distribution
-  {
-	  nodist = 0,
-	  incremental = 1,
-	  evenuniform = 2,
-	  exponential = 3,
-	  possion = 4
-  };
-
   enum selectionStrategy
   {
     noReplica = 0,
@@ -156,9 +146,6 @@ public:
     minimumReplica = 2,
   };
 
-  void SetDistribution(enum distribution dist);
-  Time SetInterval();
-  void SetIntervalRatio(double ratio);
 
 
   void SetAllAddresses(Address *addresses, uint16_t *ports, int **tm, uint32_t numPeers);
@@ -167,7 +154,7 @@ public:
 
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
   void SetGlobalSeverLoad(uint64_t *serverLoad);
-  void SetReplicationStrategy(int strategy);
+  void SetReplicaSelectionStrategy(selectionStrategy strategy);
 
 
 
@@ -176,7 +163,7 @@ public:
 
  void PopulateReplicasReplicas(Ipv4DoppelgangerTag *idgt);
 
-
+ int FindReplicaAddress(int rpc);
  int replicaSelectionStrategy_firstIndex(int rpc);
  int replicaSelectionStrategy_random(int rpc);
  int replicaSelectionStrategy_minimumLoad(int rpc);
@@ -189,6 +176,11 @@ public:
 
  void SetRPCDistribution(std::vector<uint32_t>);
  std::vector<uint32_t> GetRPCDistribution();
+
+
+ uint32_t GetNextPacketSize(void);
+ Time GetNextTransmissionInterval(void);
+ uint32_t GetNextRPC(void);
 
 
 
@@ -222,8 +214,6 @@ private:
   void HandleRead (Ptr<Socket> socket);
 
   uint32_t m_count; //!< Maximum number of packets the application will send
-  Time m_interval; //!< Packet inter-send time
-  double m_intervalRatio; // The rate at which sending intervals increase, given incremental
   uint32_t m_size; //!< Size of the sent packet
 
   uint32_t m_dataSize; //!< packet payload size (must be equal to m_size)
@@ -257,27 +247,10 @@ private:
   std::vector<uint32_t> m_transmission_distribution;;
   std::vector<uint32_t> m_rpc_request_distribution;
 
-
-
-      
-
-
-
-
-
-
   Time m_requests[REQUEST_BUFFER_SIZE];
 
   /// Callbacks for tracing the packet Tx events
   TracedCallback<Ptr<const Packet> > m_txTrace;
-
-  distribution m_dist;
-  
-  double incrementalDistributionNext(double interval, double rate);
-  int evenUniformDistributionNext(int min, int max);
-  int exponentailDistributionNext(int min, int max);
-  int poissonDistributionNext(int min, int max);
-
 };
 
 } // namespace ns3

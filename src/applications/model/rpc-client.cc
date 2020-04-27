@@ -55,11 +55,6 @@ RpcClient::GetTypeId(void)
                                         UintegerValue(100),
                                         MakeUintegerAccessor(&RpcClient::m_count),
                                         MakeUintegerChecker<uint32_t>())
-                          .AddAttribute("Interval",
-                                        "The time to wait between packets",
-                                        TimeValue(Seconds(1.0)),
-                                        MakeTimeAccessor(&RpcClient::m_interval),
-                                        MakeTimeChecker())
                           .AddAttribute("RemoteAddress",
                                         "The destination Address of the outbound packets",
                                         AddressValue(),
@@ -87,7 +82,6 @@ RpcClient::RpcClient()
   m_sent = 0;
   m_rec = 0;
   m_socket = 0;
-  m_intervalRatio = 0.01;
   m_sendEvent = EventId();
   m_data = 0;
   m_dataSize = 0;
@@ -377,7 +371,7 @@ void RpcClient::PopulateReplicasNoReplicas(RPCHeader *rpch) {
 void RpcClient::PopulateReplicasReplicas(RPCHeader *rpch) {
   int rpc_service = rpch->RequestID;
   if (m_rpc_server_replicas[rpc_service].size() > MAX_REPLICAS) {
-    NS_LOG_WARN("Error too many replicas for a single RPC header packet");
+    NS_LOG_WARN("Error too many replicas for a single RPC header packet [service: " << rpc_service << " services: " << m_rpc_server_replicas[rpc_service].size() << " max: " << MAX_REPLICAS << "]");
   }
   for( uint i =0; i< m_rpc_server_replicas[rpc_service].size(); i++) {
     Ipv4Address addr = Ipv4Address::ConvertFrom(m_peerAddresses[m_rpc_server_replicas[rpc_service][i]]);
@@ -388,7 +382,7 @@ void RpcClient::PopulateReplicasReplicas(RPCHeader *rpch) {
 void RpcClient::PopulateReplicasReplicas(Ipv4DoppelgangerTag *idgt) {
   int rpc_service = idgt->GetRequestID();
   if (m_rpc_server_replicas[rpc_service].size() > MAX_REPLICAS) {
-    NS_LOG_WARN("Error too many replicas for a single RPC header packet");
+    NS_LOG_WARN("Error too many replicas for a single RPC header packet [service: " << rpc_service << " services: " << m_rpc_server_replicas[rpc_service].size() << " max: " << MAX_REPLICAS << "]");
   }
   for( uint i =0; i< m_rpc_server_replicas[rpc_service].size(); i++) {
     Ipv4Address addr = Ipv4Address::ConvertFrom(m_peerAddresses[m_rpc_server_replicas[rpc_service][i]]);
@@ -396,8 +390,28 @@ void RpcClient::PopulateReplicasReplicas(Ipv4DoppelgangerTag *idgt) {
   }
 }
 
+int RpcClient::FindReplicaAddress(int rpc) {
+  int replicaServerAddress;
+  switch (m_selection_strategy) {
+    case noReplica:
+      replicaServerAddress = replicaSelectionStrategy_firstIndex(rpc);
+      break;
+    case randomReplica:
+      replicaServerAddress = replicaSelectionStrategy_random(rpc);
+      break;
+    case minimumReplica:
+      replicaServerAddress = replicaSelectionStrategy_minimumLoad(rpc);
+      break;
+    default:
+      replicaServerAddress = -1;
+      NS_LOG_WARN("strategy " << m_selection_strategy << " is invalid ");
+      break;
+  }
+  return replicaServerAddress;
 
-void RpcClient::SetReplicationStrategy(int strategy){
+}
+
+void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
   m_selection_strategy = strategy;
 }
 
@@ -450,124 +464,84 @@ void RpcClient::SetReplicationStrategy(int strategy){
    return m_rpc_request_distribution;
  }
 
+ uint32_t RpcClient::GetNextPacketSize() {
+   if (m_packet_size_distribution.empty()) {
+     NS_LOG_WARN(this << "Packet Size Distribution Not Set - returning packet size of 0");
+     return 0;
+   }
+   //TODO change rand to rand seed for future experiments
+   int index = rand() % m_packet_size_distribution.size();
+   return m_packet_size_distribution[index];
+ }
+
+ Time RpcClient::GetNextTransmissionInterval() {
+   if (m_transmission_distribution.empty()) {
+     NS_LOG_WARN(this << "Transmision distribution not set - returning transmission of 0 (should break output)");
+   }
+   //TODO change rand to rand seed for future experiments
+   int index = rand() % m_transmission_distribution.size();
+   return (Time) m_transmission_distribution[index] * 1000;
+ }
+ 
+ uint32_t RpcClient::GetNextRPC() {
+   if (m_rpc_request_distribution.empty()) {
+     NS_LOG_WARN(this << "RPC request distribution not set - returning 0 (this will likely cause huge incast)");
+     return 0;
+   }
+   //TODO change rand to rand seed for future experiments
+   uint32_t index = m_rpc_request_distribution[rand() % m_rpc_request_distribution.size()];
+
+   if(index >= m_rpc_server_replicas.size()) {
+     NS_LOG_WARN(this << " server RPC " << index << " requested is out of range of the known services, check the generation code for RPC generation, (returning 0, this will likely cause incast");
+     return 0;
+   }
+   return index;
+ }
+
 
 void RpcClient::Send(void)
 {
   NS_LOG_FUNCTION(this);
-
   NS_ASSERT(m_sendEvent.IsExpired());
 
-  //Constuct RPC Request Packet
-  /*
-  RPCHeader rpch;
-  bzero((char *)&rpch,sizeof(rpch));
-  rpch.PacketID = 0;
-  //Determine the RPC request Type for now set it to random
-  /rpch.RequestID = rand() % m_numPeers;
-  //PopulateReplicasNoReplicas(&rpch);
-  PopulateReplicasReplicas(&rpch);
-  SetFill((uint8_t*)&rpch,sizeof(RPCHeader),sizeof(RPCHeader));
-  */
 
-
-
+  //Generate a packet based on the size of the next request
+  //TODO generate a schema by which multiple packets are sent per request
   Ptr<Packet> p;
-  if (m_dataSize)
-  {
-    //
-    // If m_dataSize is non-zero, we have a data buffer of the same size that we
-    // are expected to copy and send.  This state of affairs is created if one of
-    // the Fill functions is called.  In this case, m_size must have been set
-    // to agree with m_dataSize
-    //
-    NS_ASSERT_MSG(m_dataSize == m_size, "RpcClient::Send(): m_size and m_dataSize inconsistent");
-    NS_ASSERT_MSG(m_data, "RpcClient::Send(): m_dataSize but no m_data");
-    p = Create<Packet>(m_data, m_dataSize);
-  }
-  else
-  {
-    //
-    // If m_dataSize is zero, the client has indicated that it doesn't care
-    // about the data itself either by specifying the data size by setting
-    // the corresponding attribute or by not calling a SetFill function.  In
-    // this case, we don't worry about it either.  But we do allow m_size
-    // to have a value different from the (zero) m_dataSize.
-    //
-    p = Create<Packet>(m_size);
-  }
-  // call to the trace sinks before the packet is actually sent,
-  // so that tags added to the packet can be sent as well
-  //
+  uint32_t packet_size = GetNextPacketSize();
+  p = Create<Packet>(packet_size);
 
 
   Ipv4DoppelgangerTag ipv4DoppelgangerTag;
-  ipv4DoppelgangerTag.SetPacketID(0);
-  ipv4DoppelgangerTag.SetRequestID(rand() % m_numPeers);
+  
+  // PacketID is an analog for sequence number, for now request are a single packet so always set to 0
+  ipv4DoppelgangerTag.SetPacketID(0); 
+
+  // Generate the location of the next reuqest
+  uint32_t request_id = GetNextRPC();
+  ipv4DoppelgangerTag.SetRequestID(request_id);
   PopulateReplicasReplicas(&ipv4DoppelgangerTag);
   p->AddPacketTag(ipv4DoppelgangerTag);
 
-  //PdcpTag idtag;
+  //Set the global request number of the packet for latency tracking
   Ipv4PacketInfoTag idtag;
-  //idtag.SetSenderTimestamp(Time(m_sent));
-  //printf("Sending Packet %d\n",m_sent);
   uint32_t send_index = m_sent % REQUEST_BUFFER_SIZE;
   idtag.SetRecvIf(send_index);
   p->AddPacketTag(idtag);
   m_requests[m_sent % REQUEST_BUFFER_SIZE] = Simulator::Now();
 
-
-
-
   //Find Replicas of the RPC
-
-
   m_txTrace(p);
 
-  //send to a random server
-  // TODO TODO TODO Start here next time choose the address to send to relient on the peer
-  if (m_parallel == true) {
-    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses_parallel[(2 * rand()) % m_numPeers][rand() % 3]), m_peerPort));
-  } else {
-    //Send to a random node on a random part of a parallel fat tree
-    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[(2 * rand()) % m_numPeers]), m_peerPort));
-
-    //Send to node 1
-    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[1]), m_peerPort));
-
-    //Send to a random node assumes that all server nodes have a service running
-    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[rand() % m_numPeers]), m_peerPort));
-
-    //Send to a node specified in the RPC header. In this case there is only one becasue there are no middle boxes
-
-    int replica;
-    switch (m_selection_strategy) {
-      case noReplica:
-        replica = replicaSelectionStrategy_firstIndex(ipv4DoppelgangerTag.GetRequestID());
-        break;
-      case randomReplica:
-        replica = replicaSelectionStrategy_random(ipv4DoppelgangerTag.GetRequestID());
-        break;
-      case minimumReplica:
-        replica = replicaSelectionStrategy_minimumLoad(ipv4DoppelgangerTag.GetRequestID());
-        break;
-      default:
-        NS_LOG_WARN("The selection strategy " << m_selection_strategy << " is invalid ");
-    }
-    //int replica = replicaSelectionStrategy_minimumLoad(rpch.RequestID);
-    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[replica]), m_peerPort));
-
-    //Test breakage
-    //m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[(rpch.RequestID+1) % m_numPeers]), m_peerPort));
-
-  }
-
-  // \send to a random server
-
+  //Use a strategy to find the address of the next replica server
+  int replicaServerAddress = FindReplicaAddress(ipv4DoppelgangerTag.GetRequestID());
+  //int replica = replicaSelectionStrategy_minimumLoad(rpch.RequestID);
+  m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddresses[replicaServerAddress]), m_peerPort));
   m_socket->Send(p);
 
   ++m_sent;
   ++(*m_global_sent);
-  if (Ipv4Address::IsMatchingType(m_peerAddresses[ipv4DoppelgangerTag.GetRequestID()]))
+  if (Ipv4Address::IsMatchingType(m_peerAddresses[replicaServerAddress]))
   {
     NS_LOG_INFO("At time " << Simulator::Now().GetSeconds() << "s client sent local packet "<< m_sent << " gloabal packet " << *m_global_sent << " of size " << m_size << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddresses[ipv4DoppelgangerTag.GetRequestID()]) << " port " << m_peerPort);
   } else {
@@ -577,53 +551,8 @@ void RpcClient::Send(void)
   //printf("Sent %d , count %d\n",m_sent, m_count);
   if (m_sent < m_count)
   {
-    m_interval = SetInterval();
-    ScheduleTransmit(m_interval);
+    ScheduleTransmit(GetNextTransmissionInterval());
   }
-}
-
-void RpcClient::SetIntervalRatio(double ratio)
-{
-  m_intervalRatio = ratio;
-}
-
-Time RpcClient::SetInterval()
-{
-  Time interval;
-  switch (m_dist)
-  {
-  case nodist:
-  {
-    interval = m_interval;
-    break;
-  }
-  case incremental:
-  {
-    double nextTime = incrementalDistributionNext((double)m_interval.GetSeconds(), m_intervalRatio);
-    //printf("Current Interval - %f, next Interval %f\n",(float)m_interval.GetSeconds(), nextTime);
-    interval = Time(Seconds(nextTime));
-    break;
-  }
-  case evenuniform:
-  {
-    double nextTime = evenUniformDistributionNext(0, 0);
-    interval = Time(Seconds(nextTime));
-    break;
-  }
-  case exponential:
-  {
-    double nextTime = (double)exponentailDistributionNext(0, 0);
-    interval = Time(Seconds(nextTime));
-    break;
-  }
-  case possion:
-  {
-    double nextTime = (double)poissonDistributionNext(0, 0);
-    interval = Time(Seconds(nextTime));
-    break;
-  }
-  }
-  return interval;
 }
 
 void RpcClient::HandleRead(Ptr<Socket> socket)
@@ -663,37 +592,4 @@ void RpcClient::HandleRead(Ptr<Socket> socket)
   }
 }
 
-void RpcClient::SetDistribution(enum distribution dist)
-{
-  m_dist = dist;
 }
-
-double RpcClient::incrementalDistributionNext(double current, double rate)
-{
-  double nextRate = current * rate;
-  double percentbound = nextRate * 0.1;
-  double fMin = 0.0 - percentbound;
-  double fMax = 0.0 + percentbound;
-  double f = (double)rand() / RAND_MAX;
-  double offset = fMin + f * (fMax - fMin);
-  double ret = nextRate + offset;
-  //printf("New Rate %f\n",ret);
-  return ret;
-}
-
-int RpcClient::evenUniformDistributionNext(int min, int max)
-{
-  return 0;
-}
-
-int RpcClient::exponentailDistributionNext(int min, int max)
-{
-  return 0;
-}
-
-int RpcClient::poissonDistributionNext(int min, int max)
-{
-  return 0;
-}
-
-} // Namespace ns3

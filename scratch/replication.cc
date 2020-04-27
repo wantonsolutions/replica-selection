@@ -30,8 +30,6 @@
 #include <fstream>
 #include <stdint.h>
 
-#define TCP 0
-
 #define CROSS_CORE 0
 
 using namespace ns3;
@@ -48,39 +46,20 @@ const int CORE = (K/2)*(K/2);
 const int NODE = K/2 ;
 const int NODES = PODS * EDGE * NODE ;
 
-//GLOBALS
-uint32_t CoverNPackets = 100;
-float CoverInterval = 0.1;
-uint32_t CoverPacketSize = 128;
 
-uint32_t ClientProtocolNPackets = 200;
-float ClientProtocolInterval = 0.15;
-uint32_t ClientProtocolPacketSize = 256;
-
-double IntervalRatio = .99;
-
-int mode = TCP;
-
+RpcClient::selectionStrategy rpcSelectionStrategy = RpcClient::noReplica;
 bool debug = false;
 
 std::string ManifestName = "manifest.config";
 std::string ProbeName = "default.csv";
 
-const char *CoverNPacketsString = "CoverNPackets";
-const char *CoverIntervalString = "CoverInterval";
-const char *CoverPacketSizeString = "CoverPacketSize";
 
-const char *ClientProtocolNPacketsString = "ClientProtocolNPackets";
-const char *ClientProtocolIntervalString = "ClientProtocolInterval";
-const char *ClientProtocolPacketSizeString = "ClientProtocolPacketSize";
-
-const char *IntervalRatioString = "IntervalRatio";
+const char *SelectionStrategyString = "SelectionStrategy";
 
 const char *ManifestNameString = "ManifestName";
 const char *ProbeNameString = "ProbeName";
 
 const char *DebugString = "Debug";
-const char *ModeString = "Mode";
 
 const char *KString = "K";
 const char *TopologyString = "Topology";
@@ -88,9 +67,54 @@ const char *Topology = "PFatTree";
 const char *ParallelString = "Parallel";
 //\Globals
 
+#include <random>
+//Distributions This should be moved to a seperate file
+std::vector<uint32_t> uniform_distribution(uint32_t size, uint32_t min, uint32_t max) {
+  std::vector<uint32_t> uniform_sample;
+  std::default_random_engine generator;
+  std::uniform_int_distribution<uint32_t> distribution(min,max);
+
+  for (uint32_t i=0; i< size;i++) {
+    uniform_sample.push_back(distribution(generator));
+  }
+  return uniform_sample;
+}
+
+//This function returns an aproximate normal sample of integers. If the mean
+//and the STD are too small the array will cluster to a small number of
+//integers
+std::vector<uint32_t> normal_distribution(uint32_t size, double mean, double std) {
+  std::vector<uint32_t> normal_sample;
+  std::default_random_engine generator;
+  std::normal_distribution<double> distribution(mean,std);
+
+  int tmp_value;
+  for (uint32_t i=0; i< size;i++) {
+    tmp_value = (int) distribution(generator);
+    if (tmp_value < 0) {
+      NS_LOG_WARN("Normal distribution should only generate positive numbers (setting value to 0 and breaking distribution)");
+      tmp_value = 0;
+    }
+    normal_sample.push_back((uint32_t) tmp_value);
+  }
+  return normal_sample;
+}
+
+//The multiplier is used to shift the distribution from the range [0,1] out to
+//further numbers. The value of the multiplier is also the max value
+std::vector<uint32_t> exponential_distribution(uint32_t size, double lambda, double multiplier) {
+  std::vector<uint32_t> exponential_sample;
+  std::default_random_engine generator;
+  std::exponential_distribution<double> distribution(lambda);
+
+  for (uint32_t i=0;i<size;i++) {
+    exponential_sample.push_back(distribution(generator) * multiplier);
+  }
+  return exponential_sample;
+}
+//\Distributions
 
 //// Custom Routing
-
 void
 CreateAndAggregateObjectFromTypeId (Ptr<Node> node, const std::string typeId)
 {
@@ -154,50 +178,6 @@ static void AddInternetStack (Ptr <Node> node){
 
 
 //----------------------------------------------RPC Client----------------------------------------------------
-void InstallRpcClientAttributes(RpcClientHelper *rpcClient, int maxpackets, double interval, int packetsize)
-{
-  rpcClient->SetAttribute("MaxPackets", UintegerValue(maxpackets));
-  rpcClient->SetAttribute("Interval", TimeValue(Seconds(interval)));
-  rpcClient->SetAttribute("PacketSize", UintegerValue(packetsize));
-}
-
-void InstallRandomRpcClientTransmissions(float start, float stop, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes, Address addresses[NODES], uint16_t Ports[NODES], int trafficMatrix[NODES][NODES], uint32_t *global_packets_sent,
-std::vector<std::vector<int>> rpcServices, uint64_t * serverLoad)
-{
-  
-  ApplicationContainer clientApps = rpcClient->Install(nodes.Get(clientIndex));
-  clientApps.Start(Seconds(start));
-  clientApps.Stop(Seconds(stop));
-  Ptr<RpcClient> ech = DynamicCast<RpcClient>(clientApps.Get(0));
-  ech->SetDistribution(RpcClient::nodist);
-  ech->SetIntervalRatio(IntervalRatio);
-  ech->SetParallel(false);
-
-  Ptr<RpcClient> uec = DynamicCast<RpcClient>(clientApps.Get(0));
-
-  //Convert Addresses
-  ////TODO Start here, trying to convert one set of pointers to another.
-  Address *addrs = new Address [NODES];
-  uint16_t *ports = new uint16_t [NODES];
-  int **tm = new int *[NODES];
-  for (int i = 0; i < NODES; i++)
-  {
-    addrs[i] = addresses[i];
-    ports[i] = Ports[i];
-    tm[i] = &trafficMatrix[i][0];
-  }
-  //uec->SetAllAddresses((Address **)(addresses),(uint16_t **)(Ports),PARALLEL,NODES);
-  //uec->SetAllAddresses(addrs, ports, tm, PARALLEL, NODES);
-  uec->SetAllAddresses(addrs, ports, tm, NODES);
-  uec->SetGlobalPackets(global_packets_sent);
-  uec->SetRpcServices(rpcServices);
-  uec->SetGlobalSeverLoad(serverLoad);
-  
-
-  //Fix this should be checked prior to executing
-  uec->SetReplicationStrategy(mode);
-}
-
 void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad) {
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i) {
@@ -217,25 +197,44 @@ void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrateg
 
 }
 
-void InstallUniformRpcClientTransmissions(float start, float stop, float gap, int clientIndex, RpcClientHelper *rpcClient, NodeContainer nodes)
-{
-  for (float base = start; base < stop; base += gap)
-  {
-    ApplicationContainer clientApps = rpcClient->Install(nodes.Get(clientIndex));
-    clientApps.Start(Seconds(base));
-    base += gap;
-    clientApps.Stop(Seconds(base));
-  }
-}
-
-void SetupModularRandomRpcClient(float start, float stop, uint16_t Ports[NODES], Address addresses[NODES], int tm[NODES][NODES], NodeContainer nodes, int clientIndex, double interval, int packetsize, int maxpackets, uint32_t * global_packets_sent,
+void SetupRpcClient(
+  float duration, uint16_t Ports[NODES], Address addresses[NODES], int trafficMatrix[NODES][NODES], NodeContainer nodes,
+   int clientIndex, uint32_t * global_packets_sent,
+  std::vector<uint32_t> ClientPacketSizeDistribution,   
+  std::vector<uint32_t> ClientTransmissionDistribution,
+  std::vector<uint32_t> RPCServiceDistribution,
+   RpcClient::selectionStrategy rpcSelectionStrategy,
 std::vector<std::vector<int>> rpcServices, uint64_t * serverLoad)
 {
-  //map clients to servers
-  //NS_LOG_INFO("Starting Client Packet Size " << packetsize << " interval " << interval << " nPackets " << maxpackets );
   RpcClientHelper rpcClient(addresses[0], int(Ports[0]));
-  InstallRpcClientAttributes(&rpcClient, maxpackets, interval, packetsize);
-  InstallRandomRpcClientTransmissions(start, stop, clientIndex, &rpcClient, nodes, addresses, Ports, tm, global_packets_sent, rpcServices, serverLoad);
+  ApplicationContainer clientApps = rpcClient.Install(nodes.Get(clientIndex));
+  clientApps.Start(Seconds(0));
+  clientApps.Stop(Seconds(duration));
+  Ptr<RpcClient> uec = DynamicCast<RpcClient>(clientApps.Get(0));
+
+  //Convert Addresses
+  ////TODO Start here, trying to convert one set of pointers to another.
+  Address *addrs = new Address [NODES];
+  uint16_t *ports = new uint16_t [NODES];
+  int **tm = new int *[NODES];
+  for (int i = 0; i < NODES; i++)
+  {
+    addrs[i] = addresses[i];
+    ports[i] = Ports[i];
+    tm[i] = &trafficMatrix[i][0];
+  }
+  //uec->SetAllAddresses((Address **)(addresses),(uint16_t **)(Ports),PARALLEL,NODES);
+  //uec->SetAllAddresses(addrs, ports, tm, PARALLEL, NODES);
+  uec->SetAllAddresses(addrs, ports, tm, NODES);
+  uec->SetGlobalPackets(global_packets_sent);
+  uec->SetRpcServices(rpcServices);
+  uec->SetGlobalSeverLoad(serverLoad);
+  //Fix this should be checked prior to executing
+  uec->SetReplicaSelectionStrategy(rpcSelectionStrategy);
+
+  uec->SetPacketSizeDistribution(ClientPacketSizeDistribution);
+  uec->SetTransmitionDistribution(ClientPacketSizeDistribution);
+  uec->SetRPCDistribution(RPCServiceDistribution);
 }
 
 void printTM(int tm[NODES][NODES])
@@ -284,41 +283,35 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
   printTM(tm);
 }
 
-void SetupTraffic(float clientStart, float clientStop, float serverStart, float serverStop, int NPackets, float interval, int packetsize, 
-int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], Ipv4InterfaceContainer *addresses, int mode, Address secondAddrs[NODES], uint16_t Ports[NODES],
+void SetupTraffic(float duration,
+
+int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], RpcClient::selectionStrategy rpcSelectionStrategy, Address rpcServerAddresses[NODES], uint16_t Ports[NODES],
 uint32_t * global_packets_sent, 
+std::vector<uint32_t> ClientPacketSizeDistribution,   
+std::vector<uint32_t> ClientTransmissionDistribution,
+std::vector<uint32_t> RPCServiceDistribution,
 std::vector<std::vector<int>> rpcReplicas, 
 std::vector<std::vector<int>> rpcServices, 
 uint64_t * serverLoad) {
-  //For reference to this function check out SetupRandomCoverTraffic in pfattree.cc
-  //int clientIndex = 0;
-  //int serverIndex = 1;
-  //Setup Server
 
-  //in this setup we are ignoring trafic matricies completely and just performing a send between a single client and a single server
-
-
-  //Install an RPC server on each endpoint
+  //Assign attributes to RPC Servers
   for (int i = 0; i < numNodes; i++) {
     ApplicationContainer serverApps;
     RpcServerHelper rpcServer(serverport);
     serverApps = rpcServer.Install(nodes.Get(i));
-		serverApps.Start (Seconds (serverStart));
-		serverApps.Stop (Seconds (clientStop));
+		serverApps.Start (Seconds (0));
+		serverApps.Stop (Seconds (duration));
 
-    //Each server gets exactly 1 RPC to serve
-
+    //Each server gets an array of services to serve
     Ptr<RpcServer> server = DynamicCast<RpcServer>(serverApps.Get(0));
     server->AssignRPC(rpcServices[i]);
     server->SetGlobalLoad(serverLoad);
     server->SetID(i);
-
-
   }
 
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++) {
-    SetupModularRandomRpcClient(clientStart, clientStop, Ports, secondAddrs, tm, nodes, i, interval, packetsize, NPackets, global_packets_sent, rpcReplicas,serverLoad);
+    SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad);
   }
 }
 
@@ -363,25 +356,15 @@ int main(int argc, char *argv[])
   Config::SetDefault("ns3::Ipv4GlobalRouting::RespondToInterfaceEvents", BooleanValue(true));
 
   //Command Line argument debugging code
-
-
-  cmd.AddValue(CoverNPacketsString, "Number of packets for the cover to echo", CoverNPackets);
-  cmd.AddValue(CoverIntervalString, "Interval at which cover traffic broadcasts", CoverInterval);
-  cmd.AddValue(CoverPacketSizeString, "The Size of the packet used by the cover traffic", CoverPacketSize);
-
-  cmd.AddValue(ClientProtocolNPacketsString, "Number of packets to echo", ClientProtocolNPackets);
-  cmd.AddValue(ClientProtocolIntervalString, "Interval at which a protocol client makes requests", ClientProtocolInterval);
-  cmd.AddValue(ClientProtocolPacketSizeString, "Interval at which a protocol client makes requests", ClientProtocolPacketSize);
-
-  cmd.AddValue(IntervalRatioString, "Ratio at which the ratio of client requests increases", IntervalRatio);
+  cmd.AddValue(DebugString, "Print all log level info statements for all clients", debug);
+  int placeholderRpcSelectionStrategy;
+  cmd.AddValue(SelectionStrategyString, "RPC selection strategies - check RpcClient::selectionStratigies for valid values", placeholderRpcSelectionStrategy);
 
   cmd.AddValue(ManifestNameString, "Then name of the ouput manifest (includes all configurations)", ManifestName);
   cmd.AddValue(ProbeNameString, "Then name of the output probe CSV", ProbeName);
-
-  cmd.AddValue(DebugString, "Print all log level info statements for all clients", debug);
-  cmd.AddValue(ModeString, "The Composition of the clients ECHO=0 DRED=1 RAID=2", mode);
-
   cmd.Parse(argc, argv);
+
+  rpcSelectionStrategy = (RpcClient::selectionStrategy) placeholderRpcSelectionStrategy;
 
 
   //mode = DRED;
@@ -394,16 +377,9 @@ int main(int argc, char *argv[])
   //StreamWrapper->SetStream(ofstream);
   std::ostream *stream = StreamWrapper.GetStream();
 
-  *stream << CoverNPacketsString << ":" << CoverNPackets << "\n";
-  *stream << CoverIntervalString << ":" << CoverInterval << "\n";
-  *stream << CoverPacketSizeString << ":" << CoverPacketSize << "\n";
-  *stream << ClientProtocolNPacketsString << ":" << ClientProtocolNPackets << "\n";
-  *stream << ClientProtocolIntervalString << ":" << ClientProtocolInterval << "\n";
-  *stream << ClientProtocolPacketSizeString << ":" << ClientProtocolPacketSize << "\n";
-  *stream << IntervalRatioString << ":" << IntervalRatio << "\n";
   *stream << ManifestNameString << ":" << ManifestName << "\n";
   *stream << DebugString << ":" << debug << "\n";
-  *stream << ModeString << ":" << mode << "\n";
+  *stream << SelectionStrategyString << ":" << rpcSelectionStrategy << "\n";
   *stream << KString << ":" << K << "\n";
   *stream << TopologyString << ":" << Topology << "\n";
 
@@ -470,31 +446,6 @@ int main(int argc, char *argv[])
               nc_agg2core[(coreS * CORE) + pod] = NodeContainer(core.Get(coreS), agg.Get((pod*AGG) + (coreS/AGG)));
       }
   }
-
-
-  int BaseRate = 1;
-  int ModRate = BaseRate;
-  std::stringstream datarate;
-  datarate << ModRate << "Mbps";
-  //printf("Data Rate %s\n", datarate.str().c_str());
-
-  //Config::SetDefault ("ns3::QueueBase::MaxSize", StringValue ("100p"));
-  //Config::SetDefault ("ns3::QueueBase::MaxSize", QueueSizeValue(QueueSize("1p")));
-  //
-
-  
-  //InternetStackHelper stack;
-  //stack.Install (nodes);
-
-  //Ipv4CongaRoutingHelper conga;
-  //Ipv4ListRoutingHelper list;
-  //list.Add (conga, 10);
-  //stack.SetRoutingHelper(list);
-
-  //stack.Install (edge);
-  //stack.Install (agg);
-  //stack.Install (core);
-
 
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i) {
@@ -605,15 +556,8 @@ int main(int argc, char *argv[])
   ////////////////////////////////////////////////////////////////////////////////////
   //Setup Clients
   ///////////////////////////////////////////////////////////////////////////////////
-  //int serverport = 9;
-  //int clientIndex = 0;
-  //int serverIndex = 11;
-
-  int coverserverport = 10;
-  float serverStart = 0.0;
-  float clientStart = 0.0;
-  float clientStop = 0.01;
-  float duration = clientStop;
+  int RpcServerPort = 10;
+  float duration = 0.01;
 
   uint32_t global_packets_sent = 0;
 
@@ -622,7 +566,7 @@ int main(int argc, char *argv[])
   for (int i = 0; i < NODES; i++)
   {
       IPS[i] = node2edge[i].GetAddress(1);
-      Ports[i] = uint16_t(coverserverport);
+      Ports[i] = uint16_t(RpcServerPort);
   }
 
   //Create Traffic Matrix
@@ -671,19 +615,17 @@ int main(int argc, char *argv[])
 
   //HACK REMOVE
   //int PacketSize = 1472;
-  int PacketSize = 5000;
+  int PacketSize = 128;
   //float Rate = 1.0 / ((PARALLEL * (float(linkrate) * (1000000000.0))) / (float(PacketSize) * 8.0));
   float Rate = 1.0 / (((float(linkrate) * (1000000.0))) / (float(PacketSize) * 8.0));
   float MaxInterval = Rate * 1.0;
   printf("Rate %f\n", Rate);
-  ClientProtocolInterval = MaxInterval;
-  CoverInterval = MaxInterval;
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-  clientApps.Start(Seconds(clientStart));
+  clientApps.Start(Seconds(0));
   clientApps.Stop(Seconds(duration));
-  serverApps.Start(Seconds(serverStart));
+  serverApps.Start(Seconds(0));
   serverApps.Stop(Seconds(duration));
 
   Ipv4InterfaceContainer *node2edgePtr = new Ipv4InterfaceContainer[NODES];
@@ -693,25 +635,25 @@ int main(int argc, char *argv[])
   }
 
 
+  //Generate Distributions
+  std::vector<uint32_t> ClientPacketSizeDistribution = uniform_distribution(1,PacketSize,PacketSize); //Single Element Packet Size
+  std::vector<uint32_t> ClientTransmissionDistribution = uniform_distribution(1,MaxInterval,MaxInterval); //Static Interval
+  std::vector<uint32_t> RPCServiceDistribution = uniform_distribution(rpcReplicas.size() * 5,0,rpcReplicas.size()-1); //Uniform requests for RPC servers
+
+
   SetupTraffic(
-      clientStart,
       duration,
-      serverStart,
-      duration,
-      CoverNPackets,
-      CoverInterval,
-      CoverPacketSize,
-      coverserverport,
+      RpcServerPort,
       nodes,
       NODES,         //total nodes
       trafficMatrix, //distance
-
-      //&node2pods,
-      node2edgePtr,
-      mode,
+      rpcSelectionStrategy,
       IPS,
       Ports,
       &global_packets_sent,
+      ClientPacketSizeDistribution,
+      ClientTransmissionDistribution,
+      RPCServiceDistribution,
       //RPC Globals
       servicesPerServer,
       rpcReplicas,
@@ -750,49 +692,3 @@ int main(int argc, char *argv[])
 //
 //
 
-
-#include <random>
-//Distributions This should be moved to a seperate file
-std::vector<uint32_t> uniform_distirbution(uint32_t size, uint32_t min, uint32_t max) {
-  std::vector<uint32_t> uniform_sample;
-  std::default_random_engine generator;
-  std::uniform_int_distribution<uint32_t> distribution(min,max);
-
-  for (uint32_t i=0; i< size;i++) {
-    uniform_sample.push_back(distribution(generator));
-  }
-  return uniform_sample;
-}
-
-//This function returns an aproximate normal sample of integers. If the mean
-//and the STD are too small the array will cluster to a small number of
-//integers
-std::vector<uint32_t> normal_distribution(uint32_t size, double mean, double std) {
-  std::vector<uint32_t> normal_sample;
-  std::default_random_engine generator;
-  std::normal_distribution<double> distribution(mean,std);
-
-  int tmp_value;
-  for (uint32_t i=0; i< size;i++) {
-    tmp_value = (int) distribution(generator);
-    if (tmp_value < 0) {
-      NS_LOG_WARN("Normal distribution should only generate positive numbers (setting value to 0 and breaking distribution)");
-      tmp_value = 0;
-    }
-    normal_sample.push_back((uint32_t) tmp_value);
-  }
-  return normal_sample;
-}
-
-//The multiplier is used to shift the distribution from the range [0,1] out to
-//further numbers. The value of the multiplier is also the max value
-std::vector<uint32_t> exponential_distribution(uint32_t size, double lambda, double multiplier) {
-  std::vector<uint32_t> exponential_sample;
-  std::default_random_engine generator;
-  std::exponential_distribution<double> distribution(lambda);
-
-  for (uint32_t i=0;i<size;i++) {
-    exponential_sample.push_back(distribution(generator) * multiplier);
-  }
-  return exponential_sample;
-}

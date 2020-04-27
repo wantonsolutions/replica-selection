@@ -12,7 +12,7 @@ function runExperiment () {
 	ci=$5
 	cps=$6
 
-	mode=$8
+	selectionStrategy=$8
 	incRate=$9
 	filename=exp_$7_$1-$2-$3-$4-$5-$6-$8-$9
 
@@ -21,15 +21,8 @@ function runExperiment () {
 
 ./waf --run \
 	"scratch/replication
-	--ClientProtocolNPackets=$cpnp
-	--ClientProtocolInterval=$cpi
-	--ClientProtocolPacketSize=$cpps
-	--CoverNPackets=$cnp
-	--CoverInterval=$ci
-	--CoverPacketSize=$cps
-	--Mode=$mode
+	--SelectionStrategy=$selectionStrategy
 	--Debug=$debug
-	--IntervalRatio=$incRate
     --ProbeName=$filename.csv
 	--ManifestName=$filename.config" 2>$filename.dat
 }
