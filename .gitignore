@@ -43,5 +43,6 @@ plot/randomCoverIncremental/randomcover
 *.csv
 *.dat
 *.png
+*.pyc
 
 
