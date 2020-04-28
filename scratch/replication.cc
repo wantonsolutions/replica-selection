@@ -31,6 +31,7 @@
 #include <stdint.h>
 
 #define CROSS_CORE 0
+#define DISTRIBUTION_SIZE 1024
 
 using namespace ns3;
 
@@ -47,6 +48,7 @@ const int NODE = K/2 ;
 const int NODES = PODS * EDGE * NODE ;
 
 
+
 RpcClient::selectionStrategy rpcSelectionStrategy = RpcClient::noReplica;
 bool debug = false;
 
@@ -55,6 +57,13 @@ std::string ProbeName = "default.csv";
 
 
 const char *SelectionStrategyString = "SelectionStrategy";
+
+const char *TransmissionDistributionUniformString = "TransmissionDistributionUniform";
+bool TransmissionDistributionUniform = false;
+const char *TransmissionUniformDistributionMinString = "TransmissionUniformDistributionMin";
+uint32_t TransmissionUniformDistributionMin = 0;
+const char *TransmissionUniformDistributionMaxString = "TransmissionUniformDistributionMax";
+uint32_t TransmissionUniformDistributionMax = 0;
 
 const char *ManifestNameString = "ManifestName";
 const char *ProbeNameString = "ProbeName";
@@ -65,7 +74,6 @@ const char *KString = "K";
 const char *TopologyString = "Topology";
 const char *Topology = "PFatTree";
 const char *ParallelString = "Parallel";
-//\Globals
 
 #include <random>
 //Distributions This should be moved to a seperate file
@@ -113,6 +121,75 @@ std::vector<uint32_t> exponential_distribution(uint32_t size, double lambda, dou
   return exponential_sample;
 }
 //\Distributions
+
+void parseArgs(int argc, char* argv[]) {
+  CommandLine cmd;
+  //Command Line argument debugging code
+  //Debug
+  cmd.AddValue(DebugString, "Print all log level info statements for all clients", debug);
+  //Selection Strategy
+  int placeholderRpcSelectionStrategy;
+  cmd.AddValue(SelectionStrategyString, "RPC selection strategies - check RpcClient::selectionStratigies for valid values", placeholderRpcSelectionStrategy);
+
+  //TransmissionUniformDistribution
+  cmd.AddValue(TransmissionDistributionUniformString, "Set to true for uniform transmission distribution", TransmissionDistributionUniform);
+  cmd.AddValue(TransmissionUniformDistributionMinString, "Set to the minimum value for a transmission interval (us)", TransmissionUniformDistributionMin);
+  cmd.AddValue(TransmissionUniformDistributionMaxString, "Set the maximum value for the uniform transmission interval (us)", TransmissionUniformDistributionMax);
+
+  //Set manifest and host name
+  cmd.AddValue(ManifestNameString, "Then name of the ouput manifest (includes all configurations)", ManifestName);
+  cmd.AddValue(ProbeNameString, "Then name of the output probe CSV", ProbeName);
+  cmd.Parse(argc, argv);
+
+  rpcSelectionStrategy = (RpcClient::selectionStrategy) placeholderRpcSelectionStrategy;
+
+  //mode = DRED;
+  //
+  //Open a file to write out manifest
+  std::string manifestFilename = ManifestName;
+  std::ios_base::openmode openmode = std::ios_base::out | std::ios_base::trunc;
+  //ofstream->open (manifestFilename.c_str (), openmode);
+  OutputStreamWrapper StreamWrapper = OutputStreamWrapper(manifestFilename, openmode);
+  //StreamWrapper->SetStream(ofstream);
+  std::ostream *stream = StreamWrapper.GetStream();
+
+  *stream << ManifestNameString << ":" << ManifestName << "\n";
+  *stream << DebugString << ":" << debug << "\n";
+  *stream << SelectionStrategyString << ":" << rpcSelectionStrategy << "\n";
+  *stream << KString << ":" << K << "\n";
+  *stream << TopologyString << ":" << Topology << "\n";
+  //TODO finish manifest and allow it to be an input argument
+  *stream << "MANIFEST INCOMPLETE" << "\n";
+}
+
+bool ClientTransmissionArgsGood() {
+  if (TransmissionDistributionUniform) {
+    if (TransmissionUniformDistributionMin == 0 ||
+    TransmissionUniformDistributionMax == 0) {
+      NS_LOG_WARN("Client uniform distribution set but min max values left to default");
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+std::vector<uint32_t>GetClientTransmissionDistribution() {
+  if (!ClientTransmissionArgsGood()) {
+    NS_LOG_WARN("Error Processing Client Transmission Arguments");
+  }
+  if (TransmissionDistributionUniform) {
+    return uniform_distribution(DISTRIBUTION_SIZE, TransmissionUniformDistributionMin, TransmissionUniformDistributionMax);
+  }
+
+  NS_LOG_WARN("Reach teh end of client transmission distribution without hitting an argument defined distribution");
+  //TODO make this the smartest default
+  return uniform_distribution(1,1000,1000); //Static Interval
+}
+//\Globals
+
+
+
 
 //// Custom Routing
 void
@@ -233,7 +310,7 @@ std::vector<std::vector<int>> rpcServices, uint64_t * serverLoad)
   uec->SetReplicaSelectionStrategy(rpcSelectionStrategy);
 
   uec->SetPacketSizeDistribution(ClientPacketSizeDistribution);
-  uec->SetTransmitionDistribution(ClientPacketSizeDistribution);
+  uec->SetTransmitionDistribution(ClientTransmissionDistribution);
   uec->SetRPCDistribution(RPCServiceDistribution);
 }
 
@@ -346,42 +423,18 @@ void replicationStrategy_crossCoreReplication(std::vector<std::vector<int>> *rep
   }
 }
 
+
+
+
+
 int main(int argc, char *argv[])
 {
-  CommandLine cmd;
-
+  parseArgs(argc, argv);
   //Default vlaues for command line arguments
 
   Config::SetDefault("ns3::Ipv4GlobalRouting::RandomEcmpRouting", BooleanValue(true));
   Config::SetDefault("ns3::Ipv4GlobalRouting::RespondToInterfaceEvents", BooleanValue(true));
 
-  //Command Line argument debugging code
-  cmd.AddValue(DebugString, "Print all log level info statements for all clients", debug);
-  int placeholderRpcSelectionStrategy;
-  cmd.AddValue(SelectionStrategyString, "RPC selection strategies - check RpcClient::selectionStratigies for valid values", placeholderRpcSelectionStrategy);
-
-  cmd.AddValue(ManifestNameString, "Then name of the ouput manifest (includes all configurations)", ManifestName);
-  cmd.AddValue(ProbeNameString, "Then name of the output probe CSV", ProbeName);
-  cmd.Parse(argc, argv);
-
-  rpcSelectionStrategy = (RpcClient::selectionStrategy) placeholderRpcSelectionStrategy;
-
-
-  //mode = DRED;
-  //
-  //Open a file to write out manifest
-  std::string manifestFilename = ManifestName;
-  std::ios_base::openmode openmode = std::ios_base::out | std::ios_base::trunc;
-  //ofstream->open (manifestFilename.c_str (), openmode);
-  OutputStreamWrapper StreamWrapper = OutputStreamWrapper(manifestFilename, openmode);
-  //StreamWrapper->SetStream(ofstream);
-  std::ostream *stream = StreamWrapper.GetStream();
-
-  *stream << ManifestNameString << ":" << ManifestName << "\n";
-  *stream << DebugString << ":" << debug << "\n";
-  *stream << SelectionStrategyString << ":" << rpcSelectionStrategy << "\n";
-  *stream << KString << ":" << K << "\n";
-  *stream << TopologyString << ":" << Topology << "\n";
 
   //printf("Client - NPackets %d, baseInterval %f packetSize %d \n",ClientProtocolNPackets,ClientProtocolInterval,ClientProtocolPacketSize);
   //printf("Cover - NPackets %d, baseInterval %f packetSize %d \n",CoverNPackets,CoverInterval,CoverPacketSize);
@@ -470,7 +523,7 @@ int main(int argc, char *argv[])
 
   TrafficControlHelper tch;
   //int linkrate = 1000;
-  int linkrate = 100;
+  int linkrate = 1000;
   int queuedepth = 50;
 
   pointToPoint.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue(std::to_string(queuedepth) + "p"));
@@ -617,9 +670,11 @@ int main(int argc, char *argv[])
   //int PacketSize = 1472;
   int PacketSize = 128;
   //float Rate = 1.0 / ((PARALLEL * (float(linkrate) * (1000000000.0))) / (float(PacketSize) * 8.0));
-  float Rate = 1.0 / (((float(linkrate) * (1000000.0))) / (float(PacketSize) * 8.0));
-  float MaxInterval = Rate * 1.0;
-  printf("Rate %f\n", Rate);
+  //float Rate = 1.0 / (((float(linkrate) * (1000000.0))) / (float(PacketSize) * 8.0));
+  //float MaxInterval = Rate * 1.0;
+  //printf("Rate %f\n", Rate);
+
+  //int transmissionInterval = 50000; //This should be once every microsecond
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
@@ -637,7 +692,7 @@ int main(int argc, char *argv[])
 
   //Generate Distributions
   std::vector<uint32_t> ClientPacketSizeDistribution = uniform_distribution(1,PacketSize,PacketSize); //Single Element Packet Size
-  std::vector<uint32_t> ClientTransmissionDistribution = uniform_distribution(1,MaxInterval,MaxInterval); //Static Interval
+  std::vector<uint32_t> ClientTransmissionDistribution = GetClientTransmissionDistribution();
   std::vector<uint32_t> RPCServiceDistribution = uniform_distribution(rpcReplicas.size() * 5,0,rpcReplicas.size()-1); //Uniform requests for RPC servers
 
 

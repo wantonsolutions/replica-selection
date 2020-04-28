@@ -480,7 +480,7 @@ void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
    }
    //TODO change rand to rand seed for future experiments
    int index = rand() % m_transmission_distribution.size();
-   return (Time) m_transmission_distribution[index] * 1000;
+   return Time(m_transmission_distribution[index]);
  }
  
  uint32_t RpcClient::GetNextRPC() {

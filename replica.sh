@@ -4,6 +4,15 @@ echo "Hello Experiment"
 
 debug=false
 
+
+function UniformClientTransmission() {
+	min=$1
+	max=$2
+	echo "--TransmissionDistributionUniform=true 
+	--TransmissionUniformDistributionMin=$1
+	--TransmissionUniformDistributionMax=$2 "
+}
+
 function runExperiment () {
 	cpnp=$1
 	cpi=$2
@@ -18,10 +27,12 @@ function runExperiment () {
 
 #./waf --visualize --run "scratch/replication"
 #./waf --run "scratch/replication" --command-template="gdb %s"
+	transmission=$(UniformClientTransmission 1000 1000)
 
 ./waf --run \
 	"scratch/replication
 	--SelectionStrategy=$selectionStrategy
+	$transmission
 	--Debug=$debug
     --ProbeName=$filename.csv
 	--ManifestName=$filename.config" 2>$filename.dat
