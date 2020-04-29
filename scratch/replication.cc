@@ -716,8 +716,8 @@ int main(int argc, char *argv[])
   );
 
   //Assign attributes to routers in network
-  //LoadBallencingStrategy strat = none;
-  LoadBallencingStrategy strat = minimumLoad;
+  LoadBallencingStrategy strat = none;
+  //LoadBallencingStrategy strat = minimumLoad;
 
   printf("setting custom load balencing strats\n");
   SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,serverLoad);

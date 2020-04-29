@@ -2,7 +2,22 @@
 
 echo "Hello Experiment"
 
+topdir=`pwd`
+
+declare -A SelectionStrategy
+SelectionStrategy["single"]=0
+SelectionStrategy["random"]=1
+SelectionStrategy["minimum"]=2
+
 debug=false
+
+function ConfigArgs() {
+	filename=$1
+	echo "--Debug=$debug
+    --ProbeName=$filename.csv
+	--ManifestName=$filename.config"
+}
+
 
 
 function UniformClientTransmission() {
@@ -12,6 +27,12 @@ function UniformClientTransmission() {
 	--TransmissionUniformDistributionMin=$1
 	--TransmissionUniformDistributionMax=$2 "
 }
+
+function SelectionStrat() {
+	select=$1
+	echo "--SelectionStrategy=${SelectionStrategy[${select}]} "
+}
+
 
 function runExperiment () {
 	cpnp=$1
@@ -39,21 +60,43 @@ function runExperiment () {
 }
 
 
+function RunInterval() {
+	max=$1
+	min=$2
+	args=""
+	transmission=$(UniformClientTransmission $min $max)
+	args="$args 
+	$transmission"
 
-function IncrementalIntervals() {
-	intervals=(0.1 0.01 0.001 0.0001 0.00001 0.000001 0.0000001)
-	ClientProtocolNPackets=4096
-	ClientProtocolInterval=0.01
-	ClientProtocolPacketSize=1024
-	CoverNPackets=1000000
-	CoverInterval=$intervals
-	CoverPacketSize=1024
-	let 'exp=0'
-	for i in `seq  0.0000001 -0.00000001 0.00000001`; do
-		runExperiment $ClientProtocolNPackets $ClientProtocolInterval $ClientProtocolPacketSize $CoverNPackets $i $CoverPacketSize $exp &
-		let 'exp=exp+1'
+	for selection in "${!SelectionStrategy[@]}"; do
+		echo $selection
+		mkdir $selection
+		pushd $selection
+
+		selectionArgs=$(SelectionStrat $selection)
+		nargs="${args} 
+		$selectionArgs "
+
+		configArgs=$(ConfigArgs results)
+		cargs="${nargs}
+		$configArgs "
+
+		echo ${cargs}
+		#$topdir/waf --run "$topdir/scratch/replication
+		currentdir=`pwd`
+		pushd $topdir
+
+		./waf --run "scratch/replication
+		${cargs}" 2>results.dat
+
+		mv results* $currentdir
+		popd
+
+		popd
 	done
+
 }
+
 
 function RunAndMove() {
 	echo "running and moving"
@@ -65,7 +108,59 @@ function RunAndMove() {
 	mv $filename.config $finalLoc.config
 }
 
+function RunStaticIntervalExperiment() {
+	intervals=(50000 25000 12500 6250)
+
+	for i in ${intervals[@]}; do
+		echo $i
+		dirname="interval_${i}_us"
+		mkdir $dirname
+		pushd $dirname
+		RunInterval $i $i
+		popd
+	done
+
+}
+
 datetime=`date "+%F_%T"`
+CurrentDate=`date "+%F"`
+echo $datetime
+
+#arguement parsing
+for i in "$@"; do 
+
+case $i in
+	-n=* | --name=*)
+	EXPERIMENT_NAME="${i#*=}"
+	;;
+	-h | --help)
+	echo "No proper help message ready to go just read through the code for now"
+esac
+
+done
+
+if [ -z "$EXPERIMENT_NAME" ]; then
+	echo "An experiment name must be given; see -n"
+	exit 0
+fi
+
+#Create and name top level experimental directory
+ExperimentDir="./Experiments/${EXPERIMENT_NAME}_${CurrentDate}"
+if [ -d ${ExperimentDir} ]; then
+	count=`ls -dq ${ExperimentDir}* | wc -l`
+	echo "${EXPERIMENT_NAME} already performed today $count times"
+	echo "Creating sub directory"
+	ExperimentDir="${ExperimentDir}_${count}"
+else
+	echo "First time running Experiment ${EXPERIMENT_NAME}"
+fi
+mkdir $ExperimentDir
+
+cd $ExperimentDir
+RunStaticIntervalExperiment
+
+
+exit
 
 echo $1
 

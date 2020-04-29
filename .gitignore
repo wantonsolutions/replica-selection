@@ -45,4 +45,7 @@ plot/randomCoverIncremental/randomcover
 *.png
 *.pyc
 
+Experiments
+data
+
 
