@@ -73,6 +73,15 @@ double TransmissionDistributionNormalMean = 0.0;
 const char *TransmissionDistributionNormalStdString = "TransmissionDistributionNormalStd";
 double TransmissionDistributionNormalStd = 0.0;
 
+const char *TransmissionDistributionExponentialString = "TransmissionDistributionExponential";
+bool TransmissionDistributionExponential = false;
+const char *TransmissionDistributionExponentialLambdaString = "TransmissionDistributionExponentialLambda";
+double TransmissionDistributionExponentialLambda = 0.0;
+const char *TransmissionDistributionExponentialMultiplierString = "TransmissionDistributionExponentialMultiplier";
+double TransmissionDistributionExponentialMultiplier = 0.0;
+const char *TransmissionDistributionExponentialMinString = "TransmissionDistributionExponentialMin";
+double TransmissionDistributionExponentialMin = 0.0;
+
 const char *ManifestNameString = "ManifestName";
 const char *ProbeNameString = "ProbeName";
 
@@ -124,13 +133,14 @@ std::vector<uint32_t> normal_distribution(uint32_t size, double mean, double std
 
 //The multiplier is used to shift the distribution from the range [0,1] out to
 //further numbers. The value of the multiplier is also the max value
-std::vector<uint32_t> exponential_distribution(uint32_t size, double lambda, double multiplier) {
+//further numbers. The min value is the min, caused by shifting all values up by the min
+std::vector<uint32_t> exponential_distribution(uint32_t size, double lambda, double multiplier, double min) {
   std::vector<uint32_t> exponential_sample;
   std::default_random_engine generator;
   std::exponential_distribution<double> distribution(lambda);
 
   for (uint32_t i=0;i<size;i++) {
-    exponential_sample.push_back(distribution(generator) * multiplier);
+    exponential_sample.push_back(distribution(generator) * multiplier + min);
   }
   return exponential_sample;
 }
@@ -154,6 +164,14 @@ void parseArgs(int argc, char* argv[]) {
   cmd.AddValue(TransmissionDistributionNormalString, "Set to true for normal transmission distribution", TransmissionDistributionNormal);
   cmd.AddValue(TransmissionDistributionNormalMeanString, "Set to the mean value for a transmission interval (us)", TransmissionDistributionNormalMean);
   cmd.AddValue(TransmissionDistributionNormalStdString, "Set the standard deviation value for the normal transmission interval (us)", TransmissionDistributionNormalStd);
+
+
+  //TransmissionDistributionNormal
+  cmd.AddValue(TransmissionDistributionExponentialString, "Set to true for normal transmission distribution", TransmissionDistributionExponential);
+  cmd.AddValue(TransmissionDistributionExponentialLambdaString, "Lambda value for transmission distribution", TransmissionDistributionExponentialLambda);
+  cmd.AddValue(TransmissionDistributionExponentialMultiplierString, "Value to multiply exponential distribution by", TransmissionDistributionExponentialMultiplier);
+  cmd.AddValue(TransmissionDistributionExponentialMinString, "Value to shift exponential distribution by (post multiply)", TransmissionDistributionExponentialMin);
+
 
   //Set manifest and host name
   cmd.AddValue(ManifestNameString, "Then name of the ouput manifest (includes all configurations)", ManifestName);
@@ -188,6 +206,9 @@ bool ClientTransmissionArgsGood() {
     distributions++;
   }
   if (TransmissionDistributionNormal) {
+    distributions++;
+  }
+  if (TransmissionDistributionExponential) {
     distributions++;
   }
   if (distributions <= 0) {
@@ -225,8 +246,26 @@ bool ClientTransmissionArgsGood() {
     }
     return true;
   }
+
+  //Exponential Distribution
+  if (TransmissionDistributionExponential) {
+    if (TransmissionDistributionExponentialLambda <= 0) {
+      NS_LOG_WARN("Exponential lambda value should not be less than 0. lambda " << TransmissionDistributionExponentialLambda);
+      return false;
+    }
+    if (TransmissionDistributionExponentialMultiplier < 0) {
+      NS_LOG_WARN("Exponential multiplier value should not be less than 0. Multiplier: " << TransmissionDistributionExponentialMultiplier);
+      return false;
+    }
+    if (TransmissionDistributionExponentialMin < 0) {
+      NS_LOG_WARN("Exponential Min value should not be less than 0. Min: " << TransmissionDistributionExponentialMin);
+      return false;
+    }
+    return true;
+  }
   return false;
 }
+
 
 std::vector<uint32_t>GetClientTransmissionDistribution() {
   if (!ClientTransmissionArgsGood()) {
@@ -236,6 +275,8 @@ std::vector<uint32_t>GetClientTransmissionDistribution() {
     return uniform_distribution(DISTRIBUTION_SIZE, TransmissionDistributionUniformMin, TransmissionDistributionUniformMax);
   } else if (TransmissionDistributionNormal) {
     return normal_distribution(DISTRIBUTION_SIZE, TransmissionDistributionNormalMean, TransmissionDistributionNormalStd);
+  } else if (TransmissionDistributionExponential) {
+    return exponential_distribution(DISTRIBUTION_SIZE, TransmissionDistributionExponentialLambda, TransmissionDistributionExponentialMultiplier, TransmissionDistributionExponentialMin);
   } else {
     NS_LOG_WARN("No client transmission distribution selected. (should be unreachable) check - ClientTransmissionArgsGood()");
   }

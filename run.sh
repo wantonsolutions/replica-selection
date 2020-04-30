@@ -24,16 +24,26 @@ function UniformClientTransmission() {
 	min=$1
 	max=$2
 	echo "--TransmissionDistributionUniform=true 
-	--TransmissionDistributionUniformMin=$1
-	--TransmissionDistributionUniformMax=$2 "
+	--TransmissionDistributionUniformMin=$min
+	--TransmissionDistributionUniformMax=$max "
 }
 
 function NormalClientTransmission() {
 	mean=$1
 	std=$2
 	echo "--TransmissionDistributionNormal=true 
-	--TransmissionDistributionNormalMean=$1
-	--TransmissionDistributionNormalStd=$2 "
+	--TransmissionDistributionNormalMean=$mean
+	--TransmissionDistributionNormalStd=$std "
+}
+
+function ExponentialClientTransmission() {
+	lambda=$1
+	multiplier=$2
+	min=$3
+	echo "--TransmissionDistributionExponential=true 
+	--TransmissionDistributionExponentialLambda=$lambda
+	--TransmissionDistributionExponentialMultiplier=$multiplier
+	--TransmissionDistributionExponentialMin=$min "
 }
 
 function SelectionStrat() {
@@ -74,6 +84,20 @@ function RunSelectionStrategies() {
 	done
 }
 
+
+#take the max and min argument as a parameters
+function RunUniformInterval() {
+	min=$1
+	max=$2
+
+	#Generate transmission arguments for the waf execution
+	args=""
+	transmission=$(UniformClientTransmission $min $max)
+	args="$args 
+	$transmission"
+	RunSelectionStrategies "$args"
+}
+
 #take the max and min argument as a parameters
 function RunNormalInterval() {
 	mean=$1
@@ -88,13 +112,14 @@ function RunNormalInterval() {
 }
 
 #take the max and min argument as a parameters
-function RunUniformInterval() {
-	min=$1
-	max=$2
+function RunExponentialInterval() {
+	lambda=$1
+	multiplier=$2
+	min=$3
 
 	#Generate transmission arguments for the waf execution
 	args=""
-	transmission=$(UniformClientTransmission $min $max)
+	transmission=$(ExponentialClientTransmission $lambda $multiplier $min)
 	args="$args 
 	$transmission"
 	RunSelectionStrategies "$args"
@@ -156,6 +181,23 @@ function RunNormalExperiment {
 		pushd $dirname
 		RunNormalInterval $mean $std
 		popd
+	done
+}
+
+function RunExponentialExperiment {
+	echo "Running Exponential Experiment"
+	intervals=(100000 50000 25000 12500 6250 3125 1562)
+	for i in ${intervals[@]}; do
+		lambda="1.0"
+		let "multiplier = ${i} * 2"
+		let "minimum = 1"
+
+		dirname="${i}"
+		mkdir $dirname
+		pushd $dirname
+		RunExponentialInterval $lambda $multiplier $minimum
+		popd
+
 	done
 }
 
@@ -240,6 +282,7 @@ mkdir $ExperimentDir
 cd $ExperimentDir
 #RunStaticIntervalExperiment
 #RunUniformIntervalExperiment_percent
-RunNormalExperiment
+#RunNormalExperiment
+RunExponentialExperiment
 
 exit
