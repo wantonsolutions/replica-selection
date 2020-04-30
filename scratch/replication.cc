@@ -145,6 +145,46 @@ std::vector<uint32_t> exponential_distribution(uint32_t size, double lambda, dou
   return exponential_sample;
 }
 //\Distributions
+bool CheckUniformDistributionParameters(int min, int max) {
+  //Uniform transmision conditions
+    if (min == 0 || max == 0) {
+      NS_LOG_WARN("Uniform distribution set but min max values left to default");
+      return false;
+    } else if (min > max) {
+      NS_LOG_WARN("Uniform distributition min value greater than max value min: " << min <<" max: " << max <<" (check parameters)");
+      return false;
+    } 
+  return true;
+}
+
+bool CheckNormalDistributionParameters(double mean, double std) {
+    if (mean < 0) {
+      NS_LOG_WARN("Select a normal mean greater than 0. Mean " << TransmissionDistributionNormalMean);
+      return false;
+    }
+    if (std <= 0.0) {
+      NS_LOG_WARN("Select a standard deviation greater than 0. Normal distributions with std <= 0 are undefined std:" << TransmissionDistributionNormalStd);
+      return false;
+    }
+    return true;
+}
+
+bool CheckExponentialDistributionParameters(double lambda, double multiplier, double min) {
+    if (lambda <= 0) {
+      NS_LOG_WARN("Exponential lambda value should not be less than 0. lambda " << lambda);
+      return false;
+    }
+    if (multiplier < 0) {
+      NS_LOG_WARN("Exponential multiplier value should not be less than 0. Multiplier: " << multiplier);
+      return false;
+    }
+    if (min < 0) {
+      NS_LOG_WARN("Exponential Min value should not be less than 0. Min: " << min);
+      return false;
+    }
+    return true;
+
+}
 
 void parseArgs(int argc, char* argv[]) {
   CommandLine cmd;
@@ -199,69 +239,45 @@ void parseArgs(int argc, char* argv[]) {
   *stream << "MANIFEST INCOMPLETE" << "\n";
 }
 
+
+//This function checks mutual exclusion across n_args bools. If booleans are
+//not passes or n_args is incorrect the program might crash. Use carefully.
+//This function returns true if exactly 1 of the boolean values is true.
+bool CheckMutuallyExclusiveConditions(int n_args, ...) {
+  int trueConditions = 0;
+  va_list ap;
+  va_start(ap, n_args);
+  for (int i=0; i< n_args; i++) {
+    bool condition = (bool) va_arg(ap, int);
+    if (condition) {
+      trueConditions++;
+    }
+  }
+  if (trueConditions <= 0) {
+    return false;
+  } else if (trueConditions > 1) {
+    return false;
+  }
+  return true;
+}
+
 bool ClientTransmissionArgsGood() {
   //Check that only one transmission scheme is being used
-  int distributions = 0;
-  if (TransmissionDistributionUniform) {
-    distributions++;
+  if (! CheckMutuallyExclusiveConditions(3,TransmissionDistributionUniform,TransmissionDistributionNormal,TransmissionDistributionExponential)){
+    NS_LOG_WARN("Incorrect number of Client transmission parameters set, check command line arguments");
   }
-  if (TransmissionDistributionNormal) {
-    distributions++;
-  }
-  if (TransmissionDistributionExponential) {
-    distributions++;
-  }
-  if (distributions <= 0) {
-    NS_LOG_WARN("No Client Transmission Distribution Specified - Select one from the parameters");
-    return false;
-  } else if (distributions > 1) {
-    NS_LOG_WARN("More than one Client transmission selected, check command line arguments");
-    return false;
-  }
-
   //Check conditions on individual distributions
   //Uniform transmision conditions
   if (TransmissionDistributionUniform) {
-    //Uniform Checks
-    if (TransmissionDistributionUniformMin == 0 ||
-    TransmissionDistributionUniformMax == 0) {
-      NS_LOG_WARN("Client uniform distribution set but min max values left to default");
-      return false;
-    } else if (TransmissionDistributionUniformMin > TransmissionDistributionUniformMax) {
-      NS_LOG_WARN("Uniform distributition min value greater than max value min: " << TransmissionDistributionUniformMin <<" max: " << TransmissionDistributionUniformMax <<" (check parameters)");
-    } else {
-      return true;
-    }
+    return CheckUniformDistributionParameters(TransmissionDistributionUniformMin,TransmissionDistributionUniformMax);
   }
-
   //Normal Distribution
   if (TransmissionDistributionNormal) {
-    if (TransmissionDistributionNormalMean < 0) {
-      NS_LOG_WARN("Select a normal mean greater than 0. Mean " << TransmissionDistributionNormalMean);
-      return false;
-    }
-    if (TransmissionDistributionNormalStd <= 0.0) {
-      NS_LOG_WARN("Select a standard deviation greater than 0. Normal distributions with std <= 0 are undefined std:" << TransmissionDistributionNormalStd);
-      return false;
-    }
-    return true;
+    return CheckNormalDistributionParameters(TransmissionDistributionNormalMean, TransmissionDistributionNormalStd);
   }
-
   //Exponential Distribution
   if (TransmissionDistributionExponential) {
-    if (TransmissionDistributionExponentialLambda <= 0) {
-      NS_LOG_WARN("Exponential lambda value should not be less than 0. lambda " << TransmissionDistributionExponentialLambda);
-      return false;
-    }
-    if (TransmissionDistributionExponentialMultiplier < 0) {
-      NS_LOG_WARN("Exponential multiplier value should not be less than 0. Multiplier: " << TransmissionDistributionExponentialMultiplier);
-      return false;
-    }
-    if (TransmissionDistributionExponentialMin < 0) {
-      NS_LOG_WARN("Exponential Min value should not be less than 0. Min: " << TransmissionDistributionExponentialMin);
-      return false;
-    }
-    return true;
+    return CheckExponentialDistributionParameters(TransmissionDistributionExponentialLambda,TransmissionDistributionExponentialMultiplier,TransmissionDistributionExponentialMin);
   }
   return false;
 }

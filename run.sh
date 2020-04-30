@@ -18,8 +18,6 @@ function ConfigArgs() {
 	--ManifestName=$filename.config"
 }
 
-
-
 function UniformClientTransmission() {
 	min=$1
 	max=$2
