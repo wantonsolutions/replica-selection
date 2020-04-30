@@ -65,7 +65,8 @@ for name in filedict:
 
             x, y = gen_cdf(mslat,1000)
             #plt.plot(x,y,linewidth=i,label=finalname)
-            plt.plot(x,y,linewidth=i,label=name)
+            #plt.plot(x,y,linewidth=i,label=name)
+            plt.plot(x,y,linewidth=i,label=sname[0])
 
             print(x)
 
@@ -74,11 +75,13 @@ for name in filedict:
 
 plt.grid('on')
 
-plt.xlabel("Time us", fontweight='bold')
+plt.xlabel("Resposne Latency (us)", fontweight='bold')
 
 #lgd = plt.legend(ncol=3,loc="lower center",bbox_to_anchor=(0.50,-0.20))
 plt.legend()
-plt.title("Replica Selection Strategy: single, min, random 1Gbps",fontweight='bold')
+#plt.title("Static interval 25us per request, 10us delay",fontweight='bold')
+#plt.title("Dynamic interval 25us per request, 10us delay +/- 25%",fontweight='bold')
+plt.title("Dynamic interval 25us per request, 10us delay +/- 50%",fontweight='bold')
 plt.tight_layout(rect=(0,0.1,1,1))
-plt.savefig("Replica.png")
+plt.savefig("Replica.pdf")
 

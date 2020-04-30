@@ -36,8 +36,8 @@ function SelectionStrat() {
 
 #take the max and min argument as a parameters
 function RunInterval() {
-	max=$1
-	min=$2
+	min=$1
+	max=$2
 
 	#Generate transmission arguments for the waf execution
 	args=""
@@ -105,6 +105,26 @@ function RunStaticIntervalExperiment() {
 	done
 }
 
+function RunUniformIntervalExperiment_percent() {
+	intervals=(100000 50000 25000 12500 6250 3125 1562)
+	#intervals=(50000 25000 12500 6250)
+
+	for i in ${intervals[@]}; do
+		echo $i
+		#let "min = $i - ( $i / 4 )"
+		#let "max = $i + ( $i / 4 )"
+		let "min = $i - ( $i / 2 )"
+		let "max = $i + ( $i / 2 )"
+		echo "min = $min"
+		echo "max = $max "
+		dirname="${i}"
+		mkdir $dirname
+		pushd $dirname
+		RunInterval $min $max
+		popd
+	done
+}
+
 function PlotStaticIntervalExperiment() {
 	dir=`pwd`
 	echo "Entering plotting in $dir"
@@ -114,7 +134,7 @@ function PlotStaticIntervalExperiment() {
 	for i in ${intervals[@]}; do
 		dirname="${i}"
 		pushd $dirname
-		#PlotInterval
+		PlotInterval
 		popd
 	done
 	pwd
@@ -126,8 +146,6 @@ function PlotStaticIntervalExperiment() {
 
 	plotScript="$topdir/plot/library/agg_latency.py"
 	python $plotScript aggregate.dat
-	
-
 }
 
 datetime=`date "+%F_%T"`
@@ -186,6 +204,7 @@ fi
 mkdir $ExperimentDir
 
 cd $ExperimentDir
-RunStaticIntervalExperiment
+#RunStaticIntervalExperiment
+RunUniformIntervalExperiment_percent
 
 exit

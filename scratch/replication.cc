@@ -78,12 +78,18 @@ const char *ParallelString = "Parallel";
 #include <random>
 //Distributions This should be moved to a seperate file
 std::vector<uint32_t> uniform_distribution(uint32_t size, uint32_t min, uint32_t max) {
+  if (min > max) {
+    NS_LOG_WARN("Min is set to less than max, this has undefined behaviour. Setting both min an max to 0");
+    min=0;
+    max=0;
+  }
   std::vector<uint32_t> uniform_sample;
   std::default_random_engine generator;
   std::uniform_int_distribution<uint32_t> distribution(min,max);
 
   for (uint32_t i=0; i< size;i++) {
     uniform_sample.push_back(distribution(generator));
+    //printf("sample %d\n",(uniform_sample[i]));
   }
   return uniform_sample;
 }
@@ -693,6 +699,9 @@ int main(int argc, char *argv[])
   //Generate Distributions
   std::vector<uint32_t> ClientPacketSizeDistribution = uniform_distribution(1,PacketSize,PacketSize); //Single Element Packet Size
   std::vector<uint32_t> ClientTransmissionDistribution = GetClientTransmissionDistribution();
+  //for( uint i=0; i < ClientTransmissionDistribution.size();i++) {
+  //  printf("d[%d]=%d\n",i,ClientTransmissionDistribution[i]);
+  //}
   std::vector<uint32_t> RPCServiceDistribution = uniform_distribution(rpcReplicas.size() * 5,0,rpcReplicas.size()-1); //Uniform requests for RPC servers
 
 

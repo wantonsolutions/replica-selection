@@ -480,6 +480,7 @@ void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
    }
    //TODO change rand to rand seed for future experiments
    int index = rand() % m_transmission_distribution.size();
+   //NS_LOG_WARN("Scheduing next interval in " << m_transmission_distribution[index]);
    return Time(m_transmission_distribution[index]);
  }
  

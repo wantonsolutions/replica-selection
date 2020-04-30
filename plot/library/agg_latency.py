@@ -56,17 +56,17 @@ with open(filename,'r') as csvfile:
             map_results[selection+"_95"]=[]
             map_results[selection+"_99"]=[]
             map_results[selection+"_x"]=[]
-        map_results[selection+"_x"].append(int(row[0]))
+        map_results[selection+"_x"].append(int(row[0]) / 1000) # divide by 1000
         map_results[selection+"_50"].append(float(row[3]))
         map_results[selection+"_95"].append(float(row[4]))
         map_results[selection+"_99"].append(float(row[5]))
 
     
+
     for selection in selections:
         map_results[selection+"_50"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_50"]))]
         map_results[selection+"_95"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_95"]))]
         map_results[selection+"_99"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_99"]))]
-
 
     for selection in selections:
         plt.plot(sorted(map_results[selection+"_x"]),map_results[selection+"_50"],label=selection+"_50",color=colors[cindex],linestyle=linetype[0], marker="x")
@@ -78,12 +78,19 @@ with open(filename,'r') as csvfile:
 
 plt.grid('on')
 
-plt.xlabel("Time us", fontweight='bold')
-plt.xscale("log")
+#ax = plt.gca()
+#ax.ticklabel_format(useOffset=False)
 
+plt.xscale("log")
+plt.rc('axes.formatter', useoffset=False)
 #lgd = plt.legend(ncol=3,loc="lower center",bbox_to_anchor=(0.50,-0.20))
 plt.legend()
-plt.title("Replica Selection Strategy: single, min, random 1Gbps",fontweight='bold')
+plt.xlim(left=0.9,right=200)
+plt.ylim(top=2500,bottom=-50)
+plt.xlabel("Interval between requests (us)", fontweight='bold')
+plt.ylabel("Response latency (us)", fontweight='bold')
+#plt.title("Static request interval response latency",fontweight='bold')
+plt.title("Dynamic request interval response latency += 50%",fontweight='bold')
 plt.tight_layout(rect=(0,0.1,1,1))
 plt.savefig("Agg_Latency.pdf")
 
