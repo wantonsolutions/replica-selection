@@ -24,8 +24,16 @@ function UniformClientTransmission() {
 	min=$1
 	max=$2
 	echo "--TransmissionDistributionUniform=true 
-	--TransmissionUniformDistributionMin=$1
-	--TransmissionUniformDistributionMax=$2 "
+	--TransmissionDistributionUniformMin=$1
+	--TransmissionDistributionUniformMax=$2 "
+}
+
+function NormalClientTransmission() {
+	mean=$1
+	std=$2
+	echo "--TransmissionDistributionNormal=true 
+	--TransmissionDistributionNormalMean=$1
+	--TransmissionDistributionNormalStd=$2 "
 }
 
 function SelectionStrat() {
@@ -33,18 +41,8 @@ function SelectionStrat() {
 	echo "--SelectionStrategy=${SelectionStrategy[${select}]} "
 }
 
-
-#take the max and min argument as a parameters
-function RunInterval() {
-	min=$1
-	max=$2
-
-	#Generate transmission arguments for the waf execution
-	args=""
-	transmission=$(UniformClientTransmission $min $max)
-	args="$args 
-	$transmission"
-
+function RunSelectionStrategies() {
+	args="$@"
 	#run a test for each of the replica selection strategies
 	for selection in "${!SelectionStrategy[@]}"; do
 
@@ -62,7 +60,6 @@ function RunInterval() {
 		$configArgs "
 
 		echo ${cargs}
-		#$topdir/waf --run "$topdir/scratch/replication
 		currentdir=`pwd`
 		pushd $topdir
 
@@ -73,8 +70,34 @@ function RunInterval() {
 		popd
 
 		popd
+
 	done
-	
+}
+
+#take the max and min argument as a parameters
+function RunNormalInterval() {
+	mean=$1
+	std=$2
+
+	#Generate transmission arguments for the waf execution
+	args=""
+	transmission=$(NormalClientTransmission $mean $std)
+	args="$args 
+	$transmission"
+	RunSelectionStrategies "$args"
+}
+
+#take the max and min argument as a parameters
+function RunUniformInterval() {
+	min=$1
+	max=$2
+
+	#Generate transmission arguments for the waf execution
+	args=""
+	transmission=$(UniformClientTransmission $min $max)
+	args="$args 
+	$transmission"
+	RunSelectionStrategies "$args"
 }
 
 function PlotInterval() {
@@ -100,43 +123,54 @@ function RunStaticIntervalExperiment() {
 		dirname="${i}"
 		mkdir $dirname
 		pushd $dirname
-		RunInterval $i $i
+		RunUniformInterval $i $i
 		popd
 	done
 }
 
 function RunUniformIntervalExperiment_percent() {
 	intervals=(100000 50000 25000 12500 6250 3125 1562)
-	#intervals=(50000 25000 12500 6250)
 
 	for i in ${intervals[@]}; do
 		echo $i
-		#let "min = $i - ( $i / 4 )"
-		#let "max = $i + ( $i / 4 )"
 		let "min = $i - ( $i / 2 )"
 		let "max = $i + ( $i / 2 )"
-		echo "min = $min"
-		echo "max = $max "
 		dirname="${i}"
 		mkdir $dirname
 		pushd $dirname
-		RunInterval $min $max
+		RunUniformInterval $min $max
 		popd
 	done
 }
 
-function PlotStaticIntervalExperiment() {
-	dir=`pwd`
-	echo "Entering plotting in $dir"
+function RunNormalExperiment {
+	echo "Running Normal Experiment"
 	intervals=(100000 50000 25000 12500 6250 3125 1562)
-	#intervals=(50000 25000 12500 6250)
-
 	for i in ${intervals[@]}; do
+		mean=${i}
+		#std="1.0"
+		#let "std = ( $i / 10 )" #10% std
+		let "std = ( $i / 4 )" #25% std
 		dirname="${i}"
+		mkdir $dirname
 		pushd $dirname
+		RunNormalInterval $mean $std
+		popd
+	done
+}
+
+function PlotIntervalsExperiment() {
+	dirname=`pwd`
+	echo "Entering plotting in $dirname"
+	for dir in ./*/     # list directories in the form "/tmp/dirname/"
+	do
+		dir=${dir%*/}      # remove the trailing "/"
+		echo ${dir##*/}    # print everything after the final "/"
+		pushd $dir
 		PlotInterval
 		popd
 	done
+
 	pwd
 	#collect aggregate measures
 	files=""
@@ -178,7 +212,7 @@ if [ ! -z "$PLOT" ]; then
 	latest=`ls -td -- */ | head -n 1`
 	cd $latest
 
-	PlotStaticIntervalExperiment
+	PlotIntervalsExperiment
 	#exit after plotting
 	exit 0
 fi
@@ -205,6 +239,7 @@ mkdir $ExperimentDir
 
 cd $ExperimentDir
 #RunStaticIntervalExperiment
-RunUniformIntervalExperiment_percent
+#RunUniformIntervalExperiment_percent
+RunNormalExperiment
 
 exit

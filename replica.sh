@@ -24,8 +24,8 @@ function UniformClientTransmission() {
 	min=$1
 	max=$2
 	echo "--TransmissionDistributionUniform=true 
-	--TransmissionUniformDistributionMin=$1
-	--TransmissionUniformDistributionMax=$2 "
+	--TransmissionDistributionUniformMin=$1
+	--TransmissionDistributionUniformMax=$2 "
 }
 
 function SelectionStrat() {

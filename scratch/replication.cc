@@ -60,10 +60,18 @@ const char *SelectionStrategyString = "SelectionStrategy";
 
 const char *TransmissionDistributionUniformString = "TransmissionDistributionUniform";
 bool TransmissionDistributionUniform = false;
-const char *TransmissionUniformDistributionMinString = "TransmissionUniformDistributionMin";
-uint32_t TransmissionUniformDistributionMin = 0;
-const char *TransmissionUniformDistributionMaxString = "TransmissionUniformDistributionMax";
-uint32_t TransmissionUniformDistributionMax = 0;
+const char *TransmissionDistributionUniformMinString = "TransmissionDistributionUniformMin";
+uint32_t TransmissionDistributionUniformMin = 0;
+const char *TransmissionDistributionUniformMaxString = "TransmissionDistributionUniformMax";
+uint32_t TransmissionDistributionUniformMax = 0;
+
+
+const char *TransmissionDistributionNormalString = "TransmissionDistributionNormal";
+bool TransmissionDistributionNormal = false;
+const char *TransmissionDistributionNormalMeanString = "TransmissionDistributionNormalMean";
+double TransmissionDistributionNormalMean = 0.0;
+const char *TransmissionDistributionNormalStdString = "TransmissionDistributionNormalStd";
+double TransmissionDistributionNormalStd = 0.0;
 
 const char *ManifestNameString = "ManifestName";
 const char *ProbeNameString = "ProbeName";
@@ -106,7 +114,7 @@ std::vector<uint32_t> normal_distribution(uint32_t size, double mean, double std
   for (uint32_t i=0; i< size;i++) {
     tmp_value = (int) distribution(generator);
     if (tmp_value < 0) {
-      NS_LOG_WARN("Normal distribution should only generate positive numbers (setting value to 0 and breaking distribution)");
+      printf("Normal distribution should only generate positive numbers (setting value to 0 and breaking distribution). Value %d\n", tmp_value);
       tmp_value = 0;
     }
     normal_sample.push_back((uint32_t) tmp_value);
@@ -137,10 +145,15 @@ void parseArgs(int argc, char* argv[]) {
   int placeholderRpcSelectionStrategy;
   cmd.AddValue(SelectionStrategyString, "RPC selection strategies - check RpcClient::selectionStratigies for valid values", placeholderRpcSelectionStrategy);
 
-  //TransmissionUniformDistribution
+  //TransmissionDistributionUniform
   cmd.AddValue(TransmissionDistributionUniformString, "Set to true for uniform transmission distribution", TransmissionDistributionUniform);
-  cmd.AddValue(TransmissionUniformDistributionMinString, "Set to the minimum value for a transmission interval (us)", TransmissionUniformDistributionMin);
-  cmd.AddValue(TransmissionUniformDistributionMaxString, "Set the maximum value for the uniform transmission interval (us)", TransmissionUniformDistributionMax);
+  cmd.AddValue(TransmissionDistributionUniformMinString, "Set to the minimum value for a transmission interval (us)", TransmissionDistributionUniformMin);
+  cmd.AddValue(TransmissionDistributionUniformMaxString, "Set the maximum value for the uniform transmission interval (us)", TransmissionDistributionUniformMax);
+
+  //TransmissionDistributionNormal
+  cmd.AddValue(TransmissionDistributionNormalString, "Set to true for normal transmission distribution", TransmissionDistributionNormal);
+  cmd.AddValue(TransmissionDistributionNormalMeanString, "Set to the mean value for a transmission interval (us)", TransmissionDistributionNormalMean);
+  cmd.AddValue(TransmissionDistributionNormalStdString, "Set the standard deviation value for the normal transmission interval (us)", TransmissionDistributionNormalStd);
 
   //Set manifest and host name
   cmd.AddValue(ManifestNameString, "Then name of the ouput manifest (includes all configurations)", ManifestName);
@@ -169,10 +182,45 @@ void parseArgs(int argc, char* argv[]) {
 }
 
 bool ClientTransmissionArgsGood() {
+  //Check that only one transmission scheme is being used
+  int distributions = 0;
   if (TransmissionDistributionUniform) {
-    if (TransmissionUniformDistributionMin == 0 ||
-    TransmissionUniformDistributionMax == 0) {
+    distributions++;
+  }
+  if (TransmissionDistributionNormal) {
+    distributions++;
+  }
+  if (distributions <= 0) {
+    NS_LOG_WARN("No Client Transmission Distribution Specified - Select one from the parameters");
+    return false;
+  } else if (distributions > 1) {
+    NS_LOG_WARN("More than one Client transmission selected, check command line arguments");
+    return false;
+  }
+
+  //Check conditions on individual distributions
+  //Uniform transmision conditions
+  if (TransmissionDistributionUniform) {
+    //Uniform Checks
+    if (TransmissionDistributionUniformMin == 0 ||
+    TransmissionDistributionUniformMax == 0) {
       NS_LOG_WARN("Client uniform distribution set but min max values left to default");
+      return false;
+    } else if (TransmissionDistributionUniformMin > TransmissionDistributionUniformMax) {
+      NS_LOG_WARN("Uniform distributition min value greater than max value min: " << TransmissionDistributionUniformMin <<" max: " << TransmissionDistributionUniformMax <<" (check parameters)");
+    } else {
+      return true;
+    }
+  }
+
+  //Normal Distribution
+  if (TransmissionDistributionNormal) {
+    if (TransmissionDistributionNormalMean < 0) {
+      NS_LOG_WARN("Select a normal mean greater than 0. Mean " << TransmissionDistributionNormalMean);
+      return false;
+    }
+    if (TransmissionDistributionNormalStd <= 0.0) {
+      NS_LOG_WARN("Select a standard deviation greater than 0. Normal distributions with std <= 0 are undefined std:" << TransmissionDistributionNormalStd);
       return false;
     }
     return true;
@@ -185,10 +233,14 @@ std::vector<uint32_t>GetClientTransmissionDistribution() {
     NS_LOG_WARN("Error Processing Client Transmission Arguments");
   }
   if (TransmissionDistributionUniform) {
-    return uniform_distribution(DISTRIBUTION_SIZE, TransmissionUniformDistributionMin, TransmissionUniformDistributionMax);
+    return uniform_distribution(DISTRIBUTION_SIZE, TransmissionDistributionUniformMin, TransmissionDistributionUniformMax);
+  } else if (TransmissionDistributionNormal) {
+    return normal_distribution(DISTRIBUTION_SIZE, TransmissionDistributionNormalMean, TransmissionDistributionNormalStd);
+  } else {
+    NS_LOG_WARN("No client transmission distribution selected. (should be unreachable) check - ClientTransmissionArgsGood()");
   }
 
-  NS_LOG_WARN("Reach teh end of client transmission distribution without hitting an argument defined distribution");
+  NS_LOG_WARN("Reach the end of client transmission distribution without hitting an argument defined distribution");
   //TODO make this the smartest default
   return uniform_distribution(1,1000,1000); //Static Interval
 }
