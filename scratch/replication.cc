@@ -58,13 +58,13 @@ std::string ProbeName = "default.csv";
 
 const char *SelectionStrategyString = "SelectionStrategy";
 
+//Transmission Iterval Distribution Patterns
 const char *TransmissionDistributionUniformString = "TransmissionDistributionUniform";
 bool TransmissionDistributionUniform = false;
 const char *TransmissionDistributionUniformMinString = "TransmissionDistributionUniformMin";
 uint32_t TransmissionDistributionUniformMin = 0;
 const char *TransmissionDistributionUniformMaxString = "TransmissionDistributionUniformMax";
 uint32_t TransmissionDistributionUniformMax = 0;
-
 
 const char *TransmissionDistributionNormalString = "TransmissionDistributionNormal";
 bool TransmissionDistributionNormal = false;
@@ -81,6 +81,56 @@ const char *TransmissionDistributionExponentialMultiplierString = "TransmissionD
 double TransmissionDistributionExponentialMultiplier = 0.0;
 const char *TransmissionDistributionExponentialMinString = "TransmissionDistributionExponentialMin";
 double TransmissionDistributionExponentialMin = 0.0;
+
+//Packet Size Distribution Parameters
+const char *PacketSizeDistributionUniformString = "PacketSizeDistributionUniform";
+bool PacketSizeDistributionUniform = false;
+const char *PacketSizeDistributionUniformMinString = "PacketSizeDistributionUniformMin";
+uint32_t PacketSizeDistributionUniformMin = 0;
+const char *PacketSizeDistributionUniformMaxString = "PacketSizeDistributionUniformMax";
+uint32_t PacketSizeDistributionUniformMax = 0;
+
+const char *PacketSizeDistributionNormalString = "PacketSizeDistributionNormal";
+bool PacketSizeDistributionNormal = false;
+const char *PacketSizeDistributionNormalMeanString = "PacketSizeDistributionNormalMean";
+double PacketSizeDistributionNormalMean = 0.0;
+const char *PacketSizeDistributionNormalStdString = "PacketSizeDistributionNormalStd";
+double PacketSizeDistributionNormalStd = 0.0;
+
+const char *PacketSizeDistributionExponentialString = "PacketSizeDistributionExponential";
+bool PacketSizeDistributionExponential = false;
+const char *PacketSizeDistributionExponentialLambdaString = "PacketSizeDistributionExponentialLambda";
+double PacketSizeDistributionExponentialLambda = 0.0;
+const char *PacketSizeDistributionExponentialMultiplierString = "PacketSizeDistributionExponentialMultiplier";
+double PacketSizeDistributionExponentialMultiplier = 0.0;
+const char *PacketSizeDistributionExponentialMinString = "PacketSizeDistributionExponentialMin";
+double PacketSizeDistributionExponentialMin = 0.0;
+
+//Server Load Distribution Parameters
+const char *ServerLoadDistributionUniformString = "ServerLoadDistributionUniform";
+bool ServerLoadDistributionUniform = false;
+const char *ServerLoadDistributionUniformMinString = "ServerLoadDistributionUniformMin";
+uint32_t ServerLoadDistributionUniformMin = 0;
+const char *ServerLoadDistributionUniformMaxString = "ServerLoadDistributionUniformMax";
+uint32_t ServerLoadDistributionUniformMax = 0;
+
+const char *ServerLoadDistributionNormalString = "ServerLoadDistributionNormal";
+bool ServerLoadDistributionNormal = false;
+const char *ServerLoadDistributionNormalMeanString = "ServerLoadDistributionNormalMean";
+double ServerLoadDistributionNormalMean = 0.0;
+const char *ServerLoadDistributionNormalStdString = "ServerLoadDistributionNormalStd";
+double ServerLoadDistributionNormalStd = 0.0;
+
+const char *ServerLoadDistributionExponentialString = "ServerLoadDistributionExponential";
+bool ServerLoadDistributionExponential = false;
+const char *ServerLoadDistributionExponentialLambdaString = "ServerLoadDistributionExponentialLambda";
+double ServerLoadDistributionExponentialLambda = 0.0;
+const char *ServerLoadDistributionExponentialMultiplierString = "ServerLoadDistributionExponentialMultiplier";
+double ServerLoadDistributionExponentialMultiplier = 0.0;
+const char *ServerLoadDistributionExponentialMinString = "ServerLoadDistributionExponentialMin";
+double ServerLoadDistributionExponentialMin = 0.0;
+
+
 
 const char *ManifestNameString = "ManifestName";
 const char *ProbeNameString = "ProbeName";
@@ -205,12 +255,43 @@ void parseArgs(int argc, char* argv[]) {
   cmd.AddValue(TransmissionDistributionNormalMeanString, "Set to the mean value for a transmission interval (us)", TransmissionDistributionNormalMean);
   cmd.AddValue(TransmissionDistributionNormalStdString, "Set the standard deviation value for the normal transmission interval (us)", TransmissionDistributionNormalStd);
 
-
   //TransmissionDistributionNormal
   cmd.AddValue(TransmissionDistributionExponentialString, "Set to true for normal transmission distribution", TransmissionDistributionExponential);
   cmd.AddValue(TransmissionDistributionExponentialLambdaString, "Lambda value for transmission distribution", TransmissionDistributionExponentialLambda);
   cmd.AddValue(TransmissionDistributionExponentialMultiplierString, "Value to multiply exponential distribution by", TransmissionDistributionExponentialMultiplier);
   cmd.AddValue(TransmissionDistributionExponentialMinString, "Value to shift exponential distribution by (post multiply)", TransmissionDistributionExponentialMin);
+  
+  //PacketSizeDistributionUniform
+  cmd.AddValue(PacketSizeDistributionUniformString, "Set to true for uniform packet size distribution", PacketSizeDistributionUniform);
+  cmd.AddValue(PacketSizeDistributionUniformMinString, "Set to the minimum value for a packet size interval (us)", PacketSizeDistributionUniformMin);
+  cmd.AddValue(PacketSizeDistributionUniformMaxString, "Set the maximum value for the uniform packet size interval (us)", PacketSizeDistributionUniformMax);
+
+  //PacketSizeDistributionNormal
+  cmd.AddValue(PacketSizeDistributionNormalString, "Set to true for normal packet size distribution", PacketSizeDistributionNormal);
+  cmd.AddValue(PacketSizeDistributionNormalMeanString, "Set to the mean value for a packet size interval (us)", PacketSizeDistributionNormalMean);
+  cmd.AddValue(PacketSizeDistributionNormalStdString, "Set the standard deviation value for the normal packet size interval (us)", PacketSizeDistributionNormalStd);
+
+  //PacketSizeDistributionNormal
+  cmd.AddValue(PacketSizeDistributionExponentialString, "Set to true for normal packet size distribution", PacketSizeDistributionExponential);
+  cmd.AddValue(PacketSizeDistributionExponentialLambdaString, "Lambda value for packet size distribution", PacketSizeDistributionExponentialLambda);
+  cmd.AddValue(PacketSizeDistributionExponentialMultiplierString, "Value to multiply exponential distribution by", PacketSizeDistributionExponentialMultiplier);
+  cmd.AddValue(PacketSizeDistributionExponentialMinString, "Value to shift exponential distribution by (post multiply)", PacketSizeDistributionExponentialMin);
+
+  //ServerLoadDistributionUniform
+  cmd.AddValue(ServerLoadDistributionUniformString, "Set to true for uniform server load distribution", ServerLoadDistributionUniform);
+  cmd.AddValue(ServerLoadDistributionUniformMinString, "Set to the minimum value for a server load interval (us)", ServerLoadDistributionUniformMin);
+  cmd.AddValue(ServerLoadDistributionUniformMaxString, "Set the maximum value for the uniform server load interval (us)", ServerLoadDistributionUniformMax);
+
+  //ServerLoadDistributionNormal
+  cmd.AddValue(ServerLoadDistributionNormalString, "Set to true for normal server load distribution", ServerLoadDistributionNormal);
+  cmd.AddValue(ServerLoadDistributionNormalMeanString, "Set to the mean value for a server load interval (us)", ServerLoadDistributionNormalMean);
+  cmd.AddValue(ServerLoadDistributionNormalStdString, "Set the standard deviation value for the normal server load interval (us)", ServerLoadDistributionNormalStd);
+
+  //ServerLoadDistributionNormal
+  cmd.AddValue(ServerLoadDistributionExponentialString, "Set to true for normal server load distribution", ServerLoadDistributionExponential);
+  cmd.AddValue(ServerLoadDistributionExponentialLambdaString, "Lambda value for server load distribution", ServerLoadDistributionExponentialLambda);
+  cmd.AddValue(ServerLoadDistributionExponentialMultiplierString, "Value to multiply exponential distribution by", ServerLoadDistributionExponentialMultiplier);
+  cmd.AddValue(ServerLoadDistributionExponentialMinString, "Value to shift exponential distribution by (post multiply)", ServerLoadDistributionExponentialMin);
 
 
   //Set manifest and host name
@@ -261,6 +342,48 @@ bool CheckMutuallyExclusiveConditions(int n_args, ...) {
   return true;
 }
 
+bool ServerLoadArgsGood() {
+  //Check that only one transmission scheme is being used
+  if (! CheckMutuallyExclusiveConditions(3,ServerLoadDistributionUniform,ServerLoadDistributionNormal,ServerLoadDistributionExponential)){
+    NS_LOG_WARN("Incorrect number of packet size parameters set, check command line arguments");
+  }
+  //Check conditions on individual distributions
+  //Uniform transmision conditions
+  if (ServerLoadDistributionUniform) {
+    return CheckUniformDistributionParameters(ServerLoadDistributionUniformMin,ServerLoadDistributionUniformMax);
+  }
+  //Normal Distribution
+  if (ServerLoadDistributionNormal) {
+    return CheckNormalDistributionParameters(ServerLoadDistributionNormalMean, ServerLoadDistributionNormalStd);
+  }
+  //Exponential Distribution
+  if (ServerLoadDistributionExponential) {
+    return CheckExponentialDistributionParameters(ServerLoadDistributionExponentialLambda,ServerLoadDistributionExponentialMultiplier,ServerLoadDistributionExponentialMin);
+  }
+  return false;
+}
+
+bool ClientPacketSizeArgsGood() {
+  //Check that only one transmission scheme is being used
+  if (! CheckMutuallyExclusiveConditions(3,PacketSizeDistributionUniform,PacketSizeDistributionNormal,PacketSizeDistributionExponential)){
+    NS_LOG_WARN("Incorrect number of packet size parameters set, check command line arguments");
+  }
+  //Check conditions on individual distributions
+  //Uniform transmision conditions
+  if (PacketSizeDistributionUniform) {
+    return CheckUniformDistributionParameters(PacketSizeDistributionUniformMin,PacketSizeDistributionUniformMax);
+  }
+  //Normal Distribution
+  if (PacketSizeDistributionNormal) {
+    return CheckNormalDistributionParameters(PacketSizeDistributionNormalMean, PacketSizeDistributionNormalStd);
+  }
+  //Exponential Distribution
+  if (PacketSizeDistributionExponential) {
+    return CheckExponentialDistributionParameters(PacketSizeDistributionExponentialLambda,PacketSizeDistributionExponentialMultiplier,PacketSizeDistributionExponentialMin);
+  }
+  return false;
+}
+
 bool ClientTransmissionArgsGood() {
   //Check that only one transmission scheme is being used
   if (! CheckMutuallyExclusiveConditions(3,TransmissionDistributionUniform,TransmissionDistributionNormal,TransmissionDistributionExponential)){
@@ -282,6 +405,24 @@ bool ClientTransmissionArgsGood() {
   return false;
 }
 
+std::vector<uint32_t>GetServerLoadDistribution() {
+  if (!ServerLoadArgsGood()) {
+    NS_LOG_WARN("Error Processing Client ServerLoad Arguments");
+  }
+  if (ServerLoadDistributionUniform) {
+    return uniform_distribution(DISTRIBUTION_SIZE, ServerLoadDistributionUniformMin, ServerLoadDistributionUniformMax);
+  } else if (ServerLoadDistributionNormal) {
+    return normal_distribution(DISTRIBUTION_SIZE, ServerLoadDistributionNormalMean, ServerLoadDistributionNormalStd);
+  } else if (ServerLoadDistributionExponential) {
+    return exponential_distribution(DISTRIBUTION_SIZE, ServerLoadDistributionExponentialLambda, ServerLoadDistributionExponentialMultiplier, ServerLoadDistributionExponentialMin);
+  } else {
+    NS_LOG_WARN("No server load distribution selected. (should be unreachable) check - ClientServerLoadArgsGood()");
+  }
+
+  NS_LOG_WARN("Reach the end of server load distribution without hitting an argument defined distribution");
+  //TODO make this the smartest default
+  return uniform_distribution(1,10,10); //Static Interval
+}
 
 std::vector<uint32_t>GetClientTransmissionDistribution() {
   if (!ClientTransmissionArgsGood()) {
@@ -300,6 +441,26 @@ std::vector<uint32_t>GetClientTransmissionDistribution() {
   NS_LOG_WARN("Reach the end of client transmission distribution without hitting an argument defined distribution");
   //TODO make this the smartest default
   return uniform_distribution(1,1000,1000); //Static Interval
+}
+
+std::vector<uint32_t>GetPacketSizeDistribution() {
+  if (!ClientPacketSizeArgsGood()) {
+    NS_LOG_WARN("Error Processing Client PacketSize Arguments");
+  }
+  if (PacketSizeDistributionUniform) {
+    return uniform_distribution(DISTRIBUTION_SIZE, PacketSizeDistributionUniformMin, PacketSizeDistributionUniformMax);
+  } else if (PacketSizeDistributionNormal) {
+    return normal_distribution(DISTRIBUTION_SIZE, PacketSizeDistributionNormalMean, PacketSizeDistributionNormalStd);
+  } else if (PacketSizeDistributionExponential) {
+    return exponential_distribution(DISTRIBUTION_SIZE, PacketSizeDistributionExponentialLambda, PacketSizeDistributionExponentialMultiplier, PacketSizeDistributionExponentialMin);
+  } else {
+    NS_LOG_WARN("No packet distribution selected. (should be unreachable) check - ClientPacketSizeArgsGood()");
+  }
+
+  NS_LOG_WARN("Reach the end of packet size distribution without hitting an argument defined distribution");
+  //TODO make this the smartest default
+  //Set all packets to 128 bytes
+  return uniform_distribution(1,128,128); //Static Interval
 }
 //\Globals
 
@@ -484,7 +645,8 @@ std::vector<uint32_t> ClientTransmissionDistribution,
 std::vector<uint32_t> RPCServiceDistribution,
 std::vector<std::vector<int>> rpcReplicas, 
 std::vector<std::vector<int>> rpcServices, 
-uint64_t * serverLoad) {
+uint64_t * serverLoad,
+std::vector<uint32_t> ServerLoadDistribution) {
 
   //Assign attributes to RPC Servers
   for (int i = 0; i < numNodes; i++) {
@@ -499,6 +661,7 @@ uint64_t * serverLoad) {
     server->AssignRPC(rpcServices[i]);
     server->SetGlobalLoad(serverLoad);
     server->SetID(i);
+    server->SetLoadDistribution(ServerLoadDistribution);
   }
 
   //Setup clients on every node
@@ -781,16 +944,6 @@ int main(int argc, char *argv[])
   ApplicationContainer clientApps;
   ApplicationContainer serverApps;
 
-  //HACK REMOVE
-  //int PacketSize = 1472;
-  int PacketSize = 128;
-  //float Rate = 1.0 / ((PARALLEL * (float(linkrate) * (1000000000.0))) / (float(PacketSize) * 8.0));
-  //float Rate = 1.0 / (((float(linkrate) * (1000000.0))) / (float(PacketSize) * 8.0));
-  //float MaxInterval = Rate * 1.0;
-  //printf("Rate %f\n", Rate);
-
-  //int transmissionInterval = 50000; //This should be once every microsecond
-
   Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
   clientApps.Start(Seconds(0));
@@ -806,12 +959,14 @@ int main(int argc, char *argv[])
 
 
   //Generate Distributions
-  std::vector<uint32_t> ClientPacketSizeDistribution = uniform_distribution(1,PacketSize,PacketSize); //Single Element Packet Size
+  std::vector<uint32_t> ClientPacketSizeDistribution = GetPacketSizeDistribution();
   std::vector<uint32_t> ClientTransmissionDistribution = GetClientTransmissionDistribution();
   //for( uint i=0; i < ClientTransmissionDistribution.size();i++) {
   //  printf("d[%d]=%d\n",i,ClientTransmissionDistribution[i]);
   //}
   std::vector<uint32_t> RPCServiceDistribution = uniform_distribution(rpcReplicas.size() * 5,0,rpcReplicas.size()-1); //Uniform requests for RPC servers
+
+  std::vector<uint32_t> ServerLoadDistribution = GetServerLoadDistribution();
 
 
   SetupTraffic(
@@ -830,7 +985,8 @@ int main(int argc, char *argv[])
       //RPC Globals
       servicesPerServer,
       rpcReplicas,
-      serverLoad
+      serverLoad,
+      ServerLoadDistribution
   );
 
   //Assign attributes to routers in network

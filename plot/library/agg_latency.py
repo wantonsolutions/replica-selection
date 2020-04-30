@@ -56,7 +56,8 @@ with open(filename,'r') as csvfile:
             map_results[selection+"_95"]=[]
             map_results[selection+"_99"]=[]
             map_results[selection+"_x"]=[]
-        map_results[selection+"_x"].append(int(row[0]) / 1000) # divide by 1000
+        #map_results[selection+"_x"].append(int(row[0]) / 1000) # divide by 1000
+        map_results[selection+"_x"].append(int(row[0])) # divide by 1000
         map_results[selection+"_50"].append(float(row[3]))
         map_results[selection+"_95"].append(float(row[4]))
         map_results[selection+"_99"].append(float(row[5]))
@@ -85,12 +86,13 @@ plt.xscale("log")
 plt.rc('axes.formatter', useoffset=False)
 #lgd = plt.legend(ncol=3,loc="lower center",bbox_to_anchor=(0.50,-0.20))
 plt.legend()
-plt.xlim(left=0.9,right=200)
-plt.ylim(top=2500,bottom=-50)
-plt.xlabel("Interval between requests (us)", fontweight='bold')
+#plt.xlim(left=0.9,right=200)
+#plt.ylim(top=2500,bottom=-50)
+#plt.xlabel("Interval between requests (us)", fontweight='bold')
+plt.xlabel("Packet Size (bytes)", fontweight='bold')
 plt.ylabel("Response latency (us)", fontweight='bold')
 #plt.title("Static request interval response latency",fontweight='bold')
-plt.title("Dynamic request interval response latency += 50%",fontweight='bold')
+plt.title("Uniform Requests 25us Variable Packet Sizes",fontweight='bold')
 plt.tight_layout(rect=(0,0.1,1,1))
 plt.savefig("Agg_Latency.pdf")
 

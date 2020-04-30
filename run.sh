@@ -44,6 +44,58 @@ function ExponentialClientTransmission() {
 	--TransmissionDistributionExponentialMin=$min "
 }
 
+function UniformPacketSize() {
+	min=$1
+	max=$2
+	echo "--PacketSizeDistributionUniform=true 
+	--PacketSizeDistributionUniformMin=$min
+	--PacketSizeDistributionUniformMax=$max "
+}
+
+function NormalPacketSize() {
+	mean=$1
+	std=$2
+	echo "--PacketSizeDistributionNormal=true 
+	--PacketSizeDistributionNormalMean=$mean
+	--PacketSizeDistributionNormalStd=$std "
+}
+
+function ExponentialPacketSize() {
+	lambda=$1
+	multiplier=$2
+	min=$3
+	echo "--PacketSizeDistributionExponential=true 
+	--PacketSizeDistributionExponentialLambda=$lambda
+	--PacketSizeDistributionExponentialMultiplier=$multiplier
+	--PacketSizeDistributionExponentialMin=$min "
+}
+
+function UniformServerLoad() {
+	min=$1
+	max=$2
+	echo "--ServerLoadDistributionUniform=true 
+	--ServerLoadDistributionUniformMin=$min
+	--ServerLoadDistributionUniformMax=$max "
+}
+
+function NormalServerLoad() {
+	mean=$1
+	std=$2
+	echo "--ServerLoadDistributionNormal=true 
+	--ServerLoadDistributionNormalMean=$mean
+	--ServerLoadDistributionNormalStd=$std "
+}
+
+function ExponentialServerLoad() {
+	lambda=$1
+	multiplier=$2
+	min=$3
+	echo "--ServerLoadDistributionExponential=true 
+	--ServerLoadDistributionExponentialLambda=$lambda
+	--ServerLoadDistributionExponentialMultiplier=$multiplier
+	--ServerLoadDistributionExponentialMin=$min "
+}
+
 function SelectionStrat() {
 	select=$1
 	echo "--SelectionStrategy=${SelectionStrategy[${select}]} "
@@ -82,47 +134,6 @@ function RunSelectionStrategies() {
 	done
 }
 
-
-#take the max and min argument as a parameters
-function RunUniformInterval() {
-	min=$1
-	max=$2
-
-	#Generate transmission arguments for the waf execution
-	args=""
-	transmission=$(UniformClientTransmission $min $max)
-	args="$args 
-	$transmission"
-	RunSelectionStrategies "$args"
-}
-
-#take the max and min argument as a parameters
-function RunNormalInterval() {
-	mean=$1
-	std=$2
-
-	#Generate transmission arguments for the waf execution
-	args=""
-	transmission=$(NormalClientTransmission $mean $std)
-	args="$args 
-	$transmission"
-	RunSelectionStrategies "$args"
-}
-
-#take the max and min argument as a parameters
-function RunExponentialInterval() {
-	lambda=$1
-	multiplier=$2
-	min=$3
-
-	#Generate transmission arguments for the waf execution
-	args=""
-	transmission=$(ExponentialClientTransmission $lambda $multiplier $min)
-	args="$args 
-	$transmission"
-	RunSelectionStrategies "$args"
-}
-
 function PlotInterval() {
 
 	#Plot each of the executions in this interval
@@ -136,22 +147,7 @@ function PlotInterval() {
 	python ${plotScript} ${plotArgs}
 }
 
-
-function RunStaticIntervalExperiment() {
-	intervals=(100000 50000 25000 12500 6250 3125 1562)
-	#intervals=(50000 25000 12500 6250)
-
-	for i in ${intervals[@]}; do
-		echo $i
-		dirname="${i}"
-		mkdir $dirname
-		pushd $dirname
-		RunUniformInterval $i $i
-		popd
-	done
-}
-
-function RunUniformIntervalExperiment_percent() {
+function RunUniformTransmissionExperiment() {
 	intervals=(100000 50000 25000 12500 6250 3125 1562)
 
 	for i in ${intervals[@]}; do
@@ -161,12 +157,14 @@ function RunUniformIntervalExperiment_percent() {
 		dirname="${i}"
 		mkdir $dirname
 		pushd $dirname
-		RunUniformInterval $min $max
+
+		transmissionArgs=$(UniformClientTransmission $min $max)
+		RunSelectionStrategies ${transmissionArgs}
 		popd
 	done
 }
 
-function RunNormalExperiment {
+function RunNormalTransmissionExperiment {
 	echo "Running Normal Experiment"
 	intervals=(100000 50000 25000 12500 6250 3125 1562)
 	for i in ${intervals[@]}; do
@@ -177,13 +175,16 @@ function RunNormalExperiment {
 		dirname="${i}"
 		mkdir $dirname
 		pushd $dirname
-		RunNormalInterval $mean $std
+
+		transmissionArgs=$(NormalClientTransmission $mean $std)
+		RunSelectionStrategies ${transmissionArgs}
+
 		popd
 	done
 }
 
-function RunExponentialExperiment {
-	echo "Running Exponential Experiment"
+function RunExponentialTransmissionExperiment {
+	echo "Running Exponential transmission Experiment"
 	intervals=(100000 50000 25000 12500 6250 3125 1562)
 	for i in ${intervals[@]}; do
 		lambda="1.0"
@@ -193,9 +194,47 @@ function RunExponentialExperiment {
 		dirname="${i}"
 		mkdir $dirname
 		pushd $dirname
-		RunExponentialInterval $lambda $multiplier $minimum
+
+		transmissionArgs=$(ExponentialClientTransmission $lambda $multiplier $minimum)
+		RunSelectionStrategies ${transmissionArgs}
 		popd
 
+	done
+}
+
+function RunUniformPacketUniformTransmissionExperiment {
+	echo "Running "
+	#25us mean uniform transmission
+	#transmissionArgs=$(UniformClientTransmission 50000 50000)
+	transmissionArgs=$(NormalClientTransmission 50000 5000)
+	packetSizes=(64 128 256 512 1024 2048 4096 8192 16384 32768)
+	for packet_size in ${packetSizes[@]}; do
+		packetArgs=$(UniformPacketSize $packet_size $packet_size)
+
+		dirname="${packet_size}"
+		mkdir $dirname
+		pushd $dirname
+		RunSelectionStrategies "${transmissionArgs} ${packetArgs}"
+		popd
+	done
+}
+
+function RunNormalServerLoad {
+	echo "Running Normal Server Load"
+	#25us mean uniform transmission
+	#transmissionArgs=$(UniformClientTransmission 50000 50000)
+	transmissionArgs=$(NormalClientTransmission 50000 5000)
+	packetArgs=$(NormalPacketSizes 128 12)
+	serverLoad=(1 2 4 8 16 32 64 128 256 512 1024)
+	for load in ${serverLoad[@]}; do
+		let "std = 1 + ($load / 10)"
+		loadArgs=$(NormalServerLoad $load $std)
+
+		dirname="${load}"
+		mkdir $dirname
+		pushd $dirname
+		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		popd
 	done
 }
 
@@ -236,6 +275,9 @@ case $i in
 	-p | --plot)
 	PLOT="true"
 	;;
+	-d=* | --dir=* )
+	DIRECTORY="${i#*=}"
+	;;
 	-h | --help)
 	echo "No proper help message ready to go just read through the code for now"
 	;;
@@ -247,11 +289,20 @@ esac
 done
 
 if [ ! -z "$PLOT" ]; then
-	echo "Plotting the last experiment again"
-	cd ./Experiments 
-	latest=`ls -td -- */ | head -n 1`
-	cd $latest
-
+	if [ ! -z "$DIRECTORY"]; then
+		#test if the directory exists
+		if [! -d "./Experiments/$DIRECTORY" ]; then
+			echo "$DIRECTORY does not exist, exiting"
+			exit 1
+		fi
+		echo "Plotting Directory $DIRECTORY"
+		plotDir="./Experiments/$DIRECTORY"
+	else
+		echo "Plotting the last experiment again"
+		#cd ./Experiments 
+		plotDir=`ls -td -- ./Experiments/*/ | head -n 1`
+	fi
+	cd $plotDir
 	PlotIntervalsExperiment
 	#exit after plotting
 	exit 0
@@ -278,9 +329,10 @@ fi
 mkdir $ExperimentDir
 
 cd $ExperimentDir
-#RunStaticIntervalExperiment
-#RunUniformIntervalExperiment_percent
-#RunNormalExperiment
-RunExponentialExperiment
+#RunUniformTransmissionExperiment
+#RunNormalTransmissionExperiment
+#RunExponentialTransmissionExperiment
+#RunUniformPacketUniformTransmissionExperiment
+RunNormalServerLoad
 
 exit

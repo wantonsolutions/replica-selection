@@ -100,6 +100,22 @@ RpcServer::DoDispose (void)
   Application::DoDispose ();
 }
 
+void
+RpcServer::SetLoadDistribution(std::vector<uint32_t> loadDistribution){
+  m_load_distribution = loadDistribution;
+}
+
+std::vector<uint32_t> 
+RpcServer::GetLoadDistribution(){
+  return m_load_distribution;
+}
+
+
+uint32_t 
+RpcServer::GetRequestLoad(){
+  return m_load_distribution[rand() % m_load_distribution.size()];
+}
+
 void 
 RpcServer::StartApplication (void)
 {
@@ -223,7 +239,7 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       }
 
       //Calculate server load
-      int load = 10;
+      int load = GetRequestLoad();
       (m_serverLoad)[m_id] += load; //make a distribution in the future
       ScheduleResponse(MicroSeconds(((m_serverLoad)[m_id])), socket, packet, from, load);
 

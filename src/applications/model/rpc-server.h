@@ -58,6 +58,10 @@ public:
   void SetGlobalLoad(uint64_t * serverLoad);
   void SetID(int id);
 
+  void SetLoadDistribution(std::vector<uint32_t> loadDistribution);
+  std::vector<uint32_t> GetLoadDistribution();
+  uint32_t GetRequestLoad();
+
 
 protected:
   virtual void DoDispose (void);
@@ -88,6 +92,8 @@ private:
   int m_id; //localID
   uint64_t *m_serverLoad; // global server load
   std::vector<int> m_serviceable_rpcs;
+
+  std::vector<uint32_t> m_load_distribution;
 };
 
 } // namespace ns3
