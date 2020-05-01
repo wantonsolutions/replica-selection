@@ -238,6 +238,49 @@ function RunNormalServerLoad {
 	done
 }
 
+function RunExponentialServerLoad {
+	echo "Running Normal Server Load"
+	#25us mean uniform transmission
+	#transmissionArgs=$(UniformClientTransmission 50000 50000)
+	transmissionArgs=$(NormalClientTransmission 50000 5000)
+	packetArgs=$(NormalPacketSizes 128 12)
+	serverLoad=(1 2 4 8 16 32 64 128 256 512)
+	for load in ${serverLoad[@]}; do
+		lambda="1.0"
+		let "multiplier = ${load} * 2"
+		let "minimum = 1"
+		loadArgs=$(ExponentialServerLoad $lambda $multiplier $minimum)
+
+		dirname="${load}"
+		mkdir $dirname
+		pushd $dirname
+		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		popd
+	done
+}
+
+function RunProportionalLoad200 {
+	echo "Running Normal Server Load"
+	#25us mean uniform transmission
+	#transmissionArgs=$(UniformClientTransmission 50000 50000)
+	loadArgs=$(NormalServerLoad 50 5)
+	packetArgs=$(NormalPacketSizes 128 12)
+	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
+	#proportion=(20 40 60 80 100 120 140 160 180 200)
+	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
+	for p in ${proportion[@]}; do
+		let "mean = (50000 * 100) / $p"
+		let "std = ${mean} / 10"
+		transmissionArgs=$(NormalClientTransmission $mean $std)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		popd
+	done
+}
+
 function PlotIntervalsExperiment() {
 	dirname=`pwd`
 	echo "Entering plotting in $dirname"
@@ -246,7 +289,7 @@ function PlotIntervalsExperiment() {
 		dir=${dir%*/}      # remove the trailing "/"
 		echo ${dir##*/}    # print everything after the final "/"
 		pushd $dir
-		PlotInterval
+		#PlotInterval
 		popd
 	done
 
@@ -333,6 +376,9 @@ cd $ExperimentDir
 #RunNormalTransmissionExperiment
 #RunExponentialTransmissionExperiment
 #RunUniformPacketUniformTransmissionExperiment
-RunNormalServerLoad
+#RunNormalServerLoad
+#RunExponentialServerLoad
+
+RunProportionalLoad200
 
 exit

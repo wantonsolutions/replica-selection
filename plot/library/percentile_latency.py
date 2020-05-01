@@ -48,9 +48,30 @@ for name in filedict:
             time = filedict[name]['dat']['Time']
             mslat = NanoToMicroSeconds(lat)
 
-            x, y = gen_cdf(mslat,1000)
-            x50 = (len(x) / 100 ) * 50
-            x95 = (len(x) / 100 ) * 95
-            x99 = (len(x) / 100 ) * 99
+            x, y = gen_cdf(mslat,10000)
+            #find 50
+            x50 = 0
+            for i in y:
+                if i < 0.5:
+                    x50 = x50 + 1
+                else:
+                    break
+            x95 = 0
+            for i in y:
+                if i < 0.95:
+                    x95 = x95 + 1
+                else:
+                    break
+            x99 = 0
+            for i in y:
+                if i < 0.99:
+                    x99 = x99 + 1
+                else:
+                    break
+
+            #x50 = (len(x) / 100 ) * 50
+            #x95 = (len(x) / 100 ) * 95
+            #x99 = (len(x) / 100 ) * 99
+            #print x
             print nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99])
             #plt.plot(x,y,linewidth=i,label=finalname)
