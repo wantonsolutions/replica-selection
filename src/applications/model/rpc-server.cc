@@ -116,6 +116,27 @@ RpcServer::GetRequestLoad(){
   return m_load_distribution[rand() % m_load_distribution.size()];
 }
 
+uint32_t
+RpcServer::GetInstantenousLoad() {
+  Time now = Simulator::Now();
+  int64_t time_passed;
+  time_passed = now.GetNanoSeconds() - m_last_load_modification.GetNanoSeconds();
+
+  //Recalculate load
+  int64_t tmp_load = m_serverLoad[m_id]; //use a tmp variable to prevent overflow
+  tmp_load -= time_passed;
+
+  //Prevent load from going below 0
+  if (tmp_load < 0) {
+    tmp_load = 0;
+  }
+
+  m_serverLoad[m_id] = tmp_load;
+  m_last_load_modification = now;
+
+  return m_serverLoad[m_id];
+}
+
 void 
 RpcServer::StartApplication (void)
 {
@@ -239,9 +260,12 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       }
 
       //Calculate server load
-      int load = GetRequestLoad();
-      (m_serverLoad)[m_id] += load; //make a distribution in the future
-      ScheduleResponse(MicroSeconds(((m_serverLoad)[m_id])), socket, packet, from, load);
+      int requestProcessingTime = GetRequestLoad();
+      int load = GetInstantenousLoad();
+      // Set the current load of the server 
+      (m_serverLoad)[m_id] = load + requestProcessingTime; //make a distribution in the future
+      //printf("Current Load %d\n",(int)(m_serverLoad[m_id]));
+      ScheduleResponse(NanoSeconds(((m_serverLoad)[m_id])), socket, packet, from, requestProcessingTime);
 
     }
 }
@@ -256,7 +280,8 @@ void RpcServer::ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet,
 void
 RpcServer::SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from,int load) {
       NS_LOG_LOGIC ("Responding with original Packet");
-      (m_serverLoad)[m_id] -= load;
+      uint64_t current_load = GetInstantenousLoad();
+      (m_serverLoad)[m_id] = current_load;
       socket->SendTo (packet, 0, from);
 
 	      if (InetSocketAddress::IsMatchingType (from))

@@ -31,6 +31,8 @@ print sys.argv
 color=iter(cm.rainbow(np.linspace(0,1,100)))
 c=next(color)
 plt.rcParams.update({'font.size': 20})
+#plt.rcParams.update({'figure.figsize': [10, 5]})
+plt.figure(figsize=(20,10),dpi=20)
 
 colors = ['b','r','c','k', 'm', 'g']
 linetype = ['-',':','--']
@@ -38,7 +40,7 @@ cindex =0
 
 plt.rcParams.update({'font.size': 20})
 
-figure(num=None, figsize=(15, 15), dpi=80, facecolor='w', edgecolor='k')
+#figure(num=None, figsize=(15, 15), dpi=80, facecolor='w', edgecolor='k')
 
 filename=sys.argv[0]
 print filename
@@ -77,7 +79,6 @@ with open(filename,'r') as csvfile:
 
 
 
-plt.grid('on')
 
 #ax = plt.gca()
 #ax.ticklabel_format(useOffset=False)
@@ -88,14 +89,21 @@ plt.rc('axes.formatter', useoffset=False)
 plt.legend()
 #plt.xlim(left=0.9,right=200)
 #plt.ylim(top=2500,bottom=-50)
+plt.yscale("log")
+plt.ylim(top=6200,bottom=70)
+#plt.grid('on')
+plt.grid(True, which="both", ls=":", color='0.20')
 #plt.xlabel("Interval between requests (us)", fontweight='bold')
 #plt.xlabel("Packet Size (bytes)", fontweight='bold')
-plt.xlabel("Aggregate Server Load Percent", fontweight='bold')
+plt.xlabel("Request Load (percentage of maximum)", fontweight='bold')
 #plt.xlabel("Server Delay Mean", fontweight='bold')
 plt.ylabel("Response latency (us)", fontweight='bold')
 #plt.title("Static request interval response latency",fontweight='bold')
 #plt.title("Uniform Requests 25us Variable Packet Sizes",fontweight='bold')
-plt.title("Response latency proportianal to server load",fontweight='bold')
-plt.tight_layout(rect=(0,0.1,1,1))
+#plt.title("Uniform Clients - Uniform Servers (50us mean)",fontweight='bold')
+#plt.title("Normal Clients - Uniform Servers (50us mean)",fontweight='bold')
+plt.title("Normal Clients - Normal Servers (50us mean)",fontweight='bold')
+plt.tight_layout()
+#plt.tight_layout(rect=(0,0.1,1,1))
 plt.savefig("Agg_Latency.pdf")
 

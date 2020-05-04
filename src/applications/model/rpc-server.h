@@ -62,6 +62,8 @@ public:
   std::vector<uint32_t> GetLoadDistribution();
   uint32_t GetRequestLoad();
 
+  uint32_t GetInstantenousLoad();
+
 
 protected:
   virtual void DoDispose (void);
@@ -90,7 +92,9 @@ private:
   Address m_local; //!< local multicast address
 
   int m_id; //localID
-  uint64_t *m_serverLoad; // global server load
+  uint64_t *m_serverLoad; // global server load in nanoseconds
+  Time m_last_load_modification; //The last time load was observed on this server, used to calculate instantenous load.
+
   std::vector<int> m_serviceable_rpcs;
 
   std::vector<uint32_t> m_load_distribution;
