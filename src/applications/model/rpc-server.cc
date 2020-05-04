@@ -89,6 +89,11 @@ void RpcServer::AssignRPC(std::vector<int> services) {
 void RpcServer::SetGlobalLoad(uint64_t * serverLoad) {
   m_serverLoad = serverLoad;
 }
+
+void RpcServer::SetGlobalLoadUpdate(Time * serverLoad_update) {
+  m_serverLoad_update = serverLoad_update;
+}
+
 void RpcServer::SetID(int id) {
   m_id = id;
 }
@@ -120,7 +125,7 @@ uint32_t
 RpcServer::GetInstantenousLoad() {
   Time now = Simulator::Now();
   int64_t time_passed;
-  time_passed = now.GetNanoSeconds() - m_last_load_modification.GetNanoSeconds();
+  time_passed = now.GetNanoSeconds() - m_serverLoad_update[m_id].GetNanoSeconds();
 
   //Recalculate load
   int64_t tmp_load = m_serverLoad[m_id]; //use a tmp variable to prevent overflow
@@ -130,9 +135,9 @@ RpcServer::GetInstantenousLoad() {
   if (tmp_load < 0) {
     tmp_load = 0;
   }
-
+  //Update Server Load
   m_serverLoad[m_id] = tmp_load;
-  m_last_load_modification = now;
+  m_serverLoad_update[m_id] = now;
 
   return m_serverLoad[m_id];
 }
@@ -280,8 +285,7 @@ void RpcServer::ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet,
 void
 RpcServer::SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from,int load) {
       NS_LOG_LOGIC ("Responding with original Packet");
-      uint64_t current_load = GetInstantenousLoad();
-      (m_serverLoad)[m_id] = current_load;
+      (m_serverLoad)[m_id] = GetInstantenousLoad();
       socket->SendTo (packet, 0, from);
 
 	      if (InetSocketAddress::IsMatchingType (from))

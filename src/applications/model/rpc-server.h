@@ -56,6 +56,7 @@ public:
   void AssignRPC(std::vector<int> services);
 
   void SetGlobalLoad(uint64_t * serverLoad);
+  void SetGlobalLoadUpdate(Time * serverLoad_update);
   void SetID(int id);
 
   void SetLoadDistribution(std::vector<uint32_t> loadDistribution);
@@ -93,7 +94,7 @@ private:
 
   int m_id; //localID
   uint64_t *m_serverLoad; // global server load in nanoseconds
-  Time m_last_load_modification; //The last time load was observed on this server, used to calculate instantenous load.
+  Time *m_serverLoad_update; //The last time load was observed on this server, used to calculate instantenous load.
 
   std::vector<int> m_serviceable_rpcs;
 

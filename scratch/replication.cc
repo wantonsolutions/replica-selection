@@ -557,7 +557,7 @@ void SetupRpcClient(
   std::vector<uint32_t> ClientTransmissionDistribution,
   std::vector<uint32_t> RPCServiceDistribution,
    RpcClient::selectionStrategy rpcSelectionStrategy,
-std::vector<std::vector<int>> rpcServices, uint64_t * serverLoad)
+std::vector<std::vector<int>> rpcServices, uint64_t * serverLoad, Time* serverLoad_update)
 {
   RpcClientHelper rpcClient(addresses[0], int(Ports[0]));
   ApplicationContainer clientApps = rpcClient.Install(nodes.Get(clientIndex));
@@ -582,6 +582,7 @@ std::vector<std::vector<int>> rpcServices, uint64_t * serverLoad)
   uec->SetGlobalPackets(global_packets_sent);
   uec->SetRpcServices(rpcServices);
   uec->SetGlobalSeverLoad(serverLoad);
+  uec->SetGlobalSeverLoadUpdate(serverLoad_update);
   //Fix this should be checked prior to executing
   uec->SetReplicaSelectionStrategy(rpcSelectionStrategy);
 
@@ -646,6 +647,7 @@ std::vector<uint32_t> RPCServiceDistribution,
 std::vector<std::vector<int>> rpcReplicas, 
 std::vector<std::vector<int>> rpcServices, 
 uint64_t * serverLoad,
+Time * serverLoad_update,
 std::vector<uint32_t> ServerLoadDistribution) {
 
   //Assign attributes to RPC Servers
@@ -660,13 +662,14 @@ std::vector<uint32_t> ServerLoadDistribution) {
     Ptr<RpcServer> server = DynamicCast<RpcServer>(serverApps.Get(0));
     server->AssignRPC(rpcServices[i]);
     server->SetGlobalLoad(serverLoad);
+    server->SetGlobalLoadUpdate(serverLoad_update);
     server->SetID(i);
     server->SetLoadDistribution(ServerLoadDistribution);
   }
 
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++) {
-    SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad);
+    SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad, serverLoad_update);
   }
 }
 
@@ -923,9 +926,11 @@ int main(int argc, char *argv[])
 
   //Create Server Load Global
   uint64_t* serverLoad = (uint64_t*) malloc(NODES * sizeof(uint64_t));
+  Time* serverLoad_update = (Time*) malloc(NODES * sizeof(Time));
   for(int i=0;i<NODES;i++) {
     printf("setting server load for server %d\n", i);
     serverLoad[i]=0;
+    serverLoad_update[i]=Time(0);
   }
   //Create IP map to server index
   std::map<uint32_t, uint32_t> ipServerMap;
@@ -986,6 +991,7 @@ int main(int argc, char *argv[])
       servicesPerServer,
       rpcReplicas,
       serverLoad,
+      serverLoad_update,
       ServerLoadDistribution
   );
 

@@ -154,6 +154,7 @@ public:
 
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
   void SetGlobalSeverLoad(uint64_t *serverLoad);
+  void SetGlobalSeverLoadUpdate(Time *serverLoad_update);
   void SetReplicaSelectionStrategy(selectionStrategy strategy);
 
 
@@ -167,6 +168,8 @@ public:
  int replicaSelectionStrategy_firstIndex(int rpc);
  int replicaSelectionStrategy_random(int rpc);
  int replicaSelectionStrategy_minimumLoad(int rpc);
+
+ uint64_t GetInstantenousLoad(int server_id);
 
  void SetPacketSizeDistribution(std::vector<uint32_t>);
  std::vector<uint32_t> GetPacketSizeDistribution();
@@ -240,6 +243,8 @@ private:
 
 
   uint64_t *m_serverLoad; // global server load
+  Time *m_serverLoad_update; // global server load update
+
   std::vector<std::vector<int>> m_rpc_server_replicas;
   int m_selection_strategy;
 

@@ -269,7 +269,8 @@ function RunProportionalLoad200 {
 	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
 	#proportion=(20 40 60 80 100 120 140 160 180 200)
 	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
-	proportion=(50 55 60 65 70 75 80 85 90 95 100)
+	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#proportion=(50 55 60 65 70 75 80 85 90 95 100)
 	#proportion=(50 75 80 100)
 
 	for p in ${proportion[@]}; do
@@ -287,6 +288,8 @@ function RunProportionalLoad200 {
 		pushd $dirname
 		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
 		popd
+
+		#exit
 	done
 }
 

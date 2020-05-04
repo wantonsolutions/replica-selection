@@ -361,6 +361,10 @@ void RpcClient::SetGlobalSeverLoad(uint64_t *serverLoad) {
   m_serverLoad = serverLoad;
 }
 
+void RpcClient::SetGlobalSeverLoadUpdate(Time *serverLoad_update) {
+  m_serverLoad_update = serverLoad_update;
+}
+
 //For now all replicas live in the same location because there are no replicas
 void RpcClient::PopulateReplicasNoReplicas(RPCHeader *rpch) {
   for( int i =0; i< MAX_REPLICAS; i++) {
@@ -431,8 +435,8 @@ void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
    for (uint i = 0; i < m_rpc_server_replicas[rpc].size();i++) {
      int replica = m_rpc_server_replicas[rpc][i];
      //printf("checking serverload for server ID %d\n", replica);
-     if ((m_serverLoad)[replica] < minLoad){
-       minLoad = (m_serverLoad)[replica];
+     if (GetInstantenousLoad(replica) < minLoad){
+       minLoad = GetInstantenousLoad(replica);
        minReplica = replica;
      }
      //printf("done loop server ID %d\n", replica);
@@ -440,6 +444,27 @@ void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
    //printf("done accessing min map\n");
    return minReplica;
  }
+
+uint64_t
+RpcClient::GetInstantenousLoad(int server_id) {
+  Time now = Simulator::Now();
+  int64_t time_passed;
+  time_passed = now.GetNanoSeconds() - m_serverLoad_update[server_id].GetNanoSeconds();
+
+  //Recalculate load
+  int64_t tmp_load = m_serverLoad[server_id]; //use a tmp variable to prevent overflow
+  tmp_load -= time_passed;
+
+  //Prevent load from going below 0
+  if (tmp_load < 0) {
+    tmp_load = 0;
+  }
+  //Update Server Load
+  m_serverLoad[server_id] = tmp_load;
+  m_serverLoad_update[server_id] = now;
+
+  return m_serverLoad[server_id];
+}
 
  void RpcClient::SetPacketSizeDistribution(std::vector<uint32_t> packetSizes) {
    m_packet_size_distribution = packetSizes;
