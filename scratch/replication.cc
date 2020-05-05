@@ -671,6 +671,10 @@ std::vector<uint32_t> ServerLoadDistribution) {
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++) {
     SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad, serverLoad_update);
+    for (int j =0 ; j < 100; j++){
+      NS_LOG_WARN("ONLY ALLOCATING A SINGLE CLIENT\n");
+    }
+    break;
   }
 }
 
@@ -723,16 +727,13 @@ int main(int argc, char *argv[])
 
   Time::SetResolution(Time::NS);
   LogComponentEnable("RpcClientApplication", LOG_LEVEL_WARN);
-  LogComponentEnable("DRedundancyClientApplication", LOG_LEVEL_WARN);
   if (debug)
   {
-    LogComponentEnable("DRedundancyClientApplication", LOG_LEVEL_INFO);
-    LogComponentEnable("DRedundancyServerApplication", LOG_LEVEL_INFO);
-    LogComponentEnable("RaidClientApplication", LOG_LEVEL_INFO);
-    LogComponentEnable("RaidServerApplication", LOG_LEVEL_INFO);
     LogComponentEnable("RpcClientApplication", LOG_LEVEL_INFO);
     LogComponentEnable("RpcServerApplication", LOG_LEVEL_INFO);
     LogComponentEnable("VarClients", LOG_LEVEL_INFO);
+    LogComponentEnable("VarClients", LOG_LEVEL_INFO);
+    LogComponentEnable("Ipv4DoppelgangerRouting",LOG_LEVEL_INFO);
   }
 
 
@@ -747,7 +748,6 @@ int main(int argc, char *argv[])
 
   NodeContainer core;
   core.Create(CORE);
-
   NodeContainer nc_node2edge[NODES];
   NetDeviceContainer ndc_node2edge[NODES];
 
@@ -892,7 +892,8 @@ int main(int argc, char *argv[])
   //Setup Clients
   ///////////////////////////////////////////////////////////////////////////////////
   int RpcServerPort = 10;
-  float duration = 0.01;
+  //float duration = 0.01;
+  float duration = 0.003;
 
   uint32_t global_packets_sent = 0;
 

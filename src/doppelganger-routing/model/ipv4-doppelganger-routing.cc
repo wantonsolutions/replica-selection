@@ -197,10 +197,6 @@ Ptr<Ipv4Route>
 Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)
 {
 
-  //todo FIGURE OUT HOW TO MODIFY PACKET HEADERS HERE, OR POTENTIALLY IN A DIFFERENT LAYER
-  NS_LOG_ERROR (this << " Doppelganger routing is not support for local routing output");
-
-
 
   Ipv4DoppelgangerTag ipv4DoppelgangerTag;
   bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
@@ -240,9 +236,9 @@ Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &head
 
       Ipv4Address ipv4Addr = ipv4Header.GetDestination();
       if(min_replica == ipv4Addr.Get()) {
-        //printf("replica is the same as the min!\n");
+        NS_LOG_INFO("replica is the same as the min! Replica: " << min_replica);
       } else {
-        //printf("the best case replica has changed since source send\n");
+        NS_LOG_INFO("the best case replica has changed since source send:" << ipv4Addr.Get() << " --> " << min_replica);
         packet->RemoveHeader(ipv4Header);
         ipv4Addr.Set(min_replica);
         ipv4Header.SetDestination(ipv4Addr);
@@ -317,9 +313,16 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   Time now = Simulator::Now ();
   std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntries (destAddress);
 
-
+  if (routeEntries.size() > 0 ) {
+    NS_LOG_WARN("Entries exist for the destination address " << destAddress.Get() << " Printing ");
+    for ( std::vector<DoppelgangerRouteEntry>::iterator it = routeEntries.begin(); it != routeEntries.end(); ++it){
+      NS_LOG_WARN(it->network.Get());
+    }
+  } else {
+    NS_LOG_WARN("No entries found for destination address " << destAddress.Get());
+  }
   //printf("we are routing in the west!!\n");
-  return false;
+  return true;
   /*
   uint32_t flowId = 0;
   FlowIdTag flowIdTag;

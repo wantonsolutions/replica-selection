@@ -293,6 +293,29 @@ function RunProportionalLoad200 {
 	done
 }
 
+function  RunDebug {
+	debug=true
+	echo "Running Debug"
+	transmissionArgs=$(NormalClientTransmission 500000 50000)
+	packetArgs=$(NormalPacketSizes 128 12)
+	loadArgs=$(NormalServerLoad 50000 5000)
+	selectionArgs=$(SelectionStrat single)
+	configArgs=$(ConfigArgs results)
+
+	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${configArgs}"
+
+	currentdir=`pwd`
+	pushd $topdir
+
+	#./waf --visualize --command-template="gdb --args %s" --run "scratch/replication"
+	./waf -j 40 --run "scratch/replication ${args}"
+
+	mv results* $currentdir
+	popd #topdir
+	popd #debugdir
+
+}
+
 function PlotIntervalsExperiment() {
 	dirname=`pwd`
 	echo "Entering plotting in $dirname"
@@ -333,8 +356,12 @@ case $i in
 	-d=* | --dir=* )
 	DIRECTORY="${i#*=}"
 	;;
+	--debug)
+	DEBUG=true
+	echo "running debug"
+	;;
 	-h | --help)
-	echo "No proper help message ready to go just read through the code for now"
+	echo "no proper help message ready to go just read through the code for now"
 	;;
 	*)
 	echo "$i is an invalid argument - take a look at the code silly billy :^)"
@@ -342,6 +369,16 @@ case $i in
 esac
 
 done
+
+if [ ! -z "$DEBUG" ]; then
+	rm -r ./Experiments/debug
+	mkdir ./Experiments/debug
+	pushd ./Experiments/debug
+	RunDebug
+	popd
+	exit
+fi
+	
 
 if [ ! -z "$PLOT" ]; then
 	if [ ! -z "$DIRECTORY" ]; then
