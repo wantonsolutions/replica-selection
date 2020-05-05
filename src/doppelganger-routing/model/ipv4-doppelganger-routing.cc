@@ -180,6 +180,10 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
     m_serverLoad = serverLoad;
   }
 
+  void Ipv4DoppelgangerRouting::SetGlobalServerLoadUpdate(Time *serverLoad_update){
+    m_serverLoad_update = serverLoad_update;
+  }
+
   void Ipv4DoppelgangerRouting::SetIPServerMap(std::map<uint32_t,uint32_t> ip_map){
     m_server_ip_map = ip_map;
   }
@@ -259,6 +263,28 @@ Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &head
   return 0;
 }
 
+uint64_t
+Ipv4DoppelgangerRouting::GetInstantenousLoad(int server_id) {
+  Time now = Simulator::Now();
+  int64_t time_passed;
+  time_passed = now.GetNanoSeconds() - m_serverLoad_update[server_id].GetNanoSeconds();
+
+  //Recalculate load
+  int64_t tmp_load = m_serverLoad[server_id]; //use a tmp variable to prevent overflow
+  tmp_load -= time_passed;
+
+  //Prevent load from going below 0
+  if (tmp_load < 0) {
+    tmp_load = 0;
+  }
+  //Update Server Load
+  m_serverLoad[server_id] = tmp_load;
+  m_serverLoad_update[server_id] = now;
+
+  return m_serverLoad[server_id];
+}
+
+
 //Returns the IP of a minuimum latency replica
  uint32_t
  Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(uint32_t ips[MAX_REPLICAS]){
@@ -266,8 +292,8 @@ Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &head
    uint32_t minReplica;
    for (uint i = 0; i < MAX_REPLICAS;i++) {
      uint32_t serverIndex = m_server_ip_map[ips[i]];
-     if (m_serverLoad[serverIndex] < minLoad){
-       minLoad = m_serverLoad[serverIndex];
+     if (GetInstantenousLoad(serverIndex) < minLoad){
+       minLoad = GetInstantenousLoad(serverIndex);
        minReplica = ips[i];
      }
    }

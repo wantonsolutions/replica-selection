@@ -531,7 +531,7 @@ static void AddInternetStack (Ptr <Node> node){
 
 
 //----------------------------------------------RPC Client----------------------------------------------------
-void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad) {
+void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad, Time * serverLoad_update) {
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i) {
       NS_LOG_WARN("Installing parameters on" << (*i)->GetId());
@@ -544,6 +544,7 @@ void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrateg
       doppelRouter->SetRpcServices(rpcServices);
       doppelRouter->SetIPServerMap(ipServerMap);
       doppelRouter->SetGlobalServerLoad(serverLoad);
+      doppelRouter->SetGlobalServerLoadUpdate(serverLoad_update);
       doppelRouter->SetLoadBallencingStrategy(strat);
       //Start here we need to get the list routing protocol
   }
@@ -996,14 +997,14 @@ int main(int argc, char *argv[])
   );
 
   //Assign attributes to routers in network
-  LoadBallencingStrategy strat = none;
-  //LoadBallencingStrategy strat = minimumLoad;
+  //LoadBallencingStrategy strat = none;
+  LoadBallencingStrategy strat = minimumLoad;
 
   printf("setting custom load balencing strats\n");
-  SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,serverLoad);
-  SetDoppelgangerRoutingParameters(edge,strat,servicesPerServer,ipServerMap,serverLoad);
-  SetDoppelgangerRoutingParameters(agg,strat,servicesPerServer,ipServerMap,serverLoad);
-  SetDoppelgangerRoutingParameters(core,strat,servicesPerServer,ipServerMap,serverLoad);
+  SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(edge,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(agg,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(core,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
   printf("done setting custom load ballencing\n");
 
 
