@@ -898,8 +898,20 @@ int main(int argc, char *argv[])
 
   //Generate Addresses for each of the end hosts and assign them
 
+
+  for (int i=0;i<NODES;i++) {
+  	node2edge[i] = address.Assign(ndc_node2edge[i]);
+  }
+  for (int i=0;i<EDGE*AGG*PODS;i++) {
+  	edge2agg[i] = address.Assign(ndc_edge2agg[i]);
+  }
+  for (int i=0;i<CORE*PODS;i++) {
+  	agg2core[i] = address.Assign(ndc_agg2core[i]);
+  }
+
   int a,b,c,d;
   a = 10;
+  int itterator=0;
   printf("Setting up IP addresses\n");
   printf("Node IP addresses\n");
   for (int i=0; i<PODS; i++) {
@@ -911,6 +923,15 @@ int main(int argc, char *argv[])
         //printf("Printing IP\n");
         int ip=toIP(a,b,c,d);
         printIP(ip);
+        Ptr<Node> node = nodes.Get(itterator);
+        for ( uint devNum=0; devNum < node->GetNDevices(); ++devNum) {
+          Ptr<NetDevice> dev = node->GetDevice(devNum);
+          Address addr = dev->GetAddress();
+          if (addr.CheckCompatible())
+          dev->SetAddress(Ipv4Address(ip));
+          //Ptr<Ipv4Address> addr = DynamicCast<Ipv4Address>(dev->GetAddress());
+
+        }
       }
     }
   }
@@ -954,16 +975,6 @@ int main(int argc, char *argv[])
     }
   }
   //return -1;
-
-  for (int i=0;i<NODES;i++) {
-  	node2edge[i] = address.Assign(ndc_node2edge[i]);
-  }
-  for (int i=0;i<EDGE*AGG*PODS;i++) {
-  	edge2agg[i] = address.Assign(ndc_edge2agg[i]);
-  }
-  for (int i=0;i<CORE*PODS;i++) {
-  	agg2core[i] = address.Assign(ndc_agg2core[i]);
-  }
 
   ////////////////////////////////////////////////////////////////////////////////////
   //Setup Clients
