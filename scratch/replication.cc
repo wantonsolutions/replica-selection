@@ -729,6 +729,36 @@ void printIP(int ip) {
 }
 
 
+void SetIpv4NodeDevices(Ptr<Node> node, uint32_t ip) {
+  for ( uint devNum=0; devNum < node->GetNDevices(); ++devNum) {
+    Ptr<NetDevice> device = node->GetDevice(devNum);
+
+    //Stolen from helper
+    Ptr<Node> nodeprime = device->GetNode ();
+    NS_ASSERT_MSG (nodeprime, "Ipv4AddressHelper::Assign(): NetDevice is not not associated "
+                  "with any node -> fail");
+
+    Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
+    NS_ASSERT_MSG (ipv4, "Ipv4AddressHelper::Assign(): NetDevice is associated"
+                  " with a node without IPv4 stack installed -> fail "
+                  "(maybe need to use InternetStackHelper?)");
+
+    int32_t interface = ipv4->GetInterfaceForDevice (device);
+    if (interface == -1)
+      {
+        interface = ipv4->AddInterface (device);
+      }
+    NS_ASSERT_MSG (interface >= 0, "Ipv4AddressHelper::Assign(): "
+                  "Interface index not found");
+
+    //Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress (NewAddress (), toIP(255,0,0,0));
+    Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress (Ipv4Address (ip), toIP(255,0,0,0));
+    ipv4->AddAddress (interface, ipv4Addr);
+    ipv4->SetMetric (interface, 1);
+    ipv4->SetUp (interface);
+  }
+}
+
 
 
 
@@ -928,21 +958,17 @@ int main(int argc, char *argv[])
         //printf("Printing IP\n");
         int ip=toIP(a,b,c,d);
         printIP(ip);
-        Ptr<Node> node = nodes.Get(itterator);
-        for ( uint devNum=0; devNum < node->GetNDevices(); ++devNum) {
-          Ptr<NetDevice> dev = node->GetDevice(devNum);
-          Address addr = dev->GetAddress();
-          if (addr.CheckCompatible())
-          dev->SetAddress(Ipv4Address(ip));
-          //Ptr<Ipv4Address> addr = DynamicCast<Ipv4Address>(dev->GetAddress());
 
-        }
+        Ptr<Node> node = nodes.Get(itterator);
+        SetIpv4NodeDevices(node, ip);
+        itterator++;
       }
     }
   }
   printf("Edge IP ADDRESSES\n");
   a=10;
   d=1;
+  itterator = 0;
   for (int i=0; i<PODS; i++) {
     for (int j=0; j<EDGE; j++) {
       b=i;
@@ -950,12 +976,16 @@ int main(int argc, char *argv[])
       //printf("Printing IP\n");
       int ip=toIP(a,b,c,d);
       printIP(ip);
+      Ptr<Node> node = edge.Get(itterator);
+      SetIpv4NodeDevices(node, ip);
+      itterator++;
     }
   }
 
   printf("AGG IP ADDRESSES\n");
   a=10;
   d=1;
+  itterator=0;
   for (int i=0; i<PODS; i++) {
     for (int j=EDGE; j<EDGE + AGG; j++) {
       b=i;
@@ -963,6 +993,9 @@ int main(int argc, char *argv[])
       //printf("Printing IP\n");
       int ip=toIP(a,b,c,d);
       printIP(ip);
+      Ptr<Node> node = agg.Get(itterator);
+      SetIpv4NodeDevices(node, ip);
+      itterator++;
     }
   }
 
@@ -970,6 +1003,7 @@ int main(int argc, char *argv[])
   a=10;
   b=PODS;
   d=1;
+  itterator = 0;
   for (int i=1; i<AGG + 1; i++) {
     for (int j=1; j<AGG + 1; j++) {
       c=i;
@@ -977,6 +1011,9 @@ int main(int argc, char *argv[])
       //printf("Printing IP\n");
       int ip=toIP(a,b,c,d);
       printIP(ip);
+      Ptr<Node> node = core.Get(itterator);
+      SetIpv4NodeDevices(node, ip);
+      itterator++;
     }
   }
   //return -1;
@@ -985,13 +1022,8 @@ int main(int argc, char *argv[])
   //Setup Clients
   ///////////////////////////////////////////////////////////////////////////////////
   int RpcServerPort = 10;
-<<<<<<< HEAD
   float duration = 0.01;
   //float duration = 0.003;
-=======
-  //float duration = 0.01;
-  float duration = 0.01;
->>>>>>> master
 
   uint32_t global_packets_sent = 0;
 

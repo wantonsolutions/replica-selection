@@ -319,10 +319,10 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
       NS_LOG_WARN(it->network.Get());
     }
   } else {
-    NS_LOG_WARN("No entries found for destination address " << destAddress.Get());
+    NS_LOG_WARN("No entries found for destination address - punting to global routing " << destAddress.Get());
+    return false;
   }
   //printf("we are routing in the west!!\n");
-  return false;
   /*
   uint32_t flowId = 0;
   FlowIdTag flowIdTag;
