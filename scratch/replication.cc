@@ -671,10 +671,12 @@ std::vector<uint32_t> ServerLoadDistribution) {
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++) {
     SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad, serverLoad_update);
+    /*
     for (int j =0 ; j < 100; j++){
       NS_LOG_WARN("ONLY ALLOCATING A SINGLE CLIENT\n");
     }
     break;
+    */
   }
 }
 
@@ -752,6 +754,9 @@ int main(int argc, char *argv[])
     LogComponentEnable("VarClients", LOG_LEVEL_INFO);
     LogComponentEnable("Ipv4DoppelgangerRouting",LOG_LEVEL_INFO);
   }
+
+  NS_LOG_INFO("Setting Random Seed");
+  srand (time(NULL));
 
 
   NodeContainer nodes;
@@ -980,8 +985,13 @@ int main(int argc, char *argv[])
   //Setup Clients
   ///////////////////////////////////////////////////////////////////////////////////
   int RpcServerPort = 10;
+<<<<<<< HEAD
+  float duration = 0.01;
+  //float duration = 0.003;
+=======
   //float duration = 0.01;
   float duration = 0.01;
+>>>>>>> master
 
   uint32_t global_packets_sent = 0;
 
@@ -1086,8 +1096,8 @@ int main(int argc, char *argv[])
   );
 
   //Assign attributes to routers in network
-  //LoadBallencingStrategy strat = none;
-  LoadBallencingStrategy strat = minimumLoad;
+  LoadBallencingStrategy strat = none;
+  //LoadBallencingStrategy strat = minimumLoad;
 
   printf("setting custom load balencing strats\n");
   SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
@@ -1097,7 +1107,7 @@ int main(int argc, char *argv[])
   printf("done setting custom load ballencing\n");
 
 
-
+  printf("Running the simulator!!\n");
   Simulator::Run();
   Simulator::Destroy();
   return 0;
