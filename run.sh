@@ -1,6 +1,4 @@
-#!/bin/bash -x
-
-echo "Hello Experiment"
+#!/bin/bash
 
 topdir=`pwd`
 
@@ -269,9 +267,9 @@ function RunProportionalLoad200 {
 	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
 	#proportion=(20 40 60 80 100 120 140 160 180 200)
 	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
-	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
 	#proportion=(50 55 60 65 70 75 80 85 90 95 100)
-	#proportion=(50 75 80 100)
+	proportion=(50 75 80 100)
 
 	for p in ${proportion[@]}; do
 		let "mean = (50000 * 100) / $p"
@@ -290,6 +288,88 @@ function RunProportionalLoad200 {
 		popd
 
 		#exit
+	done
+}
+
+function RunProportionalLoadNN {
+	echo "Running Normal Server Normal Client"
+	loadArgs=$(NormalServerLoad 50000 5000)
+	packetArgs=$(NormalPacketSizes 128 12)
+	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#proportion=(50 75 100)
+
+	for p in ${proportion[@]}; do
+		let "mean = (50000 * 100) / $p"
+		let "std = ${mean} / 10"
+		transmissionArgs=$(NormalClientTransmission $mean $std)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		popd
+	done
+}
+
+function RunProportionalLoadNU {
+	echo "Running Normal Server Uniform Client"
+	loadArgs=$(NormalServerLoad 50000 5000)
+	packetArgs=$(NormalPacketSizes 128 12)
+	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+	for p in ${proportion[@]}; do
+		let "mean = (50000 * 100) / $p"
+		let "std = ${mean} / 10"
+		let "min = $mean - ( $std * 2 )"
+		let "max = $mean + ( $std * 2 )"
+		transmissionArgs=$(UniformClientTransmission $min $max)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		popd
+	done
+}
+
+function RunProportionalLoadUN {
+	echo "Running Uniform Server Normal Client"
+	loadArgs=$(UniformServerLoad 45000 55000)
+	packetArgs=$(NormalPacketSizes 128 12)
+	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+	for p in ${proportion[@]}; do
+		let "mean = (50000 * 100) / $p"
+		let "std = ${mean} / 10"
+		transmissionArgs=$(NormalClientTransmission $mean $std)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		popd
+	done
+}
+
+function RunProportionalLoadUU {
+	echo "Running Uniform Server Normal Client"
+	loadArgs=$(UniformServerLoad 45000 55000)
+	packetArgs=$(NormalPacketSizes 128 12)
+	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+	for p in ${proportion[@]}; do
+		let "mean = (50000 * 100) / $p"
+		let "std = ${mean} / 10"
+		let "min = $mean - ( $std * 2 )"
+		let "max = $mean + ( $std * 2 )"
+		transmissionArgs=$(UniformClientTransmission $min $max)
+
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		popd
 	done
 }
 
@@ -339,9 +419,27 @@ function PlotIntervalsExperiment() {
 	python $plotScript aggregate.dat
 }
 
+function PlotIntervalExperimentAverage {
+
+	#files=("Server_Normal_Client_Normal_2020-05-06_1/aggregate.dat" "Server_Normal_Client_Normal_2020-05-06_2/aggregate.dat" "Server_Normal_Client_Normal_2020-05-06_3/aggregate.dat")
+	files=$@
+	#add file extension
+
+	plotScript="$topdir/plot/library/avg_agg_latency.py"
+	echo "Entering Python Plot"
+	python $plotScript ${files[@]}
+	CurrentDate=`date "+%F_%T"`
+	cp Avg_Agg_Latency.pdf "Avg_Agg_Latency_${CurrentDate}.pdf"
+
+}
+
+function LastExperiment {
+	dir=`ls -td -- ./Experiments/*/ | head -n 1`
+	echo `realpath $dir`
+}
+
 datetime=`date "+%F_%T"`
 CurrentDate=`date "+%F"`
-echo $datetime
 
 #arguement parsing
 for i in "$@"; do 
@@ -350,11 +448,23 @@ case $i in
 	-n=* | --name=*)
 	EXPERIMENT_NAME="${i#*=}"
 	;;
+	-d=* | --dir=* )
+	DIRECTORY="${i#*=}"
+	;;
+	--dirs=* )
+	DIRECTORIES="${i#*=}"
+	;;
+	-f=* | --function=* )
+	FUNCTION="${i#*=}"
+	;;
 	-p | --plot)
 	PLOT="true"
 	;;
-	-d=* | --dir=* )
-	DIRECTORY="${i#*=}"
+	--plot_multi)
+	PLOT_MULTI=true
+	;;
+	--last )
+	LAST=true
 	;;
 	--debug)
 	DEBUG=true
@@ -370,12 +480,25 @@ esac
 
 done
 
+if [ ! -z "$LAST" ]; then
+	echo $(LastExperiment)
+	exit
+fi
+
 if [ ! -z "$DEBUG" ]; then
 	rm -r ./Experiments/debug
 	mkdir ./Experiments/debug
 	pushd ./Experiments/debug
 	RunDebug
 	popd
+	exit
+fi
+
+if [ ! -z $PLOT_MULTI ]; then
+	echo "Plotting multiple run average (assuming you know what your doing)"
+
+	cd "./Experiments"
+	PlotIntervalExperimentAverage ${DIRECTORIES[@]}
 	exit
 fi
 	
@@ -393,8 +516,9 @@ if [ ! -z "$PLOT" ]; then
 	else
 		echo "Plotting the last experiment again"
 		#cd ./Experiments 
-		plotDir=`ls -td -- ./Experiments/*/ | head -n 1`
+		plotDir=LastExperiment
 	fi
+
 	cd $plotDir
 	PlotIntervalsExperiment
 	#exit after plotting
@@ -419,16 +543,31 @@ else
 	echo "First time running Experiment ${EXPERIMENT_NAME}"
 
 fi
+
 mkdir $ExperimentDir
+pushd $ExperimentDir
 
-cd $ExperimentDir
-#RunUniformTransmissionExperiment
-#RunNormalTransmissionExperiment
-#RunExponentialTransmissionExperiment
-#RunUniformPacketUniformTransmissionExperiment
-#RunNormalServerLoad
-#RunExponentialServerLoad
 
-RunProportionalLoad200
+#determine what to run
 
+#check to see if the function exists. This is largely for higher level scripting
+if [ ! -z $FUNCTION ]; then
+	if [ `type -t $FUNCTION`"" == 'function' ]; then
+		echo "Running $FUNCTION"
+		$FUNCTION
+	else
+		echo "$FUNCTION is not an in scope function: Exiting"
+	fi
+else 
+	echo "running some defualt bulshit"
+	#RunUniformTransmissionExperiment
+	#RunNormalTransmissionExperiment
+	#RunExponentialTransmissionExperiment
+	#RunUniformPacketUniformTransmissionExperiment
+	#RunNormalServerLoad
+	#RunExponentialServerLoad
+	RunProportionalLoad200
+fi
+
+popd
 exit
