@@ -476,6 +476,13 @@ CreateAndAggregateObjectFromTypeId (Ptr<Node> node, const std::string typeId)
   Ptr<Object> protocol = factory.Create <Object> ();
   node->AggregateObject (protocol);
 }
+
+Ptr<Ipv4DopplegangerRouter> GetDopplegangerRouter(Ptr<Node> node) {
+      Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
+      Ptr<Ipv4ListRouting> list = ipv4.GetRoutingProtocol()
+      return list.GetRoutingProtocl(0,NULL);
+}
+
 //Derrived from Internet stack helper
 static void AddInternetStack (Ptr <Node> node){
 
