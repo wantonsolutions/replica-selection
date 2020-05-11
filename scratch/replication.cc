@@ -711,6 +711,23 @@ void replicationStrategy_crossCoreReplication(std::vector<std::vector<int>> *rep
   }
 }
 
+int toIP(int a, int b, int c, int d ) {
+	int total = 0;
+	total += a << 24;
+	total += b << 16;
+	total += c << 8;
+	total += d;
+	return total;
+}
+
+void printIP(int ip) {
+	int a = (ip & (255 << 24)) >> 24;
+	int b = (ip & (255 << 16)) >> 16;
+	int c = (ip & (255 << 8)) >> 8;
+	int d = (ip & (255 << 0)) >> 0;
+	NS_LOG_WARN(a << "." << b << "." <<  c << "." << d);
+}
+
 
 
 
@@ -883,6 +900,66 @@ int main(int argc, char *argv[])
 
   //TODO Assign address as described in the fat tree paper, code for doing so is prototyped in pfattree.c
   address.SetBase("10.1.1.0", "255.255.255.255");
+
+  //Generate Addresses for each of the end hosts and assign them
+
+  int a,b,c,d;
+  a = 10;
+  printf("Setting up IP addresses\n");
+  printf("Node IP addresses\n");
+  for (int i=0; i<PODS; i++) {
+    for (int j=0; j<EDGE; j++) {
+      for (int k=2; k<( NODE + 2);  k++) {
+        b=i;
+        c=j;
+        d=k;
+        //printf("Printing IP\n");
+        int ip=toIP(a,b,c,d);
+        printIP(ip);
+      }
+    }
+  }
+  printf("Edge IP ADDRESSES\n");
+  a=10;
+  d=1;
+  for (int i=0; i<PODS; i++) {
+    for (int j=0; j<EDGE; j++) {
+      b=i;
+      c=j;
+      //printf("Printing IP\n");
+      int ip=toIP(a,b,c,d);
+      printIP(ip);
+    }
+  }
+
+  printf("AGG IP ADDRESSES\n");
+  a=10;
+  d=1;
+  for (int i=0; i<PODS; i++) {
+    for (int j=EDGE; j<EDGE + AGG; j++) {
+      b=i;
+      c=j;
+      //printf("Printing IP\n");
+      int ip=toIP(a,b,c,d);
+      printIP(ip);
+    }
+  }
+
+  printf("Core IP ADDRESSES\n");
+  a=10;
+  b=PODS;
+  d=1;
+  for (int i=1; i<AGG + 1; i++) {
+    for (int j=1; j<AGG + 1; j++) {
+      c=i;
+      d=j;
+      //printf("Printing IP\n");
+      int ip=toIP(a,b,c,d);
+      printIP(ip);
+    }
+  }
+  //return -1;
+
   for (int i=0;i<NODES;i++) {
   	node2edge[i] = address.Assign(ndc_node2edge[i]);
   }
@@ -897,8 +974,13 @@ int main(int argc, char *argv[])
   //Setup Clients
   ///////////////////////////////////////////////////////////////////////////////////
   int RpcServerPort = 10;
+<<<<<<< HEAD
   float duration = 0.01;
   //float duration = 0.003;
+=======
+  //float duration = 0.01;
+  float duration = 0.01;
+>>>>>>> master
 
   uint32_t global_packets_sent = 0;
 
