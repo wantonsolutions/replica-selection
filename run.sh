@@ -269,7 +269,7 @@ function RunProportionalLoad200 {
 	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
 	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
 	#proportion=(50 55 60 65 70 75 80 85 90 95 100)
-	proportion=(50 75 80 100)
+	proportion=(50 75 100)
 
 	for p in ${proportion[@]}; do
 		let "mean = (50000 * 100) / $p"
@@ -388,7 +388,8 @@ function  RunDebug {
 	pushd $topdir
 
 	#./waf --visualize --command-template="gdb --args %s" --run "scratch/replication"
-	./waf -j 40 --run "scratch/replication ${args}"
+	#./waf --command-template="gdb %s" --run "scratch/replication" #"${args}" 
+	./waf --run "scratch/replication ${args}" 
 
 	mv results* $currentdir
 	popd #topdir

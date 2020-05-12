@@ -477,10 +477,12 @@ CreateAndAggregateObjectFromTypeId (Ptr<Node> node, const std::string typeId)
   node->AggregateObject (protocol);
 }
 
-Ptr<Ipv4DopplegangerRouter> GetDopplegangerRouter(Ptr<Node> node) {
+Ptr<Ipv4DoppelgangerRouting> GetDoppelgangerRouter(Ptr<Node> node) {
       Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
-      Ptr<Ipv4ListRouting> list = ipv4.GetRoutingProtocol()
-      return list.GetRoutingProtocl(0,NULL);
+      Ptr<Ipv4ListRouting> list = DynamicCast<Ipv4ListRouting>(ipv4->GetRoutingProtocol());
+      int16_t valuePlaceholder=0;
+      Ptr<Ipv4DoppelgangerRouting> router = DynamicCast<Ipv4DoppelgangerRouting>(list->GetRoutingProtocol(0,valuePlaceholder));
+      return router;
 }
 
 //Derrived from Internet stack helper
@@ -690,13 +692,13 @@ std::vector<uint32_t> ServerLoadDistribution) {
 
 void translateIp(int base, int *a, int *b, int *c, int *d)
 {
-  *a = base % 256;
-  base = base / 256;
-  *b = base % 256;
+  *d = base % 256;
   base = base / 256;
   *c = base % 256;
   base = base / 256;
-  *d = base % 256;
+  *b = base % 256;
+  base = base / 256;
+  *a = base % 256;
   return;
 }
 
@@ -766,6 +768,12 @@ void SetIpv4NodeDevices(Ptr<Node> node, uint32_t ip) {
   }
 }
 
+Ipv4Address getNodeIP(Ptr<Node> node) {
+  Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
+  Ipv4InterfaceAddress iaddr = ipv4->GetAddress (1,0); 
+  Ipv4Address ipAddr = iaddr.GetLocal (); 
+  return ipAddr;
+}
 
 
 
@@ -930,17 +938,18 @@ int main(int argc, char *argv[])
   }
 
 
-  Ipv4AddressHelper address;
-  Ipv4InterfaceContainer node2edge[NODES];
-  Ipv4InterfaceContainer edge2agg[EDGE*AGG*PODS];
-  Ipv4InterfaceContainer agg2core[CORE*PODS];
+  //Ipv4AddressHelper address;
+  //Ipv4InterfaceContainer node2edge[NODES];
+  //Ipv4InterfaceContainer edge2agg[EDGE*AGG*PODS];
+  //Ipv4InterfaceContainer agg2core[CORE*PODS];
 
   //TODO Assign address as described in the fat tree paper, code for doing so is prototyped in pfattree.c
-  address.SetBase("10.1.1.0", "255.255.255.255");
+  //address.SetBase("10.1.1.0", "255.255.255.255");
 
   //Generate Addresses for each of the end hosts and assign them
 
 
+  /*
   for (int i=0;i<NODES;i++) {
   	node2edge[i] = address.Assign(ndc_node2edge[i]);
   }
@@ -949,7 +958,7 @@ int main(int argc, char *argv[])
   }
   for (int i=0;i<CORE*PODS;i++) {
   	agg2core[i] = address.Assign(ndc_agg2core[i]);
-  }
+  }*/
 
   int a,b,c,d;
   a = 10;
@@ -972,6 +981,34 @@ int main(int argc, char *argv[])
       }
     }
   }
+
+  //Set up node routing tables
+
+  for ( int n=0;n<NODES;n++ ) {
+    Ptr<Node> node = nodes.Get(n);
+    a = 10;
+    itterator=0;
+    for (int i=0; i<PODS; i++) {
+      for (int j=0; j<EDGE; j++) {
+        for (int k=2; k<( NODE + 2);  k++) {
+          //skip assigning a route to yourself
+          //if (itterator == n) {
+          //  continue;
+          //}
+          b=i;
+          c=j;
+          d=k;
+          int ip=toIP(a,b,c,d);
+          printIP(ip);
+          Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);
+          router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),1);
+          itterator++;
+        }
+      }
+    }
+  }
+
+
   printf("Edge IP ADDRESSES\n");
   a=10;
   d=1;
@@ -986,6 +1023,61 @@ int main(int argc, char *argv[])
       Ptr<Node> node = edge.Get(itterator);
       SetIpv4NodeDevices(node, ip);
       itterator++;
+    }
+  }
+
+  int a2,b2,c2,d2;
+  a2=10;
+  for(int e=0; e<EDGES;e++) {
+    printf("Edge IP ADDRESSES\n");
+    Ptr<Node> node = edge.Get(e);
+    Ipv4Address ipAddr = getNodeIP(node);
+    Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);
+    int a1,b1,c1,d1;
+    translateIp(ipAddr.Get(),&a1,&b1,&c1,&d1);
+
+    for (int i=0; i<PODS; i++) {
+      for (int j=0; j<EDGE; j++) {
+        for (int k=2; k<( NODE + 2);  k++) {
+          //skip assigning a route to yourself
+          if (itterator == e) {
+            continue;
+          }
+          b2=i;
+          c2=j;
+          d2=k;
+          int ip=toIP(a2,b2,c2,d2);
+          printIP(ip);
+
+          //Edge Up
+          //IP is in another pod or belonging to a different edge
+          if (b1 != b2 || c1 != c2) {
+            router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),3); //Up 1
+            router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),4); //Up 2
+
+           } else if (b1 == b2 && c1 == c2) {
+            //IP is in this pod
+            //HACK the port id's on the router go from 0 - (K/2)^2, the flip
+            //here is that the first indes is an incorrect address. I think
+            //that it's the mac not the ipv4 or something like this. the D
+            //index starts from 2 based on the fat tree topology, therefore any
+            //down stream client can be indentified by gaking the last digit of
+            //the IP subtracting one and setting that to the port index.
+            router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),d2-1); //down
+          }
+
+          for (uint dev=0;dev<node->GetNDevices();dev++) {
+            printf("(%d)",dev);
+          }
+          printf("\n");
+
+
+          //printf("Device: %d Ifindex: %d Mtu: %d, Addr: %d\n",device,ndev->GetIfIndex(),ndev->GetMtu(),ipAddr.Get());
+          //printf("Base Addr: %d.%d.%d.%d\n",e,f,g,h);
+          //printf("Next\n");
+          itterator++;
+        }
+      }
     }
   }
 
@@ -1038,14 +1130,18 @@ int main(int argc, char *argv[])
   uint16_t Ports[NODES];
   for (int i = 0; i < NODES; i++)
   {
-      IPS[i] = node2edge[i].GetAddress(1);
+      Ptr<Node> node = nodes.Get(i);
+      //Ptr<NetDevice> nd = node->GetDevice(1);
+      //IPS[i] = node2edge[i].GetAddress(1);
+      //IPS[i] = nd->GetAddress();
+      IPS[i] = Address(getNodeIP(node));
       Ports[i] = uint16_t(RpcServerPort);
   }
 
   //Create Traffic Matrix
   int trafficMatrix[NODES][NODES];
   int pattern = CROSS_CORE;
-  populateTrafficMatrix(trafficMatrix, pattern);
+  //populateTrafficMatrix(trafficMatrix, pattern);
 
   //Create Server RPC database
   std::vector<std::vector<int>> servicesPerServer(NODES, std::vector<int>(0));
@@ -1067,7 +1163,6 @@ int main(int argc, char *argv[])
   uint64_t* serverLoad = (uint64_t*) malloc(NODES * sizeof(uint64_t));
   Time* serverLoad_update = (Time*) malloc(NODES * sizeof(Time));
   for(int i=0;i<NODES;i++) {
-    printf("setting server load for server %d\n", i);
     serverLoad[i]=0;
     serverLoad_update[i]=Time(0);
   }
@@ -1095,11 +1190,12 @@ int main(int argc, char *argv[])
   serverApps.Start(Seconds(0));
   serverApps.Stop(Seconds(duration));
 
+  /*
   Ipv4InterfaceContainer *node2edgePtr = new Ipv4InterfaceContainer[NODES];
   for (int i = 0; i < NODES; i++)
   {
     node2edgePtr[i] = node2edge[i];
-  }
+  }*/
 
 
   //Generate Distributions

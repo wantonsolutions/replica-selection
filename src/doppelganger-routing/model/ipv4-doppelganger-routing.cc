@@ -40,6 +40,25 @@ Ipv4DoppelgangerRouting::Ipv4DoppelgangerRouting ():
   NS_LOG_FUNCTION (this);
 }
 
+void translateIp(int base, int *a, int *b, int *c, int *d)
+{
+  *d = base % 256;
+  base = base / 256;
+  *c = base % 256;
+  base = base / 256;
+  *b = base % 256;
+  base = base / 256;
+  *a = base % 256;
+  return;
+}
+
+void printIP(uint32_t ip) {
+  int a,b,c,d;
+  translateIp(ip,&a,&b,&c,&d);
+  NS_LOG_WARN(a << "."<< b << "." << c << "." << d );
+}
+
+
 Ipv4DoppelgangerRouting::~Ipv4DoppelgangerRouting ()
 {
   NS_LOG_FUNCTION (this);
@@ -302,7 +321,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
                            LocalDeliverCallback lcb, ErrorCallback ecb)
 {
 
-  NS_LOG_WARN("HELLO CORE WE ARE NOW ROUTING!!");
+  //NS_LOG_WARN("HELLO CORE WE ARE NOW ROUTING!!");
 
   NS_ASSERT (m_ipv4->GetInterfaceForDevice (idev) >= 0);
 
@@ -314,12 +333,13 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntries (destAddress);
 
   if (routeEntries.size() > 0 ) {
-    NS_LOG_WARN("Entries exist for the destination address " << destAddress.Get() << " Printing ");
-    for ( std::vector<DoppelgangerRouteEntry>::iterator it = routeEntries.begin(); it != routeEntries.end(); ++it){
-      NS_LOG_WARN(it->network.Get());
-    }
+    //NS_LOG_WARN("Entries exist for the destination address " << destAddress.Get() << " Printing ");
+    printIP(destAddress.Get());
+    //for ( std::vector<DoppelgangerRouteEntry>::iterator it = routeEntries.begin(); it != routeEntries.end(); ++it){
+    //  printIP(it->network.Get());
+   // }
   } else {
-    NS_LOG_WARN("No entries found for destination address - punting to global routing " << destAddress.Get());
+    //NS_LOG_WARN("No entries found for destination address - punting to global routing " << destAddress.Get());
     return false;
   }
   //printf("we are routing in the west!!\n");
@@ -349,7 +369,8 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   //ipv4DoppelgangerTag.SetFbMetric (fbMetric);
   //packet->AddPacketTag(ipv4DoppelgangerTag);
 
-
+  NS_LOG_WARN("Setting up route for dest address " << header.GetDestination().Get() << " port " <<  selectedPort );
+  printIP(header.GetDestination().Get());
   Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
   ucb (route, packet, header);
 
