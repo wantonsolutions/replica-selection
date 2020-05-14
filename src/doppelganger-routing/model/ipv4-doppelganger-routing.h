@@ -46,6 +46,33 @@ public:
     minimumLoad = 1,
   };
 
+  enum FatTreeSwitchType
+  {
+    endhost = 0,
+    edge = 1,
+    agg = 2,
+    core = 3,
+  };
+
+  std::string FatTreeTypeToString(FatTreeSwitchType ftst) {
+    switch(ftst){
+      case endhost:
+        return "endhost";
+      case edge:
+        return "edge";
+        break;
+      case agg:
+        return "agg";
+        break;
+      case core:
+        return "core";
+        break;
+      default:
+        return "Unknown Switch Type";
+    }
+    return "Unknown and Unreachable Switch type (error here)";
+  }
+
   //Conga functions : TODO remove
   Ipv4DoppelgangerRouting ();
   ~Ipv4DoppelgangerRouting ();
@@ -68,6 +95,9 @@ public:
   void SetGlobalServerLoad(uint64_t *serverLoad);
   void SetGlobalServerLoadUpdate(Time *serverLoad_update);
   void SetLoadBalencingStrategy(LoadBalencingStrategy strategy);
+
+  void SetFatTreeSwitchType(FatTreeSwitchType ftst);
+  FatTreeSwitchType GetFatTreeSwitchType();
 
   void SetAddress(Ipv4Address addr);
   Ipv4Address GetAddress();
@@ -147,6 +177,8 @@ private:
   std::map<uint32_t,uint32_t> m_server_ip_map;
   //in network load ballencing strategy
   LoadBalencingStrategy m_load_balencing_strategy;
+  // Location in a fat tree network
+  FatTreeSwitchType m_fattree_switch_type;
 
 
 

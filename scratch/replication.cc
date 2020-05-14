@@ -554,7 +554,7 @@ Ipv4Address getNodeIP(Ptr<Node> node) {
 }
 
 //----------------------------------------------RPC Client----------------------------------------------------
-void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouting::LoadBalencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad, Time * serverLoad_update) {
+void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouting::FatTreeSwitchType switchType, Ipv4DoppelgangerRouting::LoadBalencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad, Time * serverLoad_update) {
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i) {
       NS_LOG_WARN("Installing parameters on" << (*i)->GetId());
@@ -569,6 +569,7 @@ void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouti
       doppelRouter->SetGlobalServerLoad(serverLoad);
       doppelRouter->SetGlobalServerLoadUpdate(serverLoad_update);
       doppelRouter->SetLoadBalencingStrategy(strat);
+      doppelRouter->SetFatTreeSwitchType(switchType);
       doppelRouter->SetAddress(getNodeIP((*i)));
       //Start here we need to get the list routing protocol
   }
@@ -1293,10 +1294,10 @@ int main(int argc, char *argv[])
 
 
   printf("setting custom load balencing strats\n");
-  SetDoppelgangerRoutingParameters(nodes,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
-  SetDoppelgangerRoutingParameters(edge,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
-  SetDoppelgangerRoutingParameters(agg,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
-  SetDoppelgangerRoutingParameters(core,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(nodes,Ipv4DoppelgangerRouting::endhost,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(edge,Ipv4DoppelgangerRouting::edge,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(agg,Ipv4DoppelgangerRouting::agg,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(core,Ipv4DoppelgangerRouting::core,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
   printf("done setting custom load ballencing\n");
 
 

@@ -244,6 +244,14 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
   Ipv4Address Ipv4DoppelgangerRouting::GetAddress() {
     return m_addr;
   }
+
+  void Ipv4DoppelgangerRouting::SetFatTreeSwitchType(FatTreeSwitchType ftst) {
+    m_fattree_switch_type = ftst;
+  }
+
+  Ipv4DoppelgangerRouting::FatTreeSwitchType Ipv4DoppelgangerRouting::GetFatTreeSwitchType() {
+    return m_fattree_switch_type;
+  }
 /* END DoppleGanger Routing function additions*/
 
 Ptr<Ipv4Route>
