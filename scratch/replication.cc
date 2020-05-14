@@ -50,13 +50,17 @@ const int NODES = PODS * EDGE * NODE ;
 
 
 RpcClient::selectionStrategy rpcSelectionStrategy = RpcClient::noReplica;
+const char *RpcSelectionStrategyString = "RpcSelectionStrategy";
+Ipv4DoppelgangerRouting::LoadBalencingStrategy networkSelectionStrategy = Ipv4DoppelgangerRouting::none;
+const char *NetworkSelectionStrategyString = "NetworkSelectionStrategy";
+
+
+
 bool debug = false;
 
 std::string ManifestName = "manifest.config";
 std::string ProbeName = "default.csv";
 
-
-const char *SelectionStrategyString = "SelectionStrategy";
 
 //Transmission Iterval Distribution Patterns
 const char *TransmissionDistributionUniformString = "TransmissionDistributionUniform";
@@ -243,7 +247,10 @@ void parseArgs(int argc, char* argv[]) {
   cmd.AddValue(DebugString, "Print all log level info statements for all clients", debug);
   //Selection Strategy
   int placeholderRpcSelectionStrategy;
-  cmd.AddValue(SelectionStrategyString, "RPC selection strategies - check RpcClient::selectionStratigies for valid values", placeholderRpcSelectionStrategy);
+  cmd.AddValue(RpcSelectionStrategyString, "RPC selection strategies - check RpcClient::selectionStratigies for valid values", placeholderRpcSelectionStrategy);
+
+  int placeholderNetworkSelectionStrategy;
+  cmd.AddValue(NetworkSelectionStrategyString, "Network selection strategy - check Ivp4Doppelganger::LoadBalencingStrategies for valid values", placeholderNetworkSelectionStrategy);
 
   //TransmissionDistributionUniform
   cmd.AddValue(TransmissionDistributionUniformString, "Set to true for uniform transmission distribution", TransmissionDistributionUniform);
@@ -300,6 +307,7 @@ void parseArgs(int argc, char* argv[]) {
   cmd.Parse(argc, argv);
 
   rpcSelectionStrategy = (RpcClient::selectionStrategy) placeholderRpcSelectionStrategy;
+  networkSelectionStrategy = (Ipv4DoppelgangerRouting::LoadBalencingStrategy) placeholderNetworkSelectionStrategy;
 
   //mode = DRED;
   //
@@ -313,7 +321,7 @@ void parseArgs(int argc, char* argv[]) {
 
   *stream << ManifestNameString << ":" << ManifestName << "\n";
   *stream << DebugString << ":" << debug << "\n";
-  *stream << SelectionStrategyString << ":" << rpcSelectionStrategy << "\n";
+  *stream << RpcSelectionStrategyString << ":" << rpcSelectionStrategy << "\n";
   *stream << KString << ":" << K << "\n";
   *stream << TopologyString << ":" << Topology << "\n";
   //TODO finish manifest and allow it to be an input argument
@@ -546,7 +554,7 @@ Ipv4Address getNodeIP(Ptr<Node> node) {
 }
 
 //----------------------------------------------RPC Client----------------------------------------------------
-void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad, Time * serverLoad_update) {
+void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouting::LoadBalencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad, Time * serverLoad_update) {
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i) {
       NS_LOG_WARN("Installing parameters on" << (*i)->GetId());
@@ -560,7 +568,7 @@ void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrateg
       doppelRouter->SetIPServerMap(ipServerMap);
       doppelRouter->SetGlobalServerLoad(serverLoad);
       doppelRouter->SetGlobalServerLoadUpdate(serverLoad_update);
-      doppelRouter->SetLoadBallencingStrategy(strat);
+      doppelRouter->SetLoadBalencingStrategy(strat);
       doppelRouter->SetAddress(getNodeIP((*i)));
       //Start here we need to get the list routing protocol
   }
@@ -1283,15 +1291,12 @@ int main(int argc, char *argv[])
       ServerLoadDistribution
   );
 
-  //Assign attributes to routers in network
-  LoadBallencingStrategy strat = none;
-  //LoadBallencingStrategy strat = minimumLoad;
 
   printf("setting custom load balencing strats\n");
-  SetDoppelgangerRoutingParameters(nodes,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
-  SetDoppelgangerRoutingParameters(edge,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
-  SetDoppelgangerRoutingParameters(agg,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
-  SetDoppelgangerRoutingParameters(core,strat,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(nodes,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(edge,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(agg,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
+  SetDoppelgangerRoutingParameters(core,networkSelectionStrategy,servicesPerServer,ipServerMap,serverLoad,serverLoad_update);
   printf("done setting custom load ballencing\n");
 
 

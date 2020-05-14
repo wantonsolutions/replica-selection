@@ -34,16 +34,17 @@ struct DoppelgangerRouteEntry {
   uint32_t port;
 };
 
-enum LoadBallencingStrategy
-{
-  none = 0,
-  minimumLoad = 1,
-};
 
 
 class Ipv4DoppelgangerRouting : public Ipv4RoutingProtocol
 {
 public:
+
+  enum LoadBalencingStrategy
+  {
+    none = 0,
+    minimumLoad = 1,
+  };
 
   //Conga functions : TODO remove
   Ipv4DoppelgangerRouting ();
@@ -66,7 +67,7 @@ public:
   void SetIPServerMap(std::map<uint32_t,uint32_t> ip_map);
   void SetGlobalServerLoad(uint64_t *serverLoad);
   void SetGlobalServerLoadUpdate(Time *serverLoad_update);
-  void SetLoadBallencingStrategy(LoadBallencingStrategy strategy);
+  void SetLoadBalencingStrategy(LoadBalencingStrategy strategy);
 
   void SetAddress(Ipv4Address addr);
   Ipv4Address GetAddress();
@@ -145,7 +146,7 @@ private:
   //Ip to replica index
   std::map<uint32_t,uint32_t> m_server_ip_map;
   //in network load ballencing strategy
-  LoadBallencingStrategy m_load_ballencing_strategy;
+  LoadBalencingStrategy m_load_balencing_strategy;
 
 
 

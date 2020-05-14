@@ -233,8 +233,8 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
     m_server_ip_map = ip_map;
   }
 
-  void Ipv4DoppelgangerRouting::SetLoadBallencingStrategy(LoadBallencingStrategy strat) {
-    m_load_ballencing_strategy = strat;
+  void Ipv4DoppelgangerRouting::SetLoadBalencingStrategy(LoadBalencingStrategy strat) {
+    m_load_balencing_strategy = strat;
   }
 
   void Ipv4DoppelgangerRouting::SetAddress(Ipv4Address addr) {
@@ -335,7 +335,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   }
 
 
-  switch (m_load_ballencing_strategy) {
+  switch (m_load_balencing_strategy) {
     case none:
       //Don't do anything here, we use source routing in this case
       break;

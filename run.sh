@@ -2,10 +2,14 @@
 
 topdir=`pwd`
 
-declare -A SelectionStrategy
-SelectionStrategy["single"]=0
-SelectionStrategy["random"]=1
-SelectionStrategy["minimum"]=2
+declare -A RpcSelectionStrategy
+RpcSelectionStrategy["single"]=0
+RpcSelectionStrategy["random"]=1
+RpcSelectionStrategy["minimum"]=2
+
+declare -A NetworkSelectionStrategy
+NetworkSelectionStrategy["none"]=0
+NetworkSelectionStrategy["minimum"]=1
 
 debug=false
 
@@ -94,22 +98,31 @@ function ExponentialServerLoad() {
 	--ServerLoadDistributionExponentialMin=$min "
 }
 
-function SelectionStrat() {
+function RpcSelectionStrat() {
 	select=$1
-	echo "--SelectionStrategy=${SelectionStrategy[${select}]} "
+	echo "--RpcSelectionStrategy=${RpcSelectionStrategy[${select}]} "
 }
 
-function RunSelectionStrategies() {
+function NetworkSelectionStrat() {
+	select=$1
+	echo "--NetworkSelectionStrategy=${NetworkSelectionStrategy[${select}]} "
+}
+
+function RunRpcSelectionStrategies() {
 	args="$@"
 	#run a test for each of the replica selection strategies
-	for selection in "${!SelectionStrategy[@]}"; do
+	for selection in "${!RpcSelectionStrategy[@]}"; do
 
 		#Create Seperate sub directories for each execution
 		echo $selection
 		mkdir $selection
 		pushd $selection
 
-		selectionArgs=$(SelectionStrat $selection)
+		networkArgs=$(NetworkSelectionStrat none)
+		args="${args}
+		$networkArgs"
+
+		selectionArgs=$(RpcSelectionStrat $selection)
 		nargs="${args} 
 		$selectionArgs "
 
@@ -139,7 +152,7 @@ function PlotInterval() {
 	plotScript="$topdir/plot/library/raw_latency.py"
 	plotArgs=""
 
-	for selection in "${!SelectionStrategy[@]}"; do
+	for selection in "${!RpcSelectionStrategy[@]}"; do
 		plotArgs="${plotArgs} $selection/results.dat"
 	done
 
@@ -158,7 +171,7 @@ function RunUniformTransmissionExperiment() {
 		pushd $dirname
 
 		transmissionArgs=$(UniformClientTransmission $min $max)
-		RunSelectionStrategies ${transmissionArgs}
+		RunRpcSelectionStrategies ${transmissionArgs}
 		popd
 	done
 }
@@ -176,7 +189,7 @@ function RunNormalTransmissionExperiment {
 		pushd $dirname
 
 		transmissionArgs=$(NormalClientTransmission $mean $std)
-		RunSelectionStrategies ${transmissionArgs}
+		RunRpcSelectionStrategies ${transmissionArgs}
 
 		popd
 	done
@@ -195,7 +208,7 @@ function RunExponentialTransmissionExperiment {
 		pushd $dirname
 
 		transmissionArgs=$(ExponentialClientTransmission $lambda $multiplier $minimum)
-		RunSelectionStrategies ${transmissionArgs}
+		RunRpcSelectionStrategies ${transmissionArgs}
 		popd
 
 	done
@@ -213,7 +226,7 @@ function RunUniformPacketUniformTransmissionExperiment {
 		dirname="${packet_size}"
 		mkdir $dirname
 		pushd $dirname
-		RunSelectionStrategies "${transmissionArgs} ${packetArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs}"
 		popd
 	done
 }
@@ -232,7 +245,7 @@ function RunNormalServerLoad {
 		dirname="${load}"
 		mkdir $dirname
 		pushd $dirname
-		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
 		popd
 	done
 }
@@ -253,7 +266,7 @@ function RunExponentialServerLoad {
 		dirname="${load}"
 		mkdir $dirname
 		pushd $dirname
-		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
 		popd
 	done
 }
@@ -287,7 +300,7 @@ function RunProportionalLoad200 {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
 		popd
 
 		#exit
@@ -309,7 +322,7 @@ function RunProportionalLoadNN {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
 		popd
 	done
 }
@@ -330,7 +343,7 @@ function RunProportionalLoadNU {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
 		popd
 	done
 }
@@ -349,7 +362,7 @@ function RunProportionalLoadUN {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
 		popd
 	done
 }
@@ -371,7 +384,7 @@ function RunProportionalLoadUU {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
 		popd
 	done
 }
@@ -382,7 +395,7 @@ function  RunDebug {
 	transmissionArgs=$(NormalClientTransmission 500000 50000)
 	packetArgs=$(NormalPacketSizes 128 12)
 	loadArgs=$(NormalServerLoad 50000 5000)
-	selectionArgs=$(SelectionStrat single)
+	selectionArgs=$(RpcSelectionStrat single)
 	configArgs=$(ConfigArgs results)
 
 	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${configArgs}"
