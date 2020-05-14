@@ -68,6 +68,9 @@ public:
   void SetGlobalServerLoadUpdate(Time *serverLoad_update);
   void SetLoadBallencingStrategy(LoadBallencingStrategy strategy);
 
+  void SetAddress(Ipv4Address addr);
+  Ipv4Address GetAddress();
+
 
   uint64_t GetInstantenousLoad(int server_id);
   uint32_t replicaSelectionStrategy_minimumLoad(uint32_t ips[MAX_REPLICAS]);
@@ -133,6 +136,7 @@ private:
   std::map<uint32_t, uint32_t> m_XMap;
 
 
+  Ipv4Address m_addr;
   // global server load
   uint64_t *m_serverLoad;                             
   Time *m_serverLoad_update;                             
@@ -156,6 +160,7 @@ private:
   // X is bytes here and we quantizing it to 0 - 2^Q
   uint32_t QuantizingX (uint32_t interface, uint32_t X);
   std::vector<DoppelgangerRouteEntry> LookupDoppelgangerRouteEntries (Ipv4Address dest);
+  std::vector<DoppelgangerRouteEntry> LookupDoppelgangerRouteEntriesIP (Ipv4Address dest);
   Ptr<Ipv4Route> ConstructIpv4Route (uint32_t port, Ipv4Address destAddress);
 
   // Debug use

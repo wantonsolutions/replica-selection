@@ -52,11 +52,22 @@ void translateIp(int base, int *a, int *b, int *c, int *d)
   return;
 }
 
+std::string stringIP(uint32_t ip) {
+  int a,b,c,d;
+  translateIp(ip,&a,&b,&c,&d);
+  std::ostringstream oss;
+  oss << a << "." << b << "." << c << "." << d;
+  std::string var = oss.str();
+  return var;
+}
+
 void printIP(uint32_t ip) {
   int a,b,c,d;
   translateIp(ip,&a,&b,&c,&d);
   NS_LOG_WARN(a << "."<< b << "." << c << "." << d );
 }
+
+
 
 
 Ipv4DoppelgangerRouting::~Ipv4DoppelgangerRouting ()
@@ -173,6 +184,21 @@ Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntries (Ipv4Address dest)
   return doppelgangerRouteEntries;
 }
 
+std::vector<DoppelgangerRouteEntry>
+Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntriesIP (Ipv4Address dest)
+{
+  std::vector<DoppelgangerRouteEntry> doppelgangerRouteEntries;
+  std::vector<DoppelgangerRouteEntry>::iterator itr = m_routeEntryList.begin ();
+  for ( ; itr != m_routeEntryList.end (); ++itr)
+  {
+    if (dest.Get() == (*itr).network.Get())
+    {
+      doppelgangerRouteEntries.push_back (*itr);
+    }
+  }
+  return doppelgangerRouteEntries;
+}
+
 Ptr<Ipv4Route>
 Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddress)
 {
@@ -210,6 +236,14 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
   void Ipv4DoppelgangerRouting::SetLoadBallencingStrategy(LoadBallencingStrategy strat) {
     m_load_ballencing_strategy = strat;
   }
+
+  void Ipv4DoppelgangerRouting::SetAddress(Ipv4Address addr) {
+    m_addr = addr;
+  }
+
+  Ipv4Address Ipv4DoppelgangerRouting::GetAddress() {
+    return m_addr;
+  }
 /* END DoppleGanger Routing function additions*/
 
 Ptr<Ipv4Route>
@@ -217,19 +251,7 @@ Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &head
 {
 
 
-  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
-  bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
 
-  if (found) {
-    //printf("Found the packet tag\n");
-    NS_LOG_WARN("We have a packet tag!!");
-  } else {
-    //printf("where on earth is this pacekt tag\n");
-    NS_LOG_WARN("Packet Has no tag");
-    return 0;
-  }
-
-    Ipv4Header ipv4Header;
     /*
     uint32_t headersize;
     headersize = packet->PeekHeader(ipv4Header);
@@ -244,33 +266,6 @@ Ipv4DoppelgangerRouting::RouteOutput (Ptr<Packet> packet, const Ipv4Header &head
     */
 
   //Here we need to consult the routing strategy that we are employing
-  switch (m_load_ballencing_strategy) {
-    case none:
-      //Don't do anything here, we use source routing in this case
-      break;
-    case minimumLoad: {
-      uint32_t* replicas;
-      replicas = ipv4DoppelgangerTag.GetReplicas();
-      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
-
-      Ipv4Address ipv4Addr = ipv4Header.GetDestination();
-      if(min_replica == ipv4Addr.Get()) {
-        NS_LOG_INFO("replica is the same as the min! Replica: " << min_replica);
-      } else {
-        NS_LOG_INFO("the best case replica has changed since source send:" << ipv4Addr.Get() << " --> " << min_replica);
-        packet->RemoveHeader(ipv4Header);
-        ipv4Addr.Set(min_replica);
-        ipv4Header.SetDestination(ipv4Addr);
-        packet->AddHeader(ipv4Header);
-      }
-
-      //printf("min_replica %d\n",min_replica);
-      break;
-    }
-    default:
-      NS_LOG_WARN("Unable to find load ballencing strategy");
-      break;
-  }
 
 
 
@@ -328,18 +323,56 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   Ptr<Packet> packet = ConstCast<Packet> (p);
   Ipv4Address destAddress = header.GetDestination();
 
+  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
+  bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
+
+  if (found) {
+    //printf("Found the packet tag\n");
+    NS_LOG_WARN("We have a packet tag!!");
+  } else {
+    //printf("where on earth is this pacekt tag\n");
+    NS_LOG_WARN("Packet Has no tag");
+  }
+
+
+  switch (m_load_ballencing_strategy) {
+    case none:
+      //Don't do anything here, we use source routing in this case
+      break;
+    case minimumLoad: {
+      uint32_t* replicas;
+      replicas = ipv4DoppelgangerTag.GetReplicas();
+      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
+
+      Ipv4Address ipv4Addr = header.GetDestination();
+      if(min_replica == ipv4Addr.Get()) {
+        NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
+      } else {
+        NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
+        destAddress.Set(min_replica);
+      }
+
+      //printf("min_replica %d\n",min_replica);
+      break;
+    }
+    default:
+      NS_LOG_WARN("Unable to find load ballencing strategy");
+      break;
+  }
+
+
+
   // Packet arrival time
   Time now = Simulator::Now ();
-  std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntries (destAddress);
+  std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntriesIP (destAddress);
 
   if (routeEntries.size() > 0 ) {
-    //NS_LOG_WARN("Entries exist for the destination address " << destAddress.Get() << " Printing ");
-    printIP(destAddress.Get());
+    NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " Entry Hit for " << stringIP(destAddress.Get()) << " Found " << routeEntries.size() << " Entries");
     //for ( std::vector<DoppelgangerRouteEntry>::iterator it = routeEntries.begin(); it != routeEntries.end(); ++it){
     //  printIP(it->network.Get());
    // }
   } else {
-    //NS_LOG_WARN("No entries found for destination address - punting to global routing " << destAddress.Get());
+    NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " Entries MISS for " << stringIP(destAddress.Get()));
     return false;
   }
   //printf("we are routing in the west!!\n");
@@ -369,8 +402,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   //ipv4DoppelgangerTag.SetFbMetric (fbMetric);
   //packet->AddPacketTag(ipv4DoppelgangerTag);
 
-  NS_LOG_WARN("Setting up route for dest address " << header.GetDestination().Get() << " port " <<  selectedPort );
-  printIP(header.GetDestination().Get());
+  NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " Setting up route for dest address " << stringIP(header.GetDestination().Get()) << " port " <<  selectedPort );
   Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
   ucb (route, packet, header);
 

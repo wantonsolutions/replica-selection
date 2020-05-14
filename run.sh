@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 topdir=`pwd`
 
@@ -122,9 +122,10 @@ function RunSelectionStrategies() {
 		pushd $topdir
 
 		./waf --run "scratch/replication
-		${cargs}" 2>results.dat
+		${cargs}" 2>${currentdir}/results.dat &
+		sleep 1
 
-		mv results* $currentdir
+		#mv results* $currentdir
 		popd
 
 		popd
@@ -267,9 +268,11 @@ function RunProportionalLoad200 {
 	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
 	#proportion=(20 40 60 80 100 120 140 160 180 200)
 	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
-	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#proportion=(10 20 30 40 50 60 70 80 90 100)
+
 	#proportion=(50 55 60 65 70 75 80 85 90 95 100)
-	proportion=(50 75 100)
+	#proportion=(50 75 100)
 
 	for p in ${proportion[@]}; do
 		let "mean = (50000 * 100) / $p"
@@ -405,7 +408,7 @@ function PlotIntervalsExperiment() {
 		dir=${dir%*/}      # remove the trailing "/"
 		echo ${dir##*/}    # print everything after the final "/"
 		pushd $dir
-		PlotInterval
+		#PlotInterval
 		popd
 	done
 
@@ -431,6 +434,7 @@ function PlotIntervalExperimentAverage {
 	python $plotScript ${files[@]}
 	CurrentDate=`date "+%F_%T"`
 	cp Avg_Agg_Latency.pdf "Avg_Agg_Latency_${CurrentDate}.pdf"
+	cp Avg_Agg_Latency.db "Avg_Agg_Latency_${CurrentDate}.db"
 
 }
 
@@ -516,10 +520,11 @@ if [ ! -z "$PLOT" ]; then
 		plotDir="./Experiments/$DIRECTORY"
 	else
 		echo "Plotting the last experiment again"
-		#cd ./Experiments 
-		plotDir=LastExperiment
+		plotDir=$(LastExperiment)
 	fi
 
+	echo "PLOTTTTTOOOTING"
+	echo $plotDIR
 	cd $plotDir
 	PlotIntervalsExperiment
 	#exit after plotting
@@ -569,6 +574,9 @@ else
 	#RunExponentialServerLoad
 	RunProportionalLoad200
 fi
+#wait for any parallel tasks before exiting
+wait
+echo "Done Waiting Exiting $0"
 
 popd
 exit

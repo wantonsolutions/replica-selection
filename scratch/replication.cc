@@ -538,6 +538,12 @@ static void AddInternetStack (Ptr <Node> node){
       arp->SetTrafficControl (tc);
 }
 
+Ipv4Address getNodeIP(Ptr<Node> node) {
+  Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
+  Ipv4InterfaceAddress iaddr = ipv4->GetAddress (1,0); 
+  Ipv4Address ipAddr = iaddr.GetLocal (); 
+  return ipAddr;
+}
 
 //----------------------------------------------RPC Client----------------------------------------------------
 void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t * serverLoad, Time * serverLoad_update) {
@@ -555,6 +561,7 @@ void SetDoppelgangerRoutingParameters(NodeContainer nodes, LoadBallencingStrateg
       doppelRouter->SetGlobalServerLoad(serverLoad);
       doppelRouter->SetGlobalServerLoadUpdate(serverLoad_update);
       doppelRouter->SetLoadBallencingStrategy(strat);
+      doppelRouter->SetAddress(getNodeIP((*i)));
       //Start here we need to get the list routing protocol
   }
 
@@ -768,12 +775,6 @@ void SetIpv4NodeDevices(Ptr<Node> node, uint32_t ip) {
   }
 }
 
-Ipv4Address getNodeIP(Ptr<Node> node) {
-  Ptr<Ipv4> ipv4 = node->GetObject<Ipv4> ();
-  Ipv4InterfaceAddress iaddr = ipv4->GetAddress (1,0); 
-  Ipv4Address ipAddr = iaddr.GetLocal (); 
-  return ipAddr;
-}
 
 
 
@@ -987,7 +988,6 @@ int main(int argc, char *argv[])
   for ( int n=0;n<NODES;n++ ) {
     Ptr<Node> node = nodes.Get(n);
     a = 10;
-    itterator=0;
     for (int i=0; i<PODS; i++) {
       for (int j=0; j<EDGE; j++) {
         for (int k=2; k<( NODE + 2);  k++) {
@@ -1002,7 +1002,6 @@ int main(int argc, char *argv[])
           printIP(ip);
           Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);
           router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),1);
-          itterator++;
         }
       }
     }
@@ -1028,6 +1027,7 @@ int main(int argc, char *argv[])
 
   int a2,b2,c2,d2;
   a2=10;
+
   for(int e=0; e<EDGES;e++) {
     printf("Edge IP ADDRESSES\n");
     Ptr<Node> node = edge.Get(e);
@@ -1039,10 +1039,6 @@ int main(int argc, char *argv[])
     for (int i=0; i<PODS; i++) {
       for (int j=0; j<EDGE; j++) {
         for (int k=2; k<( NODE + 2);  k++) {
-          //skip assigning a route to yourself
-          if (itterator == e) {
-            continue;
-          }
           b2=i;
           c2=j;
           d2=k;
@@ -1052,9 +1048,11 @@ int main(int argc, char *argv[])
           //Edge Up
           //IP is in another pod or belonging to a different edge
           if (b1 != b2 || c1 != c2) {
-            router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),3); //Up 1
-            router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),4); //Up 2
-
+            //Add every IP on all upward ports
+            for( int port = K/2 + 1; port <= K ; port++) {
+              router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),port); //Up 2
+            }
+          //Edge Down
            } else if (b1 == b2 && c1 == c2) {
             //IP is in this pod
             //HACK the port id's on the router go from 0 - (K/2)^2, the flip
@@ -1065,17 +1063,6 @@ int main(int argc, char *argv[])
             //the IP subtracting one and setting that to the port index.
             router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),d2-1); //down
           }
-
-          for (uint dev=0;dev<node->GetNDevices();dev++) {
-            printf("(%d)",dev);
-          }
-          printf("\n");
-
-
-          //printf("Device: %d Ifindex: %d Mtu: %d, Addr: %d\n",device,ndev->GetIfIndex(),ndev->GetMtu(),ipAddr.Get());
-          //printf("Base Addr: %d.%d.%d.%d\n",e,f,g,h);
-          //printf("Next\n");
-          itterator++;
         }
       }
     }
@@ -1098,6 +1085,47 @@ int main(int argc, char *argv[])
     }
   }
 
+  for(int a=0; a<AGGS;a++) {
+    printf("AGG IP ADDRESSES\n");
+    Ptr<Node> node = agg.Get(a);
+    Ipv4Address ipAddr = getNodeIP(node);
+    Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);
+    int a1,b1,c1,d1;
+    translateIp(ipAddr.Get(),&a1,&b1,&c1,&d1);
+
+    for (int i=0; i<PODS; i++) {
+      for (int j=0; j<EDGE; j++) {
+        for (int k=2; k<( NODE + 2);  k++) {
+          //skip assigning a route to yourself
+          b2=i;
+          c2=j;
+          d2=k;
+          int ip=toIP(a2,b2,c2,d2);
+          printIP(ip);
+
+          //Edge Up
+          //IP is in another pod // All nodes in this pod can be routed to from here
+          if (b1 != b2) {
+            //Add every IP on all upward ports
+            for( int port = K/2 + 1; port <= K ; port++) {
+              router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),port); //Up 2
+            }
+
+           } else if (b1 == b2) {
+            //IP is in this pod
+
+            //Another hack. The second to last digit in the IP space c a.b.c.d
+            //denotes the edge router that the node is attached too. To route
+            //to the correct port, the c (range [0,k-1]) can be routed to by
+            //selecting port c + 1
+            router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),c2+1); //down
+          }
+        }
+      }
+    }
+  }
+
+
   printf("Core IP ADDRESSES\n");
   a=10;
   b=PODS;
@@ -1113,6 +1141,31 @@ int main(int argc, char *argv[])
       Ptr<Node> node = core.Get(itterator);
       SetIpv4NodeDevices(node, ip);
       itterator++;
+    }
+  }
+
+  for(int c=0; c<CORE;c++) {
+    printf("CORE IP ADDRESSES\n");
+    Ptr<Node> node = core.Get(c);
+    Ipv4Address ipAddr = getNodeIP(node);
+    Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);
+    int a1,b1,c1,d1;
+    translateIp(ipAddr.Get(),&a1,&b1,&c1,&d1);
+
+    for (int i=0; i<PODS; i++) {
+      for (int j=0; j<EDGE; j++) {
+        for (int k=2; k<( NODE + 2);  k++) {
+          //skip assigning a route to yourself
+          b2=i;
+          c2=j;
+          d2=k;
+          int ip=toIP(a2,b2,c2,d2);
+          printIP(ip);
+          //All paths route down
+          int port = b2 + 1; //Good ports start at 1
+          router->AddRoute(Ipv4Address(ip),Ipv4Mask(toIP(255,0,0,0)),port); //down
+        }
+      }
     }
   }
   //return -1;
@@ -1140,7 +1193,7 @@ int main(int argc, char *argv[])
 
   //Create Traffic Matrix
   int trafficMatrix[NODES][NODES];
-  int pattern = CROSS_CORE;
+  //int pattern = CROSS_CORE;
   //populateTrafficMatrix(trafficMatrix, pattern);
 
   //Create Server RPC database

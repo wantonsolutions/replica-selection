@@ -8,6 +8,9 @@ import matplotlib.colors as colors
 import csv
 import sys
 import pickle
+from scipy.stats import sem
+
+## invert for the sake of averating
 
 def column(data, colnum):
     col = []
@@ -26,6 +29,27 @@ def toInt(data):
     for d in data:
         ints.append(int(d))
     return ints
+
+def GetAverageArr(multiRun):
+    a=[]
+    for runs in multiRun:
+        total=0.0
+        for j in runs:
+            total = total + j
+        average=total / float(len(runs))
+        a.append(average)
+    return a
+
+def GetErrArr(multiRun):
+    a=[]
+    print(multiRun)
+    for runs in multiRun:
+        #todo calculate standard error
+        stderr=sem(runs)
+        a.append(stderr)
+        print stderr
+
+    return a
 
 def checkFileTuples(filedb, suffixes):
     ##TODO compalain if the suffixes for each file prefix don't line up
