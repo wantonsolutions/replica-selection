@@ -44,6 +44,7 @@ public:
   {
     none = 0,
     minimumLoad = 1,
+    coreOnly = 2,
   };
 
   enum FatTreeSwitchType
@@ -98,6 +99,9 @@ public:
 
   void SetFatTreeSwitchType(FatTreeSwitchType ftst);
   FatTreeSwitchType GetFatTreeSwitchType();
+
+  uint64_t GetPacketRedirections();
+  uint64_t GetTotalPackets();
 
   void SetAddress(Ipv4Address addr);
   Ipv4Address GetAddress();
@@ -179,6 +183,9 @@ private:
   LoadBalencingStrategy m_load_balencing_strategy;
   // Location in a fat tree network
   FatTreeSwitchType m_fattree_switch_type;
+  //A count of the number of times a specific router has redirected packets to a different host
+  uint64_t m_packet_redirections;
+  uint64_t m_total_packets;
 
 
 

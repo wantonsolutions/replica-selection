@@ -10,6 +10,7 @@ RpcSelectionStrategy["minimum"]=2
 declare -A NetworkSelectionStrategy
 NetworkSelectionStrategy["none"]=0
 NetworkSelectionStrategy["minimum"]=1
+NetworkSelectionStrategy["coreOnly"]=2
 
 debug=false
 
@@ -108,6 +109,11 @@ function NetworkSelectionStrat() {
 	echo "--NetworkSelectionStrategy=${NetworkSelectionStrategy[${select}]} "
 }
 
+function WorkingDirectory() {
+	dir=$1
+	echo "--WorkingDirectory=${dir}/ "
+}
+
 function RunRpcSelectionStrategies() {
 	args="$@"
 	#run a test for each of the replica selection strategies
@@ -118,24 +124,30 @@ function RunRpcSelectionStrategies() {
 		mkdir $selection
 		pushd $selection
 
-		networkArgs=$(NetworkSelectionStrat none)
+		#networkArgs=$(NetworkSelectionStrat minimum)
+
+		currentdir=`pwd`
+		dirArgs=$(WorkingDirectory $currentdir)
+		args="${args}
+		$dirArgs"
+
+		networkArgs=$(NetworkSelectionStrat minimum)
 		args="${args}
 		$networkArgs"
 
 		selectionArgs=$(RpcSelectionStrat $selection)
-		nargs="${args} 
+		args="${args} 
 		$selectionArgs "
 
 		configArgs=$(ConfigArgs results)
-		cargs="${nargs}
+		args="${args}
 		$configArgs "
 
-		echo ${cargs}
-		currentdir=`pwd`
+		echo ${args}
 		pushd $topdir
 
 		./waf --run "scratch/replication
-		${cargs}" 2>${currentdir}/results.dat &
+		${args}" 2>${currentdir}/results.dat &
 		sleep 1
 
 		#mv results* $currentdir
@@ -156,7 +168,14 @@ function PlotInterval() {
 		plotArgs="${plotArgs} $selection/results.dat"
 	done
 
-	python ${plotScript} ${plotArgs}
+	python ${plotScript} ${plotArgs} &
+
+	plotScript="$topdir/plot/library/switch_redirect.py"
+	plotArgs="$selection/RouterSummary.dat"
+
+	python ${plotScript} ${plotArgs} &
+
+
 }
 
 function RunUniformTransmissionExperiment() {
@@ -395,12 +414,15 @@ function  RunDebug {
 	transmissionArgs=$(NormalClientTransmission 500000 50000)
 	packetArgs=$(NormalPacketSizes 128 12)
 	loadArgs=$(NormalServerLoad 50000 5000)
-	selectionArgs=$(RpcSelectionStrat single)
+	#selectionArgs=$(RpcSelectionStrat single)
+	selectionArgs=$(RpcSelectionStrat minimum)
+	networkSelectionArgs=$(NetworkSelectionStrat minimum)
 	configArgs=$(ConfigArgs results)
-
-	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${configArgs}"
-
 	currentdir=`pwd`
+	dirArgs=$(WorkingDirectory $currentdir)
+
+	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs}"
+
 	pushd $topdir
 
 	#./waf --visualize --command-template="gdb --args %s" --run "scratch/replication"
@@ -425,15 +447,29 @@ function PlotIntervalsExperiment() {
 		popd
 	done
 
+	wait
+
 	pwd
 	#collect aggregate measures
 	files=""
 	files=`find | grep results.dat`
 	aggScript="$topdir/plot/library/percentile_latency.py"
-	python $aggScript $files > aggregate.dat
+	python $aggScript $files > aggregate.dat 
 
 	plotScript="$topdir/plot/library/agg_latency.py"
-	python $plotScript aggregate.dat
+	python $plotScript aggregate.dat &
+
+	#collect switch aggregate measures
+	files=""
+	files=`find | grep RouterSummary.dat`
+	aggScript="$topdir/plot/library/combine_switch_measurements.py"
+	python $aggScript $files > aggregate_switch.dat
+
+	plotScript="$topdir/plot/library/agg_switch_redirect.py"
+	python $plotScript aggregate_switch.dat &
+
+	wait
+
 }
 
 function PlotIntervalExperimentAverage {

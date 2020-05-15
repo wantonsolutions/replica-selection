@@ -40,6 +40,27 @@ NS_LOG_COMPONENT_DEFINE ("RpcServerApplication");
 
 NS_OBJECT_ENSURE_REGISTERED (RpcServer);
 
+void translateIp(int base, int *a, int *b, int *c, int *d)
+{
+  *d = base % 256;
+  base = base / 256;
+  *c = base % 256;
+  base = base / 256;
+  *b = base % 256;
+  base = base / 256;
+  *a = base % 256;
+  return;
+}
+
+std::string stringIP(uint32_t ip) {
+  int a,b,c,d;
+  translateIp(ip,&a,&b,&c,&d);
+  std::ostringstream oss;
+  oss << a << "." << b << "." << c << "." << d;
+  std::string var = oss.str();
+  return var;
+}
+
 TypeId
 RpcServer::GetTypeId (void)
 {
@@ -255,7 +276,7 @@ RpcServer::HandleRead (Ptr<Socket> socket)
 
 
       for (int i =0; i < MAX_REPLICAS; i++) {
-        NS_LOG_INFO("Service also servicable by " << doppelTag.GetReplica(i));
+        NS_LOG_INFO("Service also servicable by " << stringIP(doppelTag.GetReplica(i)));
       }
 
       if (CanServiceRPC(doppelTag.GetRequestID())) {
@@ -269,7 +290,17 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       int load = GetInstantenousLoad();
       // Set the current load of the server 
       (m_serverLoad)[m_id] = load + requestProcessingTime; //make a distribution in the future
-      //printf("Current Load %d\n",(int)(m_serverLoad[m_id]));
+
+      //Remove the replica tags for the server, the client has only one response location
+      packet->RemovePacketTag(doppelTag);
+      //TODO add the rest of the packet fields for the return trip
+      for (int i =0; i < MAX_REPLICAS; i++) {
+        doppelTag.SetReplica(i,InetSocketAddress::ConvertFrom (from).GetIpv4().Get());
+        //printf("%d\n",InetSocketAddress::ConvertFrom (from).GetIpv4().Get());
+      }
+      //printf("Tag 0:%d\n",doppelTag.GetReplica(0));
+      packet->AddPacketTag(doppelTag);
+
       ScheduleResponse(NanoSeconds(((m_serverLoad)[m_id])), socket, packet, from, requestProcessingTime);
 
     }

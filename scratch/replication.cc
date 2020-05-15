@@ -27,6 +27,7 @@
 #include "ns3/ipv4-doppelganger-routing.h"
 
 #include <string>
+#include <iostream>
 #include <fstream>
 #include <stdint.h>
 
@@ -60,6 +61,9 @@ bool debug = false;
 
 std::string ManifestName = "manifest.config";
 std::string ProbeName = "default.csv";
+
+const char* WorkingDirectoryString = "WorkingDirectory";
+std::string WorkingDirectory = "/tmp/replica-trash/";
 
 
 //Transmission Iterval Distribution Patterns
@@ -302,6 +306,8 @@ void parseArgs(int argc, char* argv[]) {
 
 
   //Set manifest and host name
+
+  cmd.AddValue(WorkingDirectoryString,"The location of the current working directory", WorkingDirectory);
   cmd.AddValue(ManifestNameString, "Then name of the ouput manifest (includes all configurations)", ManifestName);
   cmd.AddValue(ProbeNameString, "Then name of the output probe CSV", ProbeName);
   cmd.Parse(argc, argv);
@@ -785,7 +791,25 @@ void SetIpv4NodeDevices(Ptr<Node> node, uint32_t ip) {
 }
 
 
+uint64_t SumPacketRedirections(NodeContainer nc) {
+  uint64_t sum = 0;
+  for (NodeContainer::Iterator node = nc.Begin(); node != nc.End(); ++node) {
+    Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter((*node));
+    sum+=router->GetPacketRedirections();
+    //printf("Router %lu -- sum %lu\n",router->GetPacketRedirections(), sum);
+  }
+  return sum;
+}
 
+uint64_t SumPackets(NodeContainer nc) {
+  uint64_t sum = 0;
+  for (NodeContainer::Iterator node = nc.Begin(); node != nc.End(); ++node) {
+    Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter((*node));
+    sum+=router->GetTotalPackets();
+    //printf("Router %lu -- sum %lu\n",router->GetPacketRedirections(), sum);
+  }
+  return sum;
+}
 
 int main(int argc, char *argv[])
 {
@@ -1303,7 +1327,46 @@ int main(int argc, char *argv[])
 
   printf("Running the simulator!!\n");
   Simulator::Run();
+
+
+  printf("Collecting Post Run information\n");
+
+  std::ofstream runsummary;
+  runsummary.open(WorkingDirectory + "RouterSummary.dat");
+  runsummary << "NodeRedirections,";
+  runsummary << "NodeTotal,";
+  runsummary << "EdgeRedirections,";
+  runsummary << "EdgeTotal,";
+  runsummary << "AggRedirections,";
+  runsummary << "AggTotal,";
+  runsummary << "CoreRedirections,";
+  runsummary << "CoreTotal,";
+  runsummary << "\n";
+
+  runsummary << SumPacketRedirections(nodes) << ",";
+  runsummary << SumPackets(nodes) << ",";
+  runsummary << SumPacketRedirections(edge) << ",";
+  runsummary << SumPackets(edge) << ",";
+  runsummary << SumPacketRedirections(agg) << ",";
+  runsummary << SumPackets(agg) << ",";
+  runsummary << SumPacketRedirections(core) << ",";
+  runsummary << SumPackets(core);
+  runsummary << "\n";
+
+  runsummary.close();
+
+  
+
+  //Post Execution Data Collection
+  printf("Node Redirections (%lu/%lu)\n",SumPacketRedirections(nodes),SumPackets(nodes));
+  printf("Edge Redirections (%lu/%lu)\n",SumPacketRedirections(edge),SumPackets(edge));
+  printf("Agg Redirections (%lu/%lu)\n",SumPacketRedirections(agg),SumPackets(agg));
+  printf("Core Redirections (%lu/%lu)\n",SumPacketRedirections(core),SumPackets(core));
+
+
   Simulator::Destroy();
+
+
   return 0;
 }
 
