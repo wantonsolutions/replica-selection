@@ -176,6 +176,7 @@ function PlotInterval() {
 	python ${plotScript} ${plotArgs} &
 
 
+
 }
 
 function RunUniformTransmissionExperiment() {
@@ -443,13 +444,12 @@ function PlotIntervalsExperiment() {
 		dir=${dir%*/}      # remove the trailing "/"
 		echo ${dir##*/}    # print everything after the final "/"
 		pushd $dir
-		#PlotInterval
+		PlotInterval
 		popd
 	done
 
 	wait
 
-	pwd
 	#collect aggregate measures
 	files=""
 	files=`find | grep results.dat`
@@ -475,17 +475,32 @@ function PlotIntervalsExperiment() {
 function PlotIntervalExperimentAverage {
 
 	#files=("Server_Normal_Client_Normal_2020-05-06_1/aggregate.dat" "Server_Normal_Client_Normal_2020-05-06_2/aggregate.dat" "Server_Normal_Client_Normal_2020-05-06_3/aggregate.dat")
-	files=$@
+	#files=$@
 	#add file extension
+	latency_files=()
+	switch_files=()
+
+	#begin by plogging the iterval experiment for each of the sub directories
+	for a_dir in ./*/; do
+		echo "Plotting in $a_dir"
+		pushd $a_dir
+		#PlotIntervalsExperiment
+		popd
+		latency_files+=("${a_dir}aggregate.dat")
+		switch_files+=("${a_dir}aggregate_switch.dat")
+	done
+
 
 	plotScript="$topdir/plot/library/avg_agg_latency.py"
 	echo "Entering Python Plot"
-	python $plotScript ${files[@]}
-	CurrentDate=`date "+%F_%T"`
-	cp Avg_Agg_Latency.pdf "Avg_Agg_Latency_${CurrentDate}.pdf"
-	cp Avg_Agg_Latency.db "Avg_Agg_Latency_${CurrentDate}.db"
+	python $plotScript ${latency_files[@]}
+	#CurrentDate=`date "+%F_%T"`
+	#cp Avg_Agg_Latency.pdf "Avg_Agg_Latency_${CurrentDate}.pdf"
+	#cp Avg_Agg_Latency.db "Avg_Agg_Latency_${CurrentDate}.db"
 
 }
+
+
 
 function LastExperiment {
 	dir=`ls -td -- ./Experiments/*/ | head -n 1`
@@ -501,6 +516,9 @@ for i in "$@"; do
 case $i in
 	-n=* | --name=*)
 	EXPERIMENT_NAME="${i#*=}"
+	;;
+	-r=* | --runs=*)
+	RUNS="${i#*=}"
 	;;
 	-d=* | --dir=* )
 	DIRECTORY="${i#*=}"
@@ -575,7 +593,7 @@ if [ ! -z "$PLOT" ]; then
 	echo "PLOTTTTTOOOTING"
 	echo $plotDIR
 	cd $plotDir
-	PlotIntervalsExperiment
+	PlotIntervalExperimentAverage
 	#exit after plotting
 	exit 0
 fi
@@ -603,29 +621,43 @@ mkdir $ExperimentDir
 pushd $ExperimentDir
 
 
-#determine what to run
 
 #check to see if the function exists. This is largely for higher level scripting
 if [ ! -z $FUNCTION ]; then
 	if [ `type -t $FUNCTION`"" == 'function' ]; then
-		echo "Running $FUNCTION"
+		echo "$FUNCTION is a valid function input"
 		$FUNCTION
 	else
 		echo "$FUNCTION is not an in scope function: Exiting"
+		exit
 	fi
 else 
-	echo "running some defualt bulshit"
 	#RunUniformTransmissionExperiment
 	#RunNormalTransmissionExperiment
 	#RunExponentialTransmissionExperiment
 	#RunUniformPacketUniformTransmissionExperiment
 	#RunNormalServerLoad
 	#RunExponentialServerLoad
-	RunProportionalLoad200
+	FUNCTION=RunProportionalLoad200
+	echo "No Function Specified running defualt function $FUNCTION"
 fi
+
+
+#determine how many times to run
+if [ -z $RUNS ]; then
+	RUNS=1
+fi
+
+#Acually execute the functions
+for run in $(seq 1 $RUNS); do
+	mkdir $run
+	pushd $run
+	$FUNCTION
+	popd
+	wait
+	toilet "Done Waiting Round $run/$RUNS"
+done
 #wait for any parallel tasks before exiting
-wait
-echo "Done Waiting Exiting $0"
 
 popd
 exit
