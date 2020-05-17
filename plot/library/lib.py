@@ -32,6 +32,7 @@ def toInt(data):
 
 def GetAverageArr(multiRun):
     a=[]
+    print(multiRun)
     for runs in multiRun:
         total=0.0
         for j in runs:

@@ -11,6 +11,7 @@ declare -A NetworkSelectionStrategy
 NetworkSelectionStrategy["none"]=0
 NetworkSelectionStrategy["minimum"]=1
 NetworkSelectionStrategy["coreOnly"]=2
+NetworkSelectionStrategy["minDistanceMinLoad"]=3
 
 debug=false
 
@@ -131,7 +132,8 @@ function RunRpcSelectionStrategies() {
 		args="${args}
 		$dirArgs"
 
-		networkArgs=$(NetworkSelectionStrat minimum)
+		#networkArgs=$(NetworkSelectionStrat minimum)
+		networkArgs=$(NetworkSelectionStrat minDistanceMinLoad)
 		args="${args}
 		$networkArgs"
 
@@ -484,7 +486,7 @@ function PlotIntervalExperimentAverage {
 	for a_dir in ./*/; do
 		echo "Plotting in $a_dir"
 		pushd $a_dir
-		#PlotIntervalsExperiment
+		PlotIntervalsExperiment
 		popd
 		latency_files+=("${a_dir}aggregate.dat")
 		switch_files+=("${a_dir}aggregate_switch.dat")
@@ -494,6 +496,10 @@ function PlotIntervalExperimentAverage {
 	plotScript="$topdir/plot/library/avg_agg_latency.py"
 	echo "Entering Python Plot"
 	python $plotScript ${latency_files[@]}
+
+	plotScript="$topdir/plot/library/avg_agg_switch.py"
+	echo "Entering Python Plot"
+	python $plotScript ${switch_files[@]}
 	#CurrentDate=`date "+%F_%T"`
 	#cp Avg_Agg_Latency.pdf "Avg_Agg_Latency_${CurrentDate}.pdf"
 	#cp Avg_Agg_Latency.db "Avg_Agg_Latency_${CurrentDate}.db"

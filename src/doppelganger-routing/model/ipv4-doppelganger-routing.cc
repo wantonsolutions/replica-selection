@@ -298,10 +298,10 @@ Ipv4DoppelgangerRouting::GetInstantenousLoad(int server_id) {
 
 //Returns the IP of a minuimum latency replica
  uint32_t
- Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(uint32_t ips[MAX_REPLICAS]){
+ Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(std::vector<uint32_t> ips){
    uint64_t minLoad = UINT64_MAX;
    uint32_t minReplica;
-   for (uint i = 0; i < MAX_REPLICAS;i++) {
+   for (uint i = 0; i < ips.size();i++) {
      uint32_t serverIndex = m_server_ip_map[ips[i]];
      if (GetInstantenousLoad(serverIndex) < minLoad){
        minLoad = GetInstantenousLoad(serverIndex);
@@ -309,6 +309,39 @@ Ipv4DoppelgangerRouting::GetInstantenousLoad(int server_id) {
      }
    }
    return minReplica;
+ }
+
+ std::vector<uint32_t>
+ Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumDownwardDistance(std::vector<uint32_t> ips) {
+   std::vector<uint32_t> min_distance_replicas;
+   for(uint i=0;i<ips.size();++i){
+     int a1,b1,c1,d1,a2,b2,c2,d2;
+     translateIp(m_addr.Get(),&a1,&b1,&c1,&d1);
+     translateIp(ips[i],&a2,&b2,&c2,&d2);
+     switch (m_fattree_switch_type) {
+       case edge:
+        if(c1==c2) {
+          min_distance_replicas.push_back(ips[i]);
+        }
+       break;
+       case agg:
+        if(b1 == b2){
+          min_distance_replicas.push_back(ips[i]);
+        }
+       break;
+       case core:
+        min_distance_replicas.push_back(ips[i]);
+       break;
+       default:
+        NS_LOG_WARN("Min Distance Protocol for this routing is not defined, check how you are defining the switch");
+     }
+   }
+   if (min_distance_replicas.size() == 0) {
+     //There is no min distance replica below us in the suppled list. Push the responsibility higher up the tree by returning all ips.
+     return ips;
+   } else {
+    return min_distance_replicas;
+   }
  }
 
 bool
@@ -339,16 +372,22 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   }
 
 
-
+  std::vector<uint32_t> replicas;
+  uint32_t * tag_replicas = ipv4DoppelgangerTag.GetReplicas();
+  for (int i=0;i<MAX_REPLICAS;++i){
+    replicas.push_back(tag_replicas[i]);
+  }
   switch (m_load_balencing_strategy) {
+    //no load balencing forward packets to end hosts based on source chosen destination
     case none:
       //Don't do anything here, we use source routing in this case
       break;
-    case minimumLoad: {
-      uint32_t* replicas;
-      replicas = ipv4DoppelgangerTag.GetReplicas();
-      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
 
+    //minimumLoad - Switches have global instantenous knowledge of server load.
+    //They route to minimum replicas based on this information at every step.
+    //The destination of the end host can change multiple times per packet.
+    case minimumLoad: {
+      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
       Ipv4Address ipv4Addr = headerPrime.GetDestination();
       if(min_replica == ipv4Addr.Get()) {
         NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
@@ -360,11 +399,12 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
       }
       break;
     }
+     
+    //coreOnly - Switches perform min load routing, but only if the router in
+    //question is a core router. This does not min route packets which would
+    //have never crossed the core.
     case coreOnly: {
-      uint32_t* replicas;
-      replicas = ipv4DoppelgangerTag.GetReplicas();
       uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
-
       Ipv4Address ipv4Addr = headerPrime.GetDestination();
       if(min_replica == ipv4Addr.Get()) {
         NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
@@ -380,6 +420,21 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
       }
       break;
     }
+    case minDistanceMinLoad: {
+      std::vector<uint32_t> min_distance_down_replicas = replicaSelectionStrategy_minimumDownwardDistance(replicas);
+      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(min_distance_down_replicas);
+      Ipv4Address ipv4Addr = headerPrime.GetDestination();
+      if(min_replica == ipv4Addr.Get()) {
+        NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
+      } else {
+        destAddress.Set(min_replica);
+        headerPrime.SetDestination(destAddress);
+        m_packet_redirections++;
+      }
+      break;
+    
+    }
+
 
     default:
       NS_LOG_WARN("Unable to find load ballencing strategy");
@@ -402,6 +457,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
     return false;
   }
 
+  //Ecmp
   uint32_t selectedPort = routeEntries[rand() % routeEntries.size ()].port;
 
 

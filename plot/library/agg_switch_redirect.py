@@ -153,6 +153,7 @@ with open(filename,'r') as csvfile:
         plt.plot(sorted(map_results[selection+"_x"]),diff,label=selection,color=colors[selection],linestyle=linetype[1], marker=".")
 
     setUniformParams()
+    plt.ylabel("Percentage of Packets Redirected")
     plt.savefig("Percent_Switch_Redirects.pdf")
     plt.clf()
 

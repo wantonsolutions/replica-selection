@@ -45,6 +45,7 @@ public:
     none = 0,
     minimumLoad = 1,
     coreOnly = 2,
+    minDistanceMinLoad=3,
   };
 
   enum FatTreeSwitchType
@@ -108,7 +109,8 @@ public:
 
 
   uint64_t GetInstantenousLoad(int server_id);
-  uint32_t replicaSelectionStrategy_minimumLoad(uint32_t ips[MAX_REPLICAS]);
+  uint32_t replicaSelectionStrategy_minimumLoad(std::vector<uint32_t> ips);
+  std::vector<uint32_t> replicaSelectionStrategy_minimumDownwardDistance(std::vector<uint32_t> ips);
 
 
   /* Inherit From Ipv4RoutingProtocol */
