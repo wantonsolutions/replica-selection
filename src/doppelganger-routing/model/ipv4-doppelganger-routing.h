@@ -46,6 +46,7 @@ public:
     minimumLoad = 1,
     coreOnly = 2,
     minDistanceMinLoad=3,
+    coreForcedMinDistanceMinLoad=4,
   };
 
   enum FatTreeSwitchType
@@ -103,6 +104,9 @@ public:
 
   uint64_t GetPacketRedirections();
   uint64_t GetTotalPackets();
+
+  void SetFatTreeK(uint k);
+  uint GetFatTreeK(void);
 
   void SetAddress(Ipv4Address addr);
   Ipv4Address GetAddress();
@@ -188,6 +192,8 @@ private:
   //A count of the number of times a specific router has redirected packets to a different host
   uint64_t m_packet_redirections;
   uint64_t m_total_packets;
+
+  uint m_fattree_k;
 
 
 

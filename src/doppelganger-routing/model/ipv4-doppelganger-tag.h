@@ -14,6 +14,8 @@ public:
 
     static TypeId GetTypeId (void);
 
+    void SetCanRouteDown(bool CanRoute);
+    bool GetCanRouteDown();
 
     void SetRequestID(uint16_t requestID);
     uint16_t GetRequestID(void) const;
@@ -39,6 +41,7 @@ public:
 
 private:
 
+    uint8_t m_can_route_down;
     uint16_t m_requestID;
     uint16_t m_packetID;
     uint32_t m_replicas[MAX_REPLICAS];
@@ -50,6 +53,7 @@ struct RPCHeader {
   //TODO refactor RequestID to RPCType
   //TODO add RequestID hash
   //TODO size_id
+  uint8_t CanRouteDown;
   uint16_t RequestID; //RPC ID 
   uint16_t PacketID;  //Sequence Number
   uint32_t Replicas[MAX_REPLICAS]; //IP addresses of replicas

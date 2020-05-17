@@ -157,6 +157,8 @@ plt.savefig("Avg_Agg_Switch_All.pdf")
 plt.clf()
 
 
+
+##TODO This is totally wrong, the percentange for each of the runs needs to be calculated first, then the 
 sumResults=dict()
 for selection in selections:
     summerR=[]

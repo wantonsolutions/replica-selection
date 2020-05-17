@@ -46,9 +46,6 @@ plt.figure(figsize=(20,10),dpi=20)
 
 linetype = ['-',':','--']
 
-plt.rcParams.update({'font.size': 20})
-
-#figure(num=None, figsize=(15, 15), dpi=80, facecolor='w', edgecolor='k')
 
 filenames=sys.argv
 print filenames

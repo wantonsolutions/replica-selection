@@ -577,6 +577,7 @@ void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouti
       doppelRouter->SetLoadBalencingStrategy(strat);
       doppelRouter->SetFatTreeSwitchType(switchType);
       doppelRouter->SetAddress(getNodeIP((*i)));
+      doppelRouter->SetFatTreeK(K);
       //Start here we need to get the list routing protocol
   }
 

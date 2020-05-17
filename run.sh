@@ -12,6 +12,7 @@ NetworkSelectionStrategy["none"]=0
 NetworkSelectionStrategy["minimum"]=1
 NetworkSelectionStrategy["coreOnly"]=2
 NetworkSelectionStrategy["minDistanceMinLoad"]=3
+NetworkSelectionStrategy["coreForcedMinDistanceMinLoad"]=4
 
 debug=false
 
@@ -133,7 +134,8 @@ function RunRpcSelectionStrategies() {
 		$dirArgs"
 
 		#networkArgs=$(NetworkSelectionStrat minimum)
-		networkArgs=$(NetworkSelectionStrat minDistanceMinLoad)
+		#networkArgs=$(NetworkSelectionStrat minDistanceMinLoad)
+		networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
 		args="${args}
 		$networkArgs"
 
@@ -419,7 +421,7 @@ function  RunDebug {
 	loadArgs=$(NormalServerLoad 50000 5000)
 	#selectionArgs=$(RpcSelectionStrat single)
 	selectionArgs=$(RpcSelectionStrat minimum)
-	networkSelectionArgs=$(NetworkSelectionStrat minimum)
+	networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
 	configArgs=$(ConfigArgs results)
 	currentdir=`pwd`
 	dirArgs=$(WorkingDirectory $currentdir)

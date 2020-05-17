@@ -42,7 +42,8 @@ Ipv4DoppelgangerRouting::Ipv4DoppelgangerRouting ():
     m_serverLoad_update(NULL),
     m_fattree_switch_type(endhost),
     m_packet_redirections(0),
-    m_total_packets(0)
+    m_total_packets(0),
+    m_fattree_k(0)
 
 {
   NS_LOG_FUNCTION (this);
@@ -60,6 +61,15 @@ void translateIp(int base, int *a, int *b, int *c, int *d)
   return;
 }
 
+uint32_t toIP(int a, int b, int c, int d ) {
+	uint32_t  total = 0;
+	total += a << 24;
+	total += b << 16;
+	total += c << 8;
+	total += d;
+	return total;
+}
+
 std::string stringIP(uint32_t ip) {
   int a,b,c,d;
   translateIp(ip,&a,&b,&c,&d);
@@ -73,6 +83,22 @@ void printIP(uint32_t ip) {
   int a,b,c,d;
   translateIp(ip,&a,&b,&c,&d);
   NS_LOG_WARN(a << "."<< b << "." << c << "." << d );
+}
+
+bool SamePod(Ipv4Address first, Ipv4Address second) {
+  int a1,b1,c1,d1,a2,b2,c2,d2;
+  translateIp(first.Get(),&a1,&b1,&c1,&d1);
+  translateIp(second.Get(),&a2,&b2,&c2,&d2);
+  return b1 == b2;
+}
+
+uint32_t OtherPodAddress(Ipv4Address current, int K) {
+  int a,b,c,d;
+  translateIp(current.Get(),&a,&b,&c,&d);
+  //Simple other pod, it requires knowledge of K though
+  b=(b+1)%K;
+  return toIP(a,b,c,d);
+  
 }
 
 Ipv4DoppelgangerRouting::~Ipv4DoppelgangerRouting ()
@@ -265,6 +291,14 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
   uint64_t Ipv4DoppelgangerRouting::GetTotalPackets() {
     return m_total_packets;
   }
+
+  void Ipv4DoppelgangerRouting::SetFatTreeK(uint k) {
+    m_fattree_k = k;
+  }
+
+  uint Ipv4DoppelgangerRouting::GetFatTreeK(void) {
+    return m_fattree_k;
+  }
 /* END DoppleGanger Routing function additions*/
 
 Ptr<Ipv4Route>
@@ -360,20 +394,21 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   Ptr<Packet> packet = ConstCast<Packet> (p);
   Ipv4Address destAddress = headerPrime.GetDestination();
 
-  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
-  bool found = packet->PeekPacketTag(ipv4DoppelgangerTag);
+  Ipv4DoppelgangerTag tag;
+  bool found = packet->PeekPacketTag(tag);
 
   if (found) {
     //printf("Found the packet tag\n");
     NS_LOG_WARN("We have a packet tag!!");
   } else {
     //printf("where on earth is this pacekt tag\n");
-    NS_LOG_WARN("Packet Has no tag");
+    NS_LOG_WARN("Packet Has no tag, this should not be routed by this router, something is wrong!!!");
+    return false;
   }
 
 
   std::vector<uint32_t> replicas;
-  uint32_t * tag_replicas = ipv4DoppelgangerTag.GetReplicas();
+  uint32_t * tag_replicas = tag.GetReplicas();
   for (int i=0;i<MAX_REPLICAS;++i){
     replicas.push_back(tag_replicas[i]);
   }
@@ -381,6 +416,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
     //no load balencing forward packets to end hosts based on source chosen destination
     case none:
       //Don't do anything here, we use source routing in this case
+      tag.SetCanRouteDown(true);
       break;
 
     //minimumLoad - Switches have global instantenous knowledge of server load.
@@ -397,6 +433,8 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
           headerPrime.SetDestination(destAddress);
           m_packet_redirections++;
       }
+      //Tag can be routed down from anywhere
+      tag.SetCanRouteDown(true);
       break;
     }
      
@@ -413,11 +451,13 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
           NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
           destAddress.Set(min_replica);
           headerPrime.SetDestination(destAddress);
+          tag.SetCanRouteDown(true);
           m_packet_redirections++;
         } else {
           NS_LOG_INFO("Not rerouting because not a core router.. Fix this in the future to be it's own routing protocol");
         }
       }
+      tag.SetCanRouteDown(true);
       break;
     }
     case minDistanceMinLoad: {
@@ -429,29 +469,68 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
       } else {
         destAddress.Set(min_replica);
         headerPrime.SetDestination(destAddress);
+        tag.SetCanRouteDown(true);
         m_packet_redirections++;
       }
+      tag.SetCanRouteDown(true);
       break;
-    
     }
-
+    case coreForcedMinDistanceMinLoad: {
+      NS_LOG_WARN("Reached the Force Core function");
+      //All packets must reach the core router before they can be routed down.
+      if (m_fattree_switch_type == core) {
+        NS_LOG_WARN("Reached the Core");
+        tag.SetCanRouteDown(true);
+      }
+      //If a packet is on it's way down the tree use the min load balencing with minimum distance strategy
+      if (tag.GetCanRouteDown()) {
+        NS_LOG_WARN("Able to route down the tree");
+        std::vector<uint32_t> min_distance_down_replicas = replicaSelectionStrategy_minimumDownwardDistance(replicas);
+        uint32_t min_replica = replicaSelectionStrategy_minimumLoad(min_distance_down_replicas);
+        Ipv4Address ipv4Addr = headerPrime.GetDestination();
+        if(min_replica == ipv4Addr.Get()) {
+          NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
+        } else {
+            NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
+            destAddress.Set(min_replica);
+            headerPrime.SetDestination(destAddress);
+            m_packet_redirections++;
+        }
+      } else {
+        NS_LOG_WARN("Still Routing UP The tree");
+        //Packet is either on a node/edge/agg router, and is going up the tree.
+        //We need to make sure that the destination being routed to will at
+        //least take the packet to the core routers. To do this we first check
+        //if the address in the destination is in the same pod as the router.
+        //If it's not we don't need to do anything becasue the regular routing
+        //will take care of it. If the packet is in the same pod, we need to
+        //pick a cross core address to look up in the routing table to force
+        //the extra distance of routing.
+        if (SamePod(destAddress,m_addr)) {
+          //modify the destination address
+          //do not change the actual packet destination
+          NS_LOG_WARN("Matching Pod Routing Up The Tree");
+          destAddress.Set(OtherPodAddress(destAddress,GetFatTreeK()));
+        } 
+      }
+      break;
+    }
 
     default:
       NS_LOG_WARN("Unable to find load ballencing strategy");
       break;
   }
 
+  packet->ReplacePacketTag(tag);
+
 
 
   // Packet arrival time
   Time now = Simulator::Now ();
   std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntriesIP (destAddress);
-
+  //Find routing entry for the given IP
   if (routeEntries.size() > 0 ) {
     NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " Entry Hit for " << stringIP(destAddress.Get()) << " Found " << routeEntries.size() << " Entries");
-    //for ( std::vector<DoppelgangerRouteEntry>::iterator it = routeEntries.begin(); it != routeEntries.end(); ++it){
-    //  printIP(it->network.Get());
-   // }
   } else {
     NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " Entries MISS for " << stringIP(destAddress.Get()));
     return false;
