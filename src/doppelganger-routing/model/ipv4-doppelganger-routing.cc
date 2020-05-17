@@ -354,7 +354,7 @@ Ipv4DoppelgangerRouting::GetInstantenousLoad(int server_id) {
      translateIp(ips[i],&a2,&b2,&c2,&d2);
      switch (m_fattree_switch_type) {
        case edge:
-        if(c1==c2) {
+        if(a1 == a2 && b1 == b2 && c1==c2) {
           min_distance_replicas.push_back(ips[i]);
         }
        break;
@@ -368,6 +368,7 @@ Ipv4DoppelgangerRouting::GetInstantenousLoad(int server_id) {
        break;
        default:
         NS_LOG_WARN("Min Distance Protocol for this routing is not defined, check how you are defining the switch");
+        break;
      }
    }
    if (min_distance_replicas.size() == 0) {
@@ -491,7 +492,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
         if(min_replica == ipv4Addr.Get()) {
           NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
         } else {
-            NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
+            NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
             destAddress.Set(min_replica);
             headerPrime.SetDestination(destAddress);
             m_packet_redirections++;
