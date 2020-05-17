@@ -10,12 +10,22 @@ namespace ns3 {
 class Ipv4DoppelgangerTag: public Tag
 {
 public:
+
+    enum PacketType
+    {
+      request = 0,
+      response = 1,
+    };
+
     Ipv4DoppelgangerTag ();
 
     static TypeId GetTypeId (void);
 
     void SetCanRouteDown(bool CanRoute);
     bool GetCanRouteDown();
+
+    void SetPacketType(PacketType type);
+    PacketType GetPacketType();
 
     void SetRequestID(uint16_t requestID);
     uint16_t GetRequestID(void) const;
@@ -42,6 +52,7 @@ public:
 private:
 
     uint8_t m_can_route_down;
+    uint8_t m_packet_type;
     uint16_t m_requestID;
     uint16_t m_packetID;
     uint32_t m_replicas[MAX_REPLICAS];
@@ -54,6 +65,7 @@ struct RPCHeader {
   //TODO add RequestID hash
   //TODO size_id
   uint8_t CanRouteDown;
+  uint8_t PacketType;
   uint16_t RequestID; //RPC ID 
   uint16_t PacketID;  //Sequence Number
   uint32_t Replicas[MAX_REPLICAS]; //IP addresses of replicas

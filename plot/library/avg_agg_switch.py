@@ -8,6 +8,7 @@ import csv
 import sys
 import pickle
 import seaborn as sns
+from copy import copy, deepcopy
 
 from scipy.stats import sem
 
@@ -18,7 +19,7 @@ def setUniformParams():
     plt.legend()
     plt.grid(True, which="both", ls=":", color='0.20')
     plt.xlabel("Request Load (percentage of maximum)", fontweight='bold')
-    plt.ylabel("Packet Redirections", fontweight='bold')
+    plt.ylabel("Request Packet Redirections %", fontweight='bold')
     plt.tight_layout()
 
 sys.argv.pop(0)
@@ -159,7 +160,47 @@ plt.clf()
 
 
 ##TODO This is totally wrong, the percentange for each of the runs needs to be calculated first, then the 
-sumResults=dict()
+
+#we need to begin by making a sum array across all experiments 
+#sum_redirects=dict()
+#sum_total=dict()
+percent_redirects=dict()
+for selection in selections:
+    #copy dimensions to total array
+    #sum_redirects[selection]=deepcopy(multiRunAverage[selection+"_NodeRedirections"])
+    #sum_total[selection]=deepcopy(multiRunAverage[selection+"_NodeRedirections"])
+    percent_redirects[selection]=deepcopy(multiRunAverage[selection+"_NodeRedirections"])
+    i = 0
+    for measures in multiRunAverage[selection+"_NodeRedirections"]:
+        j = 0
+        Rsum = 0
+        Tsum = 0
+        for run in multiRunAverage[selection+"_NodeRedirections"][i]:
+            Rsum = Rsum + multiRunAverage[selection+"_NodeRedirections"][i][j]
+            Rsum = Rsum + multiRunAverage[selection+"_EdgeRedirections"][i][j]
+            Rsum = Rsum + multiRunAverage[selection+"_AggRedirections"][i][j]
+            Rsum = Rsum + multiRunAverage[selection+"_CoreRedirections"][i][j]
+
+            Tsum = Tsum + multiRunAverage[selection+"_NodeTotal"][i][j]
+            Tsum = Tsum + multiRunAverage[selection+"_EdgeTotal"][i][j]
+            Tsum = Tsum + multiRunAverage[selection+"_AggTotal"][i][j]
+            Tsum = Tsum + multiRunAverage[selection+"_CoreTotal"][i][j]
+
+            percent_redirects[selection][i][j] = (float(Rsum)/float(Tsum) * 100.0)
+            j=j+1
+        i=i+1
+
+
+for selection in selections:
+    avg=GetAverageArr(percent_redirects[selection])
+    err=GetErrArr(percent_redirects[selection])
+    x=sorted(GetAverageArr(multiRunAverage[selection+"_x"]))
+    plt.plot(x,avg,label=selection,color=colors[selection],linestyle=linetype[1])
+    plt.errorbar(x,avg,err,fmt=' ',color=colors[selection],capsize=5)
+
+
+'''
+
 for selection in selections:
     summerR=[]
     summerR.append(GetAverageArr(multiRunAverage[selection+"_NodeRedirections"]))
@@ -180,6 +221,7 @@ for selection in selections:
     diff=[(a/b)*100.0 for a, b in zip(redirects,totals)]
 
     plt.plot(sorted(GetAverageArr(multiRunAverage[selection+"_x"])),diff,label=selection,color=colors[selection],linestyle=linetype[1], marker=".")
+'''
 
 setUniformParams()
 plt.savefig("Percent_Switch_Redirects.pdf")

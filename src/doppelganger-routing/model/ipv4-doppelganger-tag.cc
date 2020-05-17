@@ -29,6 +29,18 @@ Ipv4DoppelgangerTag::GetCanRouteDown() {
   return (bool) m_can_route_down;
 }
 
+
+void 
+Ipv4DoppelgangerTag::SetPacketType(Ipv4DoppelgangerTag::PacketType type){
+  m_packet_type=(uint8_t) type;
+}
+
+
+Ipv4DoppelgangerTag::PacketType 
+Ipv4DoppelgangerTag::GetPacketType(){
+  return (Ipv4DoppelgangerTag::PacketType) m_packet_type;
+}
+
 void 
 Ipv4DoppelgangerTag::SetRequestID(uint16_t requestID)
 {
@@ -93,6 +105,7 @@ uint32_t
 Ipv4DoppelgangerTag::GetSerializedSize(void) const
 {
   return sizeof(uint8_t) +
+        sizeof(uint8_t) +
         sizeof(uint16_t) +
         sizeof(uint16_t) +
         (sizeof(uint32_t) * MAX_REPLICAS);
@@ -101,6 +114,7 @@ Ipv4DoppelgangerTag::GetSerializedSize(void) const
 void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
 {
   i.WriteU8(m_can_route_down);
+  i.WriteU8(m_packet_type);
   i.WriteU16(m_requestID);
   i.WriteU16(m_packetID);
   for (int itt = 0; itt < MAX_REPLICAS; itt++)
@@ -112,6 +126,7 @@ void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
 void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
 {
   m_can_route_down = i.ReadU8();
+  m_packet_type = i.ReadU8();
   m_requestID = i.ReadU16();
   m_packetID = i.ReadU16();
   for (int itt = 0; itt < MAX_REPLICAS; itt++)
@@ -123,6 +138,7 @@ void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
 void Ipv4DoppelgangerTag::Print(std::ostream &os) const
 {
   os << "Can Route Down = " << m_can_route_down;
+  os << "Packet Type = " << m_packet_type;
   os << "request ID = " << m_requestID;
   os << "packet ID  = " << m_packetID;
   for (int itt = 0; itt < MAX_REPLICAS; itt++)

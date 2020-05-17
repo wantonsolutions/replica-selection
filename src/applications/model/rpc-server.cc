@@ -299,6 +299,7 @@ RpcServer::HandleRead (Ptr<Socket> socket)
         //printf("%d\n",InetSocketAddress::ConvertFrom (from).GetIpv4().Get());
       }
       doppelTag.SetCanRouteDown(true); //There should be no limitations on how the packet is routed back to the client
+      doppelTag.SetPacketType(Ipv4DoppelgangerTag::response);
       //printf("Tag 0:%d\n",doppelTag.GetReplica(0));
       packet->AddPacketTag(doppelTag);
 

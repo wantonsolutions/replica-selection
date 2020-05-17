@@ -389,7 +389,6 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
 
   NS_ASSERT (m_ipv4->GetInterfaceForDevice (idev) >= 0);
 
-  m_total_packets++;
   Ipv4Header headerPrime = header;
 
   Ptr<Packet> packet = ConstCast<Packet> (p);
@@ -413,114 +412,123 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   for (int i=0;i<MAX_REPLICAS;++i){
     replicas.push_back(tag_replicas[i]);
   }
-  switch (m_load_balencing_strategy) {
-    //no load balencing forward packets to end hosts based on source chosen destination
-    case none:
-      //Don't do anything here, we use source routing in this case
-      tag.SetCanRouteDown(true);
-      break;
 
-    //minimumLoad - Switches have global instantenous knowledge of server load.
-    //They route to minimum replicas based on this information at every step.
-    //The destination of the end host can change multiple times per packet.
-    case minimumLoad: {
-      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
-      Ipv4Address ipv4Addr = headerPrime.GetDestination();
-      if(min_replica == ipv4Addr.Get()) {
-        NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
-      } else {
-          NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
-          destAddress.Set(min_replica);
-          headerPrime.SetDestination(destAddress);
-          m_packet_redirections++;
-      }
-      //Tag can be routed down from anywhere
-      tag.SetCanRouteDown(true);
-      break;
-    }
-     
-    //coreOnly - Switches perform min load routing, but only if the router in
-    //question is a core router. This does not min route packets which would
-    //have never crossed the core.
-    case coreOnly: {
-      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
-      Ipv4Address ipv4Addr = headerPrime.GetDestination();
-      if(min_replica == ipv4Addr.Get()) {
-        NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
-      } else {
-        if(m_fattree_switch_type == core) {
-          NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
-          destAddress.Set(min_replica);
-          headerPrime.SetDestination(destAddress);
-          tag.SetCanRouteDown(true);
-          m_packet_redirections++;
+  if (tag.GetPacketType() == Ipv4DoppelgangerTag::request) {
+    //Total packets is now the incorrect name for this variable. It only tracks request packets. Stewart May 17 2020.
+    m_total_packets++;
+    switch (m_load_balencing_strategy) {
+      //no load balencing forward packets to end hosts based on source chosen destination
+      case none:
+        //Don't do anything here, we use source routing in this case
+        tag.SetCanRouteDown(true);
+        break;
+
+      //minimumLoad - Switches have global instantenous knowledge of server load.
+      //They route to minimum replicas based on this information at every step.
+      //The destination of the end host can change multiple times per packet.
+      case minimumLoad: {
+        uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
+        Ipv4Address ipv4Addr = headerPrime.GetDestination();
+        if(min_replica == ipv4Addr.Get()) {
+          NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
         } else {
-          NS_LOG_INFO("Not rerouting because not a core router.. Fix this in the future to be it's own routing protocol");
+            NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
+            destAddress.Set(min_replica);
+            headerPrime.SetDestination(destAddress);
+            m_packet_redirections++;
         }
-      }
-      tag.SetCanRouteDown(true);
-      break;
-    }
-    case minDistanceMinLoad: {
-      std::vector<uint32_t> min_distance_down_replicas = replicaSelectionStrategy_minimumDownwardDistance(replicas);
-      uint32_t min_replica = replicaSelectionStrategy_minimumLoad(min_distance_down_replicas);
-      Ipv4Address ipv4Addr = headerPrime.GetDestination();
-      if(min_replica == ipv4Addr.Get()) {
-        NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
-      } else {
-        destAddress.Set(min_replica);
-        headerPrime.SetDestination(destAddress);
+        //Tag can be routed down from anywhere
         tag.SetCanRouteDown(true);
-        m_packet_redirections++;
+        break;
       }
-      tag.SetCanRouteDown(true);
-      break;
-    }
-    case coreForcedMinDistanceMinLoad: {
-      NS_LOG_WARN("Reached the Force Core function");
-      //All packets must reach the core router before they can be routed down.
-      if (m_fattree_switch_type == core) {
-        NS_LOG_WARN("Reached the Core");
+      
+      //coreOnly - Switches perform min load routing, but only if the router in
+      //question is a core router. This does not min route packets which would
+      //have never crossed the core.
+      case coreOnly: {
+        uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
+        Ipv4Address ipv4Addr = headerPrime.GetDestination();
+        if(min_replica == ipv4Addr.Get()) {
+          NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
+        } else {
+          if(m_fattree_switch_type == core) {
+            NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
+            destAddress.Set(min_replica);
+            headerPrime.SetDestination(destAddress);
+            tag.SetCanRouteDown(true);
+            m_packet_redirections++;
+          } else {
+            NS_LOG_INFO("Not rerouting because not a core router.. Fix this in the future to be it's own routing protocol");
+          }
+        }
         tag.SetCanRouteDown(true);
+        break;
       }
-      //If a packet is on it's way down the tree use the min load balencing with minimum distance strategy
-      if (tag.GetCanRouteDown()) {
-        NS_LOG_WARN("Able to route down the tree");
+      case minDistanceMinLoad: {
         std::vector<uint32_t> min_distance_down_replicas = replicaSelectionStrategy_minimumDownwardDistance(replicas);
         uint32_t min_replica = replicaSelectionStrategy_minimumLoad(min_distance_down_replicas);
         Ipv4Address ipv4Addr = headerPrime.GetDestination();
         if(min_replica == ipv4Addr.Get()) {
           NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
         } else {
-            NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
-            destAddress.Set(min_replica);
-            headerPrime.SetDestination(destAddress);
-            m_packet_redirections++;
+          destAddress.Set(min_replica);
+          headerPrime.SetDestination(destAddress);
+          tag.SetCanRouteDown(true);
+          m_packet_redirections++;
         }
-      } else {
-        NS_LOG_WARN("Still Routing UP The tree");
-        //Packet is either on a node/edge/agg router, and is going up the tree.
-        //We need to make sure that the destination being routed to will at
-        //least take the packet to the core routers. To do this we first check
-        //if the address in the destination is in the same pod as the router.
-        //If it's not we don't need to do anything becasue the regular routing
-        //will take care of it. If the packet is in the same pod, we need to
-        //pick a cross core address to look up in the routing table to force
-        //the extra distance of routing.
-        if (SamePod(destAddress,m_addr)) {
-          //modify the destination address
-          //do not change the actual packet destination
-          NS_LOG_WARN("Matching Pod Routing Up The Tree");
-          destAddress.Set(OtherPodAddress(destAddress,GetFatTreeK()));
-        } 
+        tag.SetCanRouteDown(true);
+        break;
       }
-      break;
-    }
+      case coreForcedMinDistanceMinLoad: {
+        NS_LOG_WARN("Reached the Force Core function");
+        //All packets must reach the core router before they can be routed down.
+        if (m_fattree_switch_type == core) {
+          NS_LOG_WARN("Reached the Core");
+          tag.SetCanRouteDown(true);
+        }
+        //If a packet is on it's way down the tree use the min load balencing with minimum distance strategy
+        if (tag.GetCanRouteDown()) {
+          NS_LOG_WARN("Able to route down the tree");
+          std::vector<uint32_t> min_distance_down_replicas = replicaSelectionStrategy_minimumDownwardDistance(replicas);
+          uint32_t min_replica = replicaSelectionStrategy_minimumLoad(min_distance_down_replicas);
+          Ipv4Address ipv4Addr = headerPrime.GetDestination();
+          if(min_replica == ipv4Addr.Get()) {
+            NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
+          } else {
+              NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
+              destAddress.Set(min_replica);
+              headerPrime.SetDestination(destAddress);
+              m_packet_redirections++;
+          }
+        } else {
+          NS_LOG_WARN("Still Routing UP The tree");
+          //Packet is either on a node/edge/agg router, and is going up the tree.
+          //We need to make sure that the destination being routed to will at
+          //least take the packet to the core routers. To do this we first check
+          //if the address in the destination is in the same pod as the router.
+          //If it's not we don't need to do anything becasue the regular routing
+          //will take care of it. If the packet is in the same pod, we need to
+          //pick a cross core address to look up in the routing table to force
+          //the extra distance of routing.
+          if (SamePod(destAddress,m_addr)) {
+            //modify the destination address
+            //do not change the actual packet destination
+            NS_LOG_WARN("Matching Pod Routing Up The Tree");
+            destAddress.Set(OtherPodAddress(destAddress,GetFatTreeK()));
+          } 
+        }
+        break;
+      }
 
-    default:
-      NS_LOG_WARN("Unable to find load ballencing strategy");
-      break;
-  }
+      default:
+        NS_LOG_WARN("Unable to find load ballencing strategy");
+        break;
+      }
+    } else if (tag.GetPacketType() == Ipv4DoppelgangerTag::response) {
+      NS_LOG_INFO("Routing A Response");
+    } else {
+      NS_LOG_INFO("Unknown packet type routing as usual");
+    }
 
   packet->ReplacePacketTag(tag);
 

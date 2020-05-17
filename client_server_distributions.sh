@@ -1,14 +1,19 @@
 #!/bin/bash
 
 
-function RunPermu {
-    ./run.sh -n="Server_Normal_Client_Normal" -f="RunProportionalLoadNN"
+
+function RunNetLB {
+    prefix="A"
+    rounds=2
+    ./run.sh -n="${prefix}_NLB_None" -r=$rounds -f="RunProportionalNone"
     ./run.sh -p
-    ./run.sh -n="Server_Normal_Client_Uniform" -f="RunProportionalLoadNU"
+    ./run.sh -n="${prefix}_NLB_Min" -r=$rounds -f="RunProportionalMin"
     ./run.sh -p
-    ./run.sh -n="Server_Uniform_Client_Normal" -f="RunProportionalLoadUN"
+    ./run.sh -n="${prefix}_NLB_Core" -r=$rounds -f="RunProportionalCoreOnly"
     ./run.sh -p
-    ./run.sh -n="Server_Uniform_Client_Uniform" -f="RunProportionalLoadUU"
+    ./run.sh -n="${prefix}_NLB_MDML" -r=$rounds -f="RunProportionalMinDistanceMinLoad"
+    ./run.sh -p
+    ./run.sh -n="${prefix}_NLB_MDMLC" -r=$rounds -f="RunProportionalMinDistanceMinLoadCore"
     ./run.sh -p
 }
 
@@ -41,5 +46,7 @@ function PlotKnown {
     ./run.sh --plot_multi --dirs="${dirs[@]}"
 }
 
-RunNNAverage
+#RunNNAverage
 #PlotKnown
+
+RunNetLB

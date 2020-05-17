@@ -117,7 +117,7 @@ function WorkingDirectory() {
 }
 
 function RunRpcSelectionStrategies() {
-	args="$@"
+	local args="$@"
 	#run a test for each of the replica selection strategies
 	for selection in "${!RpcSelectionStrategy[@]}"; do
 
@@ -129,21 +129,16 @@ function RunRpcSelectionStrategies() {
 		#networkArgs=$(NetworkSelectionStrat minimum)
 
 		currentdir=`pwd`
-		dirArgs=$(WorkingDirectory $currentdir)
+		local dirArgs=$(WorkingDirectory $currentdir)
 		args="${args}
 		$dirArgs"
 
-		#networkArgs=$(NetworkSelectionStrat minimum)
-		#networkArgs=$(NetworkSelectionStrat minDistanceMinLoad)
-		networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
-		args="${args}
-		$networkArgs"
 
-		selectionArgs=$(RpcSelectionStrat $selection)
+		local selectionArgs=$(RpcSelectionStrat $selection)
 		args="${args} 
 		$selectionArgs "
 
-		configArgs=$(ConfigArgs results)
+		local configArgs=$(ConfigArgs results)
 		args="${args}
 		$configArgs "
 
@@ -295,7 +290,7 @@ function RunExponentialServerLoad {
 	done
 }
 
-function RunProportionalLoad200 {
+function RunProportionalLoad {
 	echo "Running Normal Server Load"
 	#25us mean uniform transmission
 	#transmissionArgs=$(UniformClientTransmission 50000 50000)
@@ -303,6 +298,7 @@ function RunProportionalLoad200 {
 	#loadArgs=$(UniformServerLoad 45 55)
 	packetArgs=$(NormalPacketSizes 128 12)
 	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
+	networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
 	#proportion=(20 40 60 80 100 120 140 160 180 200)
 	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
 	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
@@ -324,12 +320,60 @@ function RunProportionalLoad200 {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${networkArgs}"
 		popd
 
 		#exit
 	done
 }
+
+function RunProportialLoadArgs {
+	echo "Running Normal Server Load"
+	local args="$@"
+	local loadArgs=$(NormalServerLoad 50000 5000)
+	local packetArgs=$(NormalPacketSizes 128 12)
+	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+	for p in ${proportion[@]}; do
+		let "mean = (50000 * 100) / $p"
+		let "std = ${mean} / 10"
+		local transmissionArgs=$(NormalClientTransmission $mean $std)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args}"
+		popd
+
+		#exit
+	done
+}
+
+function RunProportionalNone {
+	local networkArgs=$(NetworkSelectionStrat none)
+	RunProportialLoadArgs "${networkArgs} "
+}
+
+function RunProportionalMin {
+	local networkArgs=$(NetworkSelectionStrat minimum)
+	RunProportialLoadArgs "${networkArgs} "
+}
+
+function RunProportionalCoreOnly {
+	local networkArgs=$(NetworkSelectionStrat coreOnly)
+	RunProportialLoadArgs "${networkArgs} "
+}
+
+function RunProportionalMinDistanceMinLoad {
+	local networkArgs=$(NetworkSelectionStrat minDistanceMinLoad)
+	RunProportialLoadArgs "${networkArgs} "
+}
+
+function RunProportionalMinDistanceMinLoadCore {
+	local networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
+	RunProportialLoadArgs "${networkArgs} "
+}
+
 
 function RunProportionalLoadNN {
 	echo "Running Normal Server Normal Client"
@@ -565,6 +609,9 @@ if [ ! -z "$LAST" ]; then
 	exit
 fi
 
+echo "Compiling"
+./waf -j 40
+
 if [ ! -z "$DEBUG" ]; then
 	rm -r ./Experiments/debug
 	mkdir ./Experiments/debug
@@ -634,7 +681,6 @@ pushd $ExperimentDir
 if [ ! -z $FUNCTION ]; then
 	if [ `type -t $FUNCTION`"" == 'function' ]; then
 		echo "$FUNCTION is a valid function input"
-		$FUNCTION
 	else
 		echo "$FUNCTION is not an in scope function: Exiting"
 		exit
@@ -646,7 +692,7 @@ else
 	#RunUniformPacketUniformTransmissionExperiment
 	#RunNormalServerLoad
 	#RunExponentialServerLoad
-	FUNCTION=RunProportionalLoad200
+	FUNCTION=RunProportionalLoad
 	echo "No Function Specified running defualt function $FUNCTION"
 fi
 

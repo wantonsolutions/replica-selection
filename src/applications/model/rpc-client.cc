@@ -542,6 +542,7 @@ void RpcClient::Send(void)
   
   // PacketID is an analog for sequence number, for now request are a single packet so always set to 0
   ipv4DoppelgangerTag.SetCanRouteDown(false);
+  ipv4DoppelgangerTag.SetPacketType(Ipv4DoppelgangerTag::request);
   ipv4DoppelgangerTag.SetPacketID(0); 
 
   // Generate the location of the next reuqest
