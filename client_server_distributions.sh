@@ -4,7 +4,7 @@
 
 function RunNetLB {
     prefix="A"
-    rounds=2
+    rounds=12
     ./run.sh -n="${prefix}_NLB_None" -r=$rounds -f="RunProportionalNone"
     ./run.sh -p
     ./run.sh -n="${prefix}_NLB_Min" -r=$rounds -f="RunProportionalMin"

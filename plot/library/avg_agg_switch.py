@@ -159,6 +159,10 @@ plt.clf()
 
 
 
+
+plt.rcParams.update({'font.size': 20})
+#plt.rcParams.update({'figure.figsize': [10, 5]})
+plt.figure(figsize=(20,10),dpi=20)
 ##TODO This is totally wrong, the percentange for each of the runs needs to be calculated first, then the 
 
 #we need to begin by making a sum array across all experiments 
