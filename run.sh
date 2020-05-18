@@ -492,7 +492,7 @@ function PlotIntervalsExperiment() {
 		dir=${dir%*/}      # remove the trailing "/"
 		echo ${dir##*/}    # print everything after the final "/"
 		pushd $dir
-		PlotInterval
+		#PlotInterval
 		popd
 	done
 
@@ -506,6 +506,8 @@ function PlotIntervalsExperiment() {
 
 	plotScript="$topdir/plot/library/agg_latency.py"
 	python $plotScript aggregate.dat &
+
+	exit 1
 
 	#collect switch aggregate measures
 	files=""

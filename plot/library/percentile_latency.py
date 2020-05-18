@@ -45,10 +45,13 @@ for name in filedict:
                 nameagg=nameagg+field+","
             
             lat = filedict[name]['dat']['Latency']
-            time = filedict[name]['dat']['Time']
+            sojourn = filedict[name]['dat']['Sojourn']
             mslat = NanoToMicroSeconds(lat)
+            mssoj = NanoToMicroSeconds(sojourn)
 
-            x, y = gen_cdf(mslat,10000)
+            cdf_granularity = 10000
+            x, y = gen_cdf(mslat,cdf_granularity)
+            sojx, sojy = gen_cdf(mssoj,cdf_granularity)
             #find 50
             x50 = 0
             for i in y:
@@ -73,5 +76,5 @@ for name in filedict:
             #x95 = (len(x) / 100 ) * 95
             #x99 = (len(x) / 100 ) * 99
             #print x
-            print nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99])
+            print nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99]) + "," + str(sojx[x50]) + "," + str(sojx[x95]) + "," + str(sojx[x99])
             #plt.plot(x,y,linewidth=i,label=finalname)
