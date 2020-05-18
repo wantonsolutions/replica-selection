@@ -707,8 +707,8 @@ std::vector<uint32_t> ServerLoadDistribution) {
     for (int j =0 ; j < 100; j++){
       NS_LOG_WARN("ONLY ALLOCATING A SINGLE CLIENT\n");
     }
-    break;
-    */
+     break;
+     */
   }
 }
 
@@ -932,7 +932,6 @@ int main(int argc, char *argv[])
   for (int e=0;e<aggC;e++){
       //printf("edge %d total %d\n",e,aggC);
       //printf("c.GetN == %d\n",nc_edge2agg[e].GetN());
-      printf("%d\n",e);
       ndc_edge2agg[e] = pointToPoint.Install(nc_edge2agg[e]);
   }
   //connect agg to cores
@@ -999,7 +998,6 @@ int main(int argc, char *argv[])
   a = 10;
   int itterator=0;
   printf("Setting up IP addresses\n");
-  printf("Node IP addresses\n");
   for (int i=0; i<PODS; i++) {
     for (int j=0; j<EDGE; j++) {
       for (int k=2; k<( NODE + 2);  k++) {
@@ -1042,7 +1040,6 @@ int main(int argc, char *argv[])
   }
 
 
-  printf("Edge IP ADDRESSES\n");
   a=10;
   d=1;
   itterator = 0;
@@ -1063,7 +1060,6 @@ int main(int argc, char *argv[])
   a2=10;
 
   for(int e=0; e<EDGES;e++) {
-    printf("Edge IP ADDRESSES\n");
     Ptr<Node> node = edge.Get(e);
     Ipv4Address ipAddr = getNodeIP(node);
     Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);
@@ -1102,7 +1098,6 @@ int main(int argc, char *argv[])
     }
   }
 
-  printf("AGG IP ADDRESSES\n");
   a=10;
   d=1;
   itterator=0;
@@ -1120,7 +1115,6 @@ int main(int argc, char *argv[])
   }
 
   for(int a=0; a<AGGS;a++) {
-    printf("AGG IP ADDRESSES\n");
     Ptr<Node> node = agg.Get(a);
     Ipv4Address ipAddr = getNodeIP(node);
     Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);
@@ -1160,7 +1154,6 @@ int main(int argc, char *argv[])
   }
 
 
-  printf("Core IP ADDRESSES\n");
   a=10;
   b=PODS;
   d=1;
@@ -1179,7 +1172,6 @@ int main(int argc, char *argv[])
   }
 
   for(int c=0; c<CORE;c++) {
-    printf("CORE IP ADDRESSES\n");
     Ptr<Node> node = core.Get(c);
     Ipv4Address ipAddr = getNodeIP(node);
     Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);

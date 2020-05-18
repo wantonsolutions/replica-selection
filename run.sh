@@ -609,17 +609,6 @@ if [ ! -z "$LAST" ]; then
 	exit
 fi
 
-echo "Compiling"
-./waf -j 40
-
-if [ ! -z "$DEBUG" ]; then
-	rm -r ./Experiments/debug
-	mkdir ./Experiments/debug
-	pushd ./Experiments/debug
-	RunDebug
-	popd
-	exit
-fi
 
 if [ ! -z $PLOT_MULTI ]; then
 	echo "Plotting multiple run average (assuming you know what your doing)"
@@ -656,6 +645,18 @@ fi
 if [ -z "$EXPERIMENT_NAME" ]; then
 	echo "An experiment name must be given; see -n"
 	exit 0
+fi
+
+echo "Compiling"
+./waf -j 40
+
+if [ ! -z "$DEBUG" ]; then
+	rm -r ./Experiments/debug
+	mkdir ./Experiments/debug
+	pushd ./Experiments/debug
+	RunDebug
+	popd
+	exit
 fi
 
 

@@ -95,6 +95,16 @@ Ipv4DoppelgangerTag::GetReplicas(void) const
   return (uint32_t *)m_replicas;
 }
 
+void 
+Ipv4DoppelgangerTag::SetHostSojournTime(uint64_t time){
+  m_host_sojourn_time=time;
+}
+
+uint64_t 
+Ipv4DoppelgangerTag::GetHostSojournTime(){
+  return m_host_sojourn_time;
+}
+
 TypeId
 Ipv4DoppelgangerTag::GetInstanceTypeId(void) const
 {
@@ -108,7 +118,8 @@ Ipv4DoppelgangerTag::GetSerializedSize(void) const
         sizeof(uint8_t) +
         sizeof(uint16_t) +
         sizeof(uint16_t) +
-        (sizeof(uint32_t) * MAX_REPLICAS);
+        (sizeof(uint32_t) * MAX_REPLICAS) +
+        sizeof(uint64_t);
 }
 
 void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
@@ -121,6 +132,7 @@ void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
   {
     i.WriteU32(m_replicas[itt]);
   }
+  i.WriteU64(m_host_sojourn_time);
 }
 
 void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
@@ -133,6 +145,7 @@ void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
   {
     m_replicas[itt] = i.ReadU32();
   }
+  m_host_sojourn_time = i.ReadU64();
 }
 
 void Ipv4DoppelgangerTag::Print(std::ostream &os) const
@@ -145,6 +158,7 @@ void Ipv4DoppelgangerTag::Print(std::ostream &os) const
   {
     os << "Replica " << itt << " " << m_replicas[itt];
   }
+  os << "host sojourn time = "<< m_host_sojourn_time;
 }
 
 } // namespace ns3

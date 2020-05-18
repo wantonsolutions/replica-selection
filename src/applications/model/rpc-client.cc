@@ -544,6 +544,7 @@ void RpcClient::Send(void)
   ipv4DoppelgangerTag.SetCanRouteDown(false);
   ipv4DoppelgangerTag.SetPacketType(Ipv4DoppelgangerTag::request);
   ipv4DoppelgangerTag.SetPacketID(0); 
+  ipv4DoppelgangerTag.SetHostSojournTime(0);
 
   // Generate the location of the next reuqest
   uint32_t request_id = GetNextRPC();
@@ -589,11 +590,20 @@ void RpcClient::HandleRead(Ptr<Socket> socket)
   Ptr<Packet> packet;
   //PdcpTag idtag;
   Ipv4PacketInfoTag idtag;
+  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
+
+
   Address from;
   while ((packet = socket->RecvFrom(from)))
   {
     if (packet->PeekPacketTag(idtag))
     {
+      if (packet->PeekPacketTag(ipv4DoppelgangerTag)){
+        NS_LOG_INFO("Received Packet with correct doppel tag");
+      } else {
+        NS_LOG_INFO("Received packet, but there is no doppelganger tag, there is likely a bug, doing nothing");
+        return;
+      }
 
       m_rec++;
       //NS_LOG_INFO("Tag ID" << idtag.GetSenderTimestamp());
@@ -607,7 +617,7 @@ void RpcClient::HandleRead(Ptr<Socket> socket)
       //       NS_LOG_WARN(difference.GetNanoSeconds() << "," <<
       //		       Simulator::Now ().GetSeconds ());
 
-      NS_LOG_WARN(difference.GetNanoSeconds() << "," << Simulator::Now().GetSeconds() << "," << m_sent << "," << m_rec << "," << requestIndex << "," << 0 << "," << this->GetNode()->GetId() << ",");
+      NS_LOG_WARN(difference.GetNanoSeconds() << "," << Simulator::Now().GetSeconds() << "," << m_sent << "," << m_rec << "," << requestIndex << "," << 0 << "," << this->GetNode()->GetId() << "," << ipv4DoppelgangerTag.GetHostSojournTime());
     }
     if (InetSocketAddress::IsMatchingType(from))
     {

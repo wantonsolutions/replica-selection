@@ -8,6 +8,9 @@ import csv
 import sys
 import pickle
 
+import seaborn as sns
+
+
 from lib import *
 
 
@@ -34,15 +37,19 @@ if makeCache:
     filedict = organizeFilenames(filenames, suffixes)
     fullDB = populateDataBases(filedict)
 
+color_comet=sns.xkcd_rgb["medium blue"]
+colors=dict()
+colors["random"]=sns.xkcd_rgb["medium blue"]
+colors["single"]=sns.xkcd_rgb["pale red"]
+colors["minimum"]=sns.xkcd_rgb["medium green"]
 
-color=iter(cm.rainbow(np.linspace(0,1,100)))
-c=next(color)
+#color=iter(cm.rainbow(np.linspace(0,1,100)))
+#c=next(color)
 plt.rcParams.update({'font.size': 20})
 
 tmpcolor = ['b','r','c','k', 'm', 'g']
 cindex =0
 
-plt.rcParams.update({'font.size': 20})
 
 figure(num=None, figsize=(15, 15), dpi=80, facecolor='w', edgecolor='k')
 cindex = 0
@@ -60,13 +67,16 @@ for name in filedict:
             
             print(finalname)
             lat = filedict[name]['dat']['Latency']
-            time = filedict[name]['dat']['Time']
+            sojourn = filedict[name]['dat']['Sojourn']
             mslat = NanoToMicroSeconds(lat)
+            mssoj = NanoToMicroSeconds(sojourn)
 
             x, y = gen_cdf(mslat,1000)
+            x2, y2 = gen_cdf(mssoj,1000)
             #plt.plot(x,y,linewidth=i,label=finalname)
             #plt.plot(x,y,linewidth=i,label=name)
-            plt.plot(x,y,linewidth=i,label=sname[0])
+            plt.plot(x,y,linewidth=i,label=sname[0],color=colors[sname[0]])
+            plt.plot(x2,y2,linewidth=i,label=sname[0]+" Sojourn",color=colors[sname[0]],linestyle=':')
 
             print(x)
 
@@ -81,7 +91,7 @@ plt.xlabel("Resposne Latency (us)", fontweight='bold')
 plt.legend()
 #plt.title("Static interval 25us per request, 10us delay",fontweight='bold')
 #plt.title("Dynamic interval 25us per request, 10us delay +/- 25%",fontweight='bold')
-plt.title("Dynamic interval 25us per request, 10us delay +/- 50%",fontweight='bold')
+#plt.title("Dynamic interval 25us per request, 10us delay +/- 50%",fontweight='bold')
 plt.tight_layout(rect=(0,0.1,1,1))
 plt.savefig("Replica.pdf")
 

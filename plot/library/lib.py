@@ -149,6 +149,7 @@ def populateAppDict(filename):
     db["Request-Index"] = toInt(column(data,4))
     db["D-Level"] = toInt(column(data,5))
     db["Id"] = toInt(column(data,6))
+    db["Sojourn"] = toInt(column(data,7))
     return db
 
 def sumDevFeild(ddb, name):
