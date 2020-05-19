@@ -83,7 +83,7 @@ for filename in filenames:
         
 
         for selection in selections:
-            map_results[selection+"_NodeRedirections"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_NodeRedirections"]))]
+            map_results[selection+"_NodeRedirections"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_NodeRedirections"]))] 
             map_results[selection+"_NodeTotal"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_NodeTotal"]))]
             map_results[selection+"_EdgeRedirections"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_EdgeRedirections"]))]
             map_results[selection+"_EdgeTotal"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_EdgeTotal"]))]
@@ -91,7 +91,7 @@ for filename in filenames:
             map_results[selection+"_AggTotal"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_AggTotal"]))]
             map_results[selection+"_CoreRedirections"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_CoreRedirections"]))]
             map_results[selection+"_CoreTotal"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_CoreTotal"]))]
-            map_results[selection+"_x"]=sorted(map_results[selection+"_x"])
+            map_results[selection+"_x"]=sorted(map_results[selection+"_x"]) ##This has to be the last in the list dummy (write better code than this)
         
     avg_results[filename] = map_results
 
@@ -202,30 +202,6 @@ for selection in selections:
     plt.plot(x,avg,label=selection,color=colors[selection],linestyle=linetype[1])
     plt.errorbar(x,avg,err,fmt=' ',color=colors[selection],capsize=5)
 
-
-'''
-
-for selection in selections:
-    summerR=[]
-    summerR.append(GetAverageArr(multiRunAverage[selection+"_NodeRedirections"]))
-    summerR.append(GetAverageArr(multiRunAverage[selection+"_EdgeRedirections"]))
-    summerR.append(GetAverageArr(multiRunAverage[selection+"_AggRedirections"]))
-    summerR.append(GetAverageArr(multiRunAverage[selection+"_CoreRedirections"]))
-    redirects=[sum(x) for x in zip(*summerR)]
-    print(redirects)        
-
-    summerT=[]
-    summerT.append(GetAverageArr(multiRunAverage[selection+"_NodeTotal"]))
-    summerT.append(GetAverageArr(multiRunAverage[selection+"_EdgeTotal"]))
-    summerT.append(GetAverageArr(multiRunAverage[selection+"_AggTotal"]))
-    summerT.append(GetAverageArr(multiRunAverage[selection+"_CoreTotal"]))
-    totals=[sum(x) for x in zip(*summerT)]
-    print(totals)
-
-    diff=[(a/b)*100.0 for a, b in zip(redirects,totals)]
-
-    plt.plot(sorted(GetAverageArr(multiRunAverage[selection+"_x"])),diff,label=selection,color=colors[selection],linestyle=linetype[1], marker=".")
-'''
 
 setUniformParams()
 plt.savefig("Percent_Switch_Redirects.pdf")

@@ -32,7 +32,6 @@ def toInt(data):
 
 def GetAverageArr(multiRun):
     a=[]
-    print(multiRun)
     for runs in multiRun:
         total=0.0
         for j in runs:
@@ -43,12 +42,10 @@ def GetAverageArr(multiRun):
 
 def GetErrArr(multiRun):
     a=[]
-    print(multiRun)
     for runs in multiRun:
         #todo calculate standard error
         stderr=sem(runs)
         a.append(stderr)
-        print stderr
 
     return a
 
