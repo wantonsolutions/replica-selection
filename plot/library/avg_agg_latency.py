@@ -211,19 +211,35 @@ plt.clf()
 plt.rcParams.update({'font.size': 20})
 plt.figure(figsize=(20,10),dpi=20)
 
-
+network_percent=dict()
 for selection in selections:
+
+    network_percent[selection+"_50"]=deepcopy(multiRunAverage[selection+"_50"])
+    network_percent[selection+"_99"]=deepcopy(multiRunAverage[selection+"_99"])
+    i = 0
+    for measures in multiRunAverage[selection+"_50"]:
+        j = 0
+        for run in multiRunAverage[selection+"_50"][i]:
+            percent_50 = float(network_time[selection+"_50"][i][j]) / float(multiRunAverage[selection+"_50"][i][j]) * 100.0
+            network_percent[selection+"_50"][i][j] = percent_50
+            percent_99 = float(network_time[selection+"_99"][i][j]) / float(multiRunAverage[selection+"_99"][i][j]) * 100.0
+            network_percent[selection+"_99"][i][j] = percent_99
+            j=j+1
+        i=i+1
+
+
     #TODO plot this with error.
+for selection in selections:
     x=sorted(GetAverageArr(multiRunAverage[selection+"_x"]))
-    avg_latency_50=GetAverageArr(multiRunAverage[selection+"_50"])
-    avg_net_50=GetAverageArr(network_time[selection+"_50"])
-    percent_50 = [ (a / b) * 100.0 for a, b in zip(avg_net_50,avg_latency_50) ]
-    plt.plot(x,percent_50,label=selection,color=colors[selection],linestyle=linetype[0])
-    
-    avg_latency_99=GetAverageArr(multiRunAverage[selection+"_99"])
-    avg_net_99=GetAverageArr(network_time[selection+"_99"])
-    percent_99 = [ (a / b) * 100.0 for a, b in zip(avg_net_99,avg_latency_99) ]
-    plt.plot(x,percent_99,label=selection,color=colors[selection],linestyle=linetype[2])
+    percent_50 = GetAverageArr(network_percent[selection+"_50"])
+    err_50=GetErrArr(network_percent[selection+"_50"])
+    plt.plot(x,percent_50,label=selection+" 50th",color=colors[selection],linestyle=linetype[0])
+    plt.errorbar(x,percent_50,err_50,fmt=' ',color=colors[selection],capsize=5)
+
+    percent_99 = GetAverageArr(network_percent[selection+"_99"])
+    err_99=GetErrArr(network_percent[selection+"_99"])
+    plt.plot(x,percent_99,label=selection+" 99th",color=colors[selection],linestyle=linetype[2])
+    plt.errorbar(x,percent_99,err_99,fmt=' ',color=colors[selection],capsize=5)
 
 plt.rc('axes.formatter', useoffset=False)
 plt.legend()

@@ -112,6 +112,8 @@ for selection in selections:
         multiRunAverage[selection+"_CoreTotal"]=[]
     for filename in filenames:
         i=0
+        print i
+        print avg_results[filename]
         for value in avg_results[filename][selection+"_NodeRedirections"]:
             if len(multiRunAverage[selection+"_NodeRedirections"]) <= i:
                 multiRunAverage[selection+"_x"].append([])
