@@ -63,14 +63,16 @@ base = filenames[0]
 filenames.pop(0) #remove the base
 #treatment = filenames[1]
 
+measurement="minimum_99"
+
 
 xaxis=GetAverageArr(avg_runs[base]["minimum_x"])
 xaxis=[int(x) for x in xaxis]
-min_base_avg=GetAverageArr(avg_runs[base]["minimum_50"])
+min_base_avg=GetAverageArr(avg_runs[base][measurement])
 min_treatments_diff=[]
 min_treatments_sum=[]
 for filename in filenames:
-    min_treatments = GetAverageArr(avg_runs[filename]["minimum_50"])
+    min_treatments = GetAverageArr(avg_runs[filename][measurement])
     min_treatments_run=[((a-b)/a)*100.0 for a, b in zip(min_base_avg,min_treatments)]
     min_treatments_diff.append(min_treatments_run)
     min_treatments_sum.append(sum(min_treatments_run)/float(len(min_treatments_run)))

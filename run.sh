@@ -294,7 +294,8 @@ function RunProportionalLoad {
 	echo "Running Normal Server Load"
 	#25us mean uniform transmission
 	#transmissionArgs=$(UniformClientTransmission 50000 50000)
-	loadArgs=$(NormalServerLoad 50000 5000)
+	#loadArgs=$(NormalServerLoad 50000 5000)
+	loadArgs=$(ExponentialServerLoad 1.0 50000 1) #Normal Distribution
 	#loadArgs=$(UniformServerLoad 45 55)
 	packetArgs=$(NormalPacketSizes 128 12)
 	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
@@ -330,7 +331,8 @@ function RunProportionalLoad {
 function RunProportialLoadArgs {
 	echo "Running Normal Server Load"
 	local args="$@"
-	local loadArgs=$(NormalServerLoad 50000 5000)
+	#local loadArgs=$(NormalServerLoad 50000 5000) #Normal Distribution
+	local loadArgs=$(ExponentialServerLoad 1.0 50000 1) #Exponential Distribution
 	local packetArgs=$(NormalPacketSizes 128 12)
 	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
 
@@ -532,7 +534,7 @@ function PlotIntervalExperimentAverage {
 	for a_dir in ./*/; do
 		echo "Plotting in $a_dir"
 		pushd $a_dir
-		#PlotIntervalsExperiment
+		PlotIntervalsExperiment
 		popd
 		latency_files+=("${a_dir}aggregate.dat")
 		switch_files+=("${a_dir}aggregate_switch.dat")

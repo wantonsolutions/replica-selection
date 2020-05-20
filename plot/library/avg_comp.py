@@ -63,9 +63,11 @@ base = filenames[0]
 treatment = filenames[1]
 
 
+measurement="minimum_99"
+
 xaxis=GetAverageArr(avg_runs[base]["minimum_x"])
-min_base_avg=GetAverageArr(avg_runs[base]["minimum_50"])
-min_treatment_avg=GetAverageArr(avg_runs[treatment]["minimum_50"])
+min_base_avg=GetAverageArr(avg_runs[base][measurement])
+min_treatment_avg=GetAverageArr(avg_runs[treatment][measurement])
 
 
 diff=[((a-b)/a)*100.0 for a, b in zip(min_base_avg,min_treatment_avg)]

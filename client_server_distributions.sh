@@ -3,7 +3,7 @@
 
 
 function RunNetLB {
-    prefix="A"
+    prefix="EXP"
     rounds=12
     ./run.sh -n="${prefix}_NLB_None" -r=$rounds -f="RunProportionalNone"
     ./run.sh -p

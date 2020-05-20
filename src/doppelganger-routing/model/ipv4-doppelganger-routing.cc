@@ -552,6 +552,10 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " Setting up route for dest address " << stringIP(header.GetDestination().Get()) << " port " <<  selectedPort );
   Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route (selectedPort, destAddress);
 
+
+  //Check channel state
+  Ptr<Channel> chan = idev->GetChannel();
+
   //ucb (route, packet, header);
   ucb (route, packet, headerPrime);
 
