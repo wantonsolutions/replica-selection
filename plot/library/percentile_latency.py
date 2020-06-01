@@ -27,6 +27,8 @@ sys.argv.pop(0)
 makeCache = True
 #plot the latencies of each individual measure
 filedict = dict()
+
+f = open("aggregate.dat",'w')
 if makeCache:    
     suffixes = ["dat"]
     filenames=sys.argv
@@ -76,5 +78,8 @@ for name in filedict:
             #x95 = (len(x) / 100 ) * 95
             #x99 = (len(x) / 100 ) * 99
             #print x
-            print nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99]) + "," + str(sojx[x50]) + "," + str(sojx[x95]) + "," + str(sojx[x99])
+            #print nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99]) + "," + str(sojx[x50]) + "," + str(sojx[x95]) + "," + str(sojx[x99])
+            f.write(nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99]) + "," + str(sojx[x50]) + "," + str(sojx[x95]) + "," + str(sojx[x99])+"\n")
             #plt.plot(x,y,linewidth=i,label=finalname)
+
+f.close()

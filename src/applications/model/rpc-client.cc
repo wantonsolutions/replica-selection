@@ -52,7 +52,7 @@ RpcClient::GetTypeId(void)
                           .AddConstructor<RpcClient>()
                           .AddAttribute("MaxPackets",
                                         "The maximum number of packets the application will send",
-                                        UintegerValue(10000),
+                                        UintegerValue(5000),
                                         MakeUintegerAccessor(&RpcClient::m_count),
                                         MakeUintegerChecker<uint32_t>())
                           .AddAttribute("RemoteAddress",

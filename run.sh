@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 topdir=`pwd`
 
@@ -332,9 +332,13 @@ function RunProportialLoadArgs {
 	echo "Running Normal Server Load"
 	local args="$@"
 	#local loadArgs=$(NormalServerLoad 50000 5000) #Normal Distribution
-	local loadArgs=$(ExponentialServerLoad 1.0 50000 1) #Exponential Distribution
+	local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
 	local packetArgs=$(NormalPacketSizes 128 12)
-	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#local proportion=(10 12 14 16 18 20 22 24 26 28 30 32 34 36 )
+	local proportion=(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)
+	#local proportion=(10 20 30 40 50 60 70 80 90 100)
+	#local proportion=(50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75)
 
 	for p in ${proportion[@]}; do
 		let "mean = (50000 * 100) / $p"
@@ -464,7 +468,9 @@ function  RunDebug {
 	echo "Running Debug"
 	transmissionArgs=$(NormalClientTransmission 500000 50000)
 	packetArgs=$(NormalPacketSizes 128 12)
-	loadArgs=$(NormalServerLoad 50000 5000)
+	#local loadArgs=$(ExponentialServerLoad 0.1 50000 1) #Exponential Distribution
+	local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
+	#loadArgs=$(NormalServerLoad 50000 5000)
 	#selectionArgs=$(RpcSelectionStrat single)
 	selectionArgs=$(RpcSelectionStrat minimum)
 	networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
@@ -486,7 +492,23 @@ function  RunDebug {
 
 }
 
-function PlotIntervalsExperiment() {
+function AggregateIntervalsExperiment {
+
+	#collect aggregate measures
+	files=""
+	files=`find | grep results.dat`
+	aggScript="$topdir/plot/library/percentile_latency.py"
+	python $aggScript $files &
+
+	#collect switch aggregate measures
+	files=""
+	files=`find | grep RouterSummary.dat`
+	aggScript="$topdir/plot/library/combine_switch_measurements.py"
+	python $aggScript $files &
+
+}
+
+function PlotIntervalsExperiment {
 	dirname=`pwd`
 	echo "Entering plotting in $dirname"
 	for dir in ./*/     # list directories in the form "/tmp/dirname/"
@@ -498,28 +520,25 @@ function PlotIntervalsExperiment() {
 		popd
 	done
 
-	wait
-
-	#collect aggregate measures
-	files=""
-	files=`find | grep results.dat`
-	aggScript="$topdir/plot/library/percentile_latency.py"
-	python $aggScript $files > aggregate.dat 
-
 	plotScript="$topdir/plot/library/agg_latency.py"
 	python $plotScript aggregate.dat &
 
-	#collect switch aggregate measures
-	files=""
-	files=`find | grep RouterSummary.dat`
-	aggScript="$topdir/plot/library/combine_switch_measurements.py"
-	python $aggScript $files > aggregate_switch.dat
 
 	plotScript="$topdir/plot/library/agg_switch_redirect.py"
 	python $plotScript aggregate_switch.dat &
 
 	wait
 
+}
+
+function AggregateIntervalExperimentAverage() {
+	for a_dir in ./*/; do
+		echo "Aggregating in $a_dir"
+		pushd $a_dir
+		AggregateIntervalsExperiment
+		popd
+	done
+	wait
 }
 
 function PlotIntervalExperimentAverage {
@@ -534,7 +553,7 @@ function PlotIntervalExperimentAverage {
 	for a_dir in ./*/; do
 		echo "Plotting in $a_dir"
 		pushd $a_dir
-		PlotIntervalsExperiment
+		#PlotIntervalsExperiment
 		popd
 		latency_files+=("${a_dir}aggregate.dat")
 		switch_files+=("${a_dir}aggregate_switch.dat")
@@ -548,9 +567,6 @@ function PlotIntervalExperimentAverage {
 	plotScript="$topdir/plot/library/avg_agg_switch.py"
 	echo "Entering Python Plot"
 	python $plotScript ${switch_files[@]}
-	#CurrentDate=`date "+%F_%T"`
-	#cp Avg_Agg_Latency.pdf "Avg_Agg_Latency_${CurrentDate}.pdf"
-	#cp Avg_Agg_Latency.db "Avg_Agg_Latency_${CurrentDate}.db"
 
 }
 
@@ -639,6 +655,8 @@ if [ ! -z "$PLOT" ]; then
 	echo "PLOTTTTTOOOTING"
 	echo $plotDIR
 	cd $plotDir
+	AggregateIntervalExperimentAverage
+	wait
 	PlotIntervalExperimentAverage
 	#exit after plotting
 	exit 0

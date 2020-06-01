@@ -42,6 +42,7 @@ if len(filenames) != 1:
 
 filename=filenames[0]
 
+
 counter=0
 data=dict()
 names=[]

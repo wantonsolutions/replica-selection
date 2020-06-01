@@ -8,6 +8,7 @@ import csv
 import sys
 import pickle
 import seaborn as sns
+import math
 
 from scipy.stats import sem
 
@@ -30,7 +31,7 @@ from lib import *
 sys.argv.pop(0)
 
 #plot the latencies of each individual measure
-print sys.argv
+#print sys.argv
 
 color_comet=sns.xkcd_rgb["medium blue"]
 colors=dict()
@@ -39,18 +40,19 @@ colors["single"]=sns.xkcd_rgb["pale red"]
 colors["minimum"]=sns.xkcd_rgb["medium green"]
 
 
-plt.rcParams.update({'font.size': 6})
+plt.rcParams.update({'font.size': 4})
+#plt.rcParams.update({'font.size': 1})
 #plt.rcParams.update({'figure.figsize': [10, 5]})
-plt.figure(figsize=(80,10),dpi=20)
+plt.figure(figsize=(80,10),dpi=300)
 linetype = ['-',':','--']
 
 #figure(num=None, figsize=(15, 15), dpi=80, facecolor='w', edgecolor='k')
 
 filenames=sys.argv
-print filenames
+print (filenames)
 
 if len(filenames) < 2:
-    print "Not enough suppiled files, must have at least two"
+    print ("Not enough suppiled files, must have at least two")
     exit()
 
 avg_runs=dict()
@@ -69,12 +71,30 @@ measurement="minimum_99"
 xaxis=GetAverageArr(avg_runs[base]["minimum_x"])
 xaxis=[int(x) for x in xaxis]
 min_base_avg=GetAverageArr(avg_runs[base][measurement])
+min_base_err=GetErrArr(avg_runs[base][measurement])
 min_treatments_diff=[]
+min_treatments_diff_err=[]
 min_treatments_sum=[]
 for filename in filenames:
     min_treatments = GetAverageArr(avg_runs[filename][measurement])
-    min_treatments_run=[((a-b)/a)*100.0 for a, b in zip(min_base_avg,min_treatments)]
+    min_treatments_err = GetErrArr(avg_runs[filename][measurement])
+    #min_treatments_run=[ ((a-b)/a)*100.0 for a, b in zip(min_base_avg,min_treatments) if a != 0]
+    min_treatments_run=[]
+    for a, b in zip(min_base_avg,min_treatments):
+        if a != 0:
+            min_treatments_run.append(((a-b)/a)*100.0)
+        else:
+            print "unable to append a, dead run"
+            min_treatments_run.append(0)
+
     min_treatments_diff.append(min_treatments_run)
+
+    #calculate error
+    #a - b error
+    p_err = [math.sqrt((((math.sqrt((a_err**2) + (b_err**2)))/(a-b)) ** 2) + ((a_err / a ) ** 2)) for a, a_err, b, b_err in zip(min_base_avg,min_base_err,min_treatments,min_treatments_err)]
+    min_treatments_diff_err.append(p_err)
+    
+    #add to sum
     min_treatments_sum.append(sum(min_treatments_run)/float(len(min_treatments_run)))
 
 
@@ -87,9 +107,12 @@ for filename in filenames:
 
 #plt.bar(xaxis,diff,width=4.5,color=colors["minimum"])
 fig, ax = plt.subplots()
+#im = ax.imshow(min_treatments_diff_err)
 im = ax.imshow(min_treatments_diff)
 
+
 # We want to show all ticks...
+print len(xaxis)
 ax.set_xticks(np.arange(len(xaxis)))
 ax.set_yticks(np.arange(len(filenames)))
 # ... and label them with the respective list entries
@@ -103,7 +126,8 @@ plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
 # Loop over data dimensions and create text annotations.
 for i in range(len(filenames)):
     for j in range(len(xaxis)):
-        text = ax.text(j, i, int(min_treatments_diff[i][j]),
+        #text = ax.text(j, i, str(int(min_treatments_diff[i][j]))+" e "+str(float(min_treatments_diff_err[i][j])),
+        text = ax.text(j, i, str(int(min_treatments_diff[i][j])),
                        ha="center", va="center", color="w")
 #ax = plt.gca()
 #ax.ticklabel_format(useOffset=False)

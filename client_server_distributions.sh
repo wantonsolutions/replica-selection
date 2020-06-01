@@ -1,20 +1,35 @@
 #!/bin/bash
 
-
+prefix="EXP_Y11"
+date="2020-05-29"
+dirs=("None" "Min" "Core" "MDML" "MDMLC")
 
 function RunNetLB {
-    prefix="EXP"
-    rounds=12
-    ./run.sh -n="${prefix}_NLB_None" -r=$rounds -f="RunProportionalNone"
-    ./run.sh -p
-    ./run.sh -n="${prefix}_NLB_Min" -r=$rounds -f="RunProportionalMin"
-    ./run.sh -p
-    ./run.sh -n="${prefix}_NLB_Core" -r=$rounds -f="RunProportionalCoreOnly"
-    ./run.sh -p
-    ./run.sh -n="${prefix}_NLB_MDML" -r=$rounds -f="RunProportionalMinDistanceMinLoad"
-    ./run.sh -p
-    ./run.sh -n="${prefix}_NLB_MDMLC" -r=$rounds -f="RunProportionalMinDistanceMinLoadCore"
-    ./run.sh -p
+    rounds=1
+    ./run.sh -n="${prefix}_None" -r=$rounds -f="RunProportionalNone"
+    ./run.sh -n="${prefix}_Min" -r=$rounds -f="RunProportionalMin"
+    ./run.sh -n="${prefix}_Core" -r=$rounds -f="RunProportionalCoreOnly"
+    ./run.sh -n="${prefix}_MDML" -r=$rounds -f="RunProportionalMinDistanceMinLoad"
+    ./run.sh -n="${prefix}_MDMLC" -r=$rounds -f="RunProportionalMinDistanceMinLoadCore"
+}
+
+function PlotKnown {
+
+    for dir in ${dirs[@]}; do
+        ./run.sh -p -d="${prefix}_${dir}_${date}"
+    done
+
+}
+
+function MoveKnown {
+    pushd Experiments
+
+    mkdir ${prefix}
+    for dir in ${dirs[@]}; do
+        echo $dir
+        cp ${prefix}_${dir}_${date}/Avg_Agg_Latency.db ${prefix}/${dir}.db
+        cp ${prefix}_${dir}_${date}/Avg_Agg_Switch.db ${prefix}/${dir}_switch.db
+    done
 }
 
 function RunNNAverage {
@@ -31,22 +46,7 @@ function RunNNAverage {
     ./run.sh --plot_multi --dirs="${dirs[@]}"
 }
 
-function PlotKnown {
-    #dirs="/home/ssgrant/workspace/ns-allinone-3.29/replica-selection/ns-3.29/Experiments/Server_Normal_Client_Normal_2020-05-07/aggregate.dat /home/ssgrant/workspace/ns-allinone-3.29/replica-selection/ns-3.29/Experiments/Server_Normal_Client_Normal_2020-05-07_1/aggregate.dat /home/ssgrant/workspace/ns-allinone-3.29/replica-selection/ns-3.29/Experiments/Server_Normal_Client_Normal_2020-05-07_2/aggregate.dat"
-    prefix="/home/ssgrant/workspace/ns-allinone-3.29/replica-selection/ns-3.29/Experiments/"
-    #folder="Normal_Network_LB_2020-05-13"
-    folder="Normal_Source_LB_2020-05-13"
-    count=11
-    file="aggregate.dat"
-    for i in $(seq 1 $count);do 
-        dirs+="${prefix}${folder}_${i}/${file} "
-    done
-    dirs"/home/ssgrant/workspace/ns-allinone-3.29/replica-selection/ns-3.29/Experiments/Server_Normal_Client_Normal_2 "
 
-    ./run.sh --plot_multi --dirs="${dirs[@]}"
-}
-
-#RunNNAverage
-#PlotKnown
-
-RunNetLB
+#RunNetLB
+PlotKnown
+MoveKnown

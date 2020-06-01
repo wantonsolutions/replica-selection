@@ -27,6 +27,8 @@ sys.argv.pop(0)
 makeCache = True
 #plot the latencies of each individual measure
 
+f=open("aggregate_switch.dat","w")
+
 
 filenames=sys.argv
 for filename in filenames:
@@ -51,5 +53,6 @@ for filename in filenames:
             for value in row:
                 rest=rest+value+","
             
-            print nameagg+rest
+            f.write(nameagg+rest+"\n")
             break
+f.close()
