@@ -742,6 +742,7 @@ void SetupTraffic(float duration,
                   std::vector<std::vector<int>> rpcServices,
                   uint64_t *serverLoad,
                   Time *serverLoad_update,
+                  std::vector<std::vector<LoadEvent>> serverLoad_log,
                   std::vector<uint32_t> ServerLoadDistribution)
 {
 
@@ -759,6 +760,7 @@ void SetupTraffic(float duration,
     server->AssignRPC(rpcServices[i]);
     server->SetGlobalLoad(serverLoad);
     server->SetGlobalLoadUpdate(serverLoad_update);
+    server->SetGlobalLoadLog(serverLoad_log);
     server->SetID(i);
     server->SetLoadDistribution(ServerLoadDistribution);
   }
@@ -1363,6 +1365,9 @@ int main(int argc, char *argv[])
     serverLoad[i] = 0;
     serverLoad_update[i] = Time(0);
   }
+  //Create Global Server Load Log
+  std::vector<std::vector<LoadEvent>> serverLoadLog(NODES, std::vector<LoadEvent>());
+
   //Create IP map to server index
   std::map<uint32_t, uint32_t> ipServerMap;
   for (int i = 0; i < NODES; i++)
@@ -1408,6 +1413,7 @@ int main(int argc, char *argv[])
     printf("%d,",ServerLoadDistribution[i]);
   }
 
+  ServerLoadAtTime(0,0,serverLoadLog);
   SetupTraffic(
       duration,
       RpcServerPort,
@@ -1426,6 +1432,7 @@ int main(int argc, char *argv[])
       rpcReplicas,
       serverLoad,
       serverLoad_update,
+      serverLoadLog,
       ServerLoadDistribution);
 
   //printf("setting custom load balencing strats\n");

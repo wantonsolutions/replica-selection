@@ -40,6 +40,31 @@ NS_LOG_COMPONENT_DEFINE ("RpcServerApplication");
 
 NS_OBJECT_ENSURE_REGISTERED (RpcServer);
 
+uint64_t 
+ServerLoadAtTime(uint server_id, uint64_t time, std::vector<std::vector<LoadEvent>> global_load_log) {
+  printf("Calculating Server Load\n");
+  uint64_t last_event_time=0;
+  uint64_t load = 0;
+  for(int i=0;i<global_load_log[server_id].size();i++) {
+    LoadEvent le = global_load_log[server_id][i];
+    //Break the loop if we have seen all events to this point in time
+    if (le.time > time) {
+      break;
+    }
+    //subtract load for gap in time between last events
+    load -= (le.time - last_event_time);
+    if (load < 0) {
+      load = 0;
+    }
+    // add load for new event
+    load += le.load;
+    last_event_time = le.time;
+  }
+  //subtract for the final gap between the last event and the current time
+  load -= Simulator::Now().GetNanoSeconds() - last_event_time;
+  return load;
+}
+
 void translateIp(int base, int *a, int *b, int *c, int *d)
 {
   *d = base % 256;
@@ -134,6 +159,11 @@ RpcServer::SetLoadDistribution(std::vector<uint32_t> loadDistribution){
 std::vector<uint32_t> 
 RpcServer::GetLoadDistribution(){
   return m_load_distribution;
+}
+
+void
+RpcServer::SetGlobalLoadLog(std::vector<std::vector<LoadEvent>> global_load_log) {
+  m_load_log = global_load_log;
 }
 
 
@@ -290,6 +320,11 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       int load = GetInstantenousLoad();
       // Set the current load of the server 
       (m_serverLoad)[m_id] = load + requestProcessingTime; //make a distribution in the future
+
+      //Update the Event Log
+      LoadEvent ld = {(uint64_t)Simulator::Now().GetNanoSeconds(),(uint64_t)requestProcessingTime};
+      m_load_log[m_id].push_back(ld);
+
 
       //Remove the replica tags for the server, the client has only one response location
       packet->RemovePacketTag(doppelTag);

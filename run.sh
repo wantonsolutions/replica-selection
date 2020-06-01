@@ -49,7 +49,7 @@ function ExponentialClientTransmission() {
 	--TransmissionDistributionExponentialMin=$min "
 }
 
-function UniformPacketSize() {
+function UniformPacketSizes() {
 	min=$1
 	max=$2
 	echo "--PacketSizeDistributionUniform=true 

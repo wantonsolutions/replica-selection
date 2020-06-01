@@ -34,6 +34,13 @@ class Packet;
  * \defgroup rpc UdpEcho
  */
 
+struct LoadEvent {
+  uint64_t time;
+  uint64_t load;
+};
+
+uint64_t ServerLoadAtTime(uint server_id, uint64_t time, std::vector<std::vector<LoadEvent>> global_load_log);
+
 /**
  * \ingroup rpc
  * \brief A Rpc server
@@ -57,10 +64,13 @@ public:
 
   void SetGlobalLoad(uint64_t * serverLoad);
   void SetGlobalLoadUpdate(Time * serverLoad_update);
+  void SetGlobalLoadLog(std::vector<std::vector<LoadEvent>> global_load_log);
   void SetID(int id);
 
   void SetLoadDistribution(std::vector<uint32_t> loadDistribution);
   std::vector<uint32_t> GetLoadDistribution();
+
+
   uint32_t GetRequestLoad();
 
   uint32_t GetInstantenousLoad();
@@ -99,6 +109,7 @@ private:
   std::vector<int> m_serviceable_rpcs;
 
   std::vector<uint32_t> m_load_distribution;
+  std::vector<std::vector<LoadEvent>> m_load_log;
 };
 
 } // namespace ns3
