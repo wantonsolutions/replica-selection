@@ -26,7 +26,8 @@
 #include "ns3/traced-callback.h"
 
 
-#define REQUEST_BUFFER_SIZE 16777216
+//#define REQUEST_BUFFER_SIZE 16777216
+#define REQUEST_BUFFER_SIZE 100000
 #define RTT_BUFFER_SIZE 36
 
 namespace ns3 {

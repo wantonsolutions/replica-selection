@@ -57,7 +57,7 @@ function UniformPacketSizes() {
 	--PacketSizeDistributionUniformMax=$max "
 }
 
-function NormalPacketSize() {
+function NormalPacketSizes() {
 	mean=$1
 	std=$2
 	echo "--PacketSizeDistributionNormal=true 
@@ -336,7 +336,8 @@ function RunProportialLoadArgs {
 	local packetArgs=$(NormalPacketSizes 128 12)
 	#local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
 	#local proportion=(10 12 14 16 18 20 22 24 26 28 30 32 34 36 )
-	local proportion=(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)
+	#local proportion=(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)
+	local proportion=(10 12 14 16 18 20 22 24 26 28 30)
 	#local proportion=(10 20 30 40 50 60 70 80 90 100)
 	#local proportion=(50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75)
 
@@ -566,7 +567,7 @@ function PlotIntervalExperimentAverage {
 
 	plotScript="$topdir/plot/library/avg_agg_switch.py"
 	echo "Entering Python Plot"
-	python $plotScript ${switch_files[@]}
+	#python $plotScript ${switch_files[@]}
 
 }
 
@@ -655,7 +656,7 @@ if [ ! -z "$PLOT" ]; then
 	echo "PLOTTTTTOOOTING"
 	echo $plotDIR
 	cd $plotDir
-	AggregateIntervalExperimentAverage
+	#AggregateIntervalExperimentAverage
 	wait
 	PlotIntervalExperimentAverage
 	#exit after plotting

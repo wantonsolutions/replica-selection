@@ -25,8 +25,9 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
 #include "ns3/ipv4-doppelganger-tag.h"
+#include "ns3/rpc-server.h"
 
-#define REQUEST_BUFFER_SIZE 16777216
+#define REQUEST_BUFFER_SIZE 100000
 namespace ns3 {
 
 class Socket;
@@ -155,6 +156,7 @@ public:
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
   void SetGlobalSeverLoad(uint64_t *serverLoad);
   void SetGlobalSeverLoadUpdate(Time *serverLoad_update);
+  void SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log);
   void SetReplicaSelectionStrategy(selectionStrategy strategy);
 
 
@@ -251,6 +253,8 @@ private:
   std::vector<uint32_t> m_packet_size_distribution;
   std::vector<uint32_t> m_transmission_distribution;;
   std::vector<uint32_t> m_rpc_request_distribution;
+
+  std::vector<std::vector<LoadEvent>>  *m_global_load_log;
 
   Time m_requests[REQUEST_BUFFER_SIZE];
 

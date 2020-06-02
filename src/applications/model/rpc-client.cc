@@ -361,6 +361,10 @@ void RpcClient::SetGlobalSeverLoad(uint64_t *serverLoad) {
   m_serverLoad = serverLoad;
 }
 
+void RpcClient::SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log) {
+  m_global_load_log = global_load_log;
+}
+
 void RpcClient::SetGlobalSeverLoadUpdate(Time *serverLoad_update) {
   m_serverLoad_update = serverLoad_update;
 }
@@ -435,8 +439,14 @@ void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
    for (uint i = 0; i < m_rpc_server_replicas[rpc].size();i++) {
      int replica = m_rpc_server_replicas[rpc][i];
      //printf("checking serverload for server ID %d\n", replica);
-     if (GetInstantenousLoad(replica) < minLoad){
-       minLoad = GetInstantenousLoad(replica);
+     uint64_t dialated_load = ServerLoadAtTime(replica,uint64_t(Simulator::Now().GetNanoSeconds()),m_global_load_log);
+     uint64_t sanity_load = GetInstantenousLoad(replica);
+     if (dialated_load != sanity_load) {
+       NS_LOG_WARN("What on earth, how can the dialted of current time not be the same as instant load (dialated = " << dialated_load << ") ( sanity " << sanity_load << ")");
+
+     }
+     if (dialated_load < minLoad){
+       minLoad = dialated_load;
        minReplica = replica;
      }
      //printf("done loop server ID %d\n", replica);

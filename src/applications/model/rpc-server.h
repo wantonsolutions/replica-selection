@@ -39,7 +39,7 @@ struct LoadEvent {
   uint64_t load;
 };
 
-uint64_t ServerLoadAtTime(uint server_id, uint64_t time, std::vector<std::vector<LoadEvent>> global_load_log);
+uint64_t ServerLoadAtTime(uint server_id, uint64_t time, std::vector<std::vector<LoadEvent>> *global_load_log);
 
 /**
  * \ingroup rpc
@@ -64,7 +64,7 @@ public:
 
   void SetGlobalLoad(uint64_t * serverLoad);
   void SetGlobalLoadUpdate(Time * serverLoad_update);
-  void SetGlobalLoadLog(std::vector<std::vector<LoadEvent>> global_load_log);
+  void SetGlobalLoadLog(std::vector<std::vector<LoadEvent>>* global_load_log);
   void SetID(int id);
 
   void SetLoadDistribution(std::vector<uint32_t> loadDistribution);
@@ -109,7 +109,7 @@ private:
   std::vector<int> m_serviceable_rpcs;
 
   std::vector<uint32_t> m_load_distribution;
-  std::vector<std::vector<LoadEvent>> m_load_log;
+  std::vector<std::vector<LoadEvent>> *m_load_log;
 };
 
 } // namespace ns3

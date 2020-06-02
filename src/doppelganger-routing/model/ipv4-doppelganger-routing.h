@@ -11,6 +11,7 @@
 #include "ns3/nstime.h"
 #include "ns3/event-id.h"
 #include "ipv4-doppelganger-tag.h"
+#include "ns3/rpc-server.h"
 
 #include <map>
 #include <vector>
@@ -98,6 +99,7 @@ public:
   void SetGlobalServerLoad(uint64_t *serverLoad);
   void SetGlobalServerLoadUpdate(Time *serverLoad_update);
   void SetLoadBalencingStrategy(LoadBalencingStrategy strategy);
+  void SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log);
 
   void SetFatTreeSwitchType(FatTreeSwitchType ftst);
   FatTreeSwitchType GetFatTreeSwitchType();
@@ -181,6 +183,7 @@ private:
   // global server load
   uint64_t *m_serverLoad;                             
   Time *m_serverLoad_update;                             
+  std::vector<std::vector<LoadEvent>> *m_load_log;
   //replica locations
   std::vector<std::vector<int>> m_rpc_server_replicas;
   //Ip to replica index

@@ -1,16 +1,16 @@
 #!/bin/bash
 
-prefix="EXP_Y11"
-date="2020-05-29"
+prefix="EXP_Y12"
+date="2020-06-01"
 dirs=("None" "Min" "Core" "MDML" "MDMLC")
 
 function RunNetLB {
-    rounds=1
+    rounds=3
     ./run.sh -n="${prefix}_None" -r=$rounds -f="RunProportionalNone"
     ./run.sh -n="${prefix}_Min" -r=$rounds -f="RunProportionalMin"
-    ./run.sh -n="${prefix}_Core" -r=$rounds -f="RunProportionalCoreOnly"
-    ./run.sh -n="${prefix}_MDML" -r=$rounds -f="RunProportionalMinDistanceMinLoad"
-    ./run.sh -n="${prefix}_MDMLC" -r=$rounds -f="RunProportionalMinDistanceMinLoadCore"
+    #./run.sh -n="${prefix}_Core" -r=$rounds -f="RunProportionalCoreOnly"
+    #./run.sh -n="${prefix}_MDML" -r=$rounds -f="RunProportionalMinDistanceMinLoad"
+    #./run.sh -n="${prefix}_MDMLC" -r=$rounds -f="RunProportionalMinDistanceMinLoadCore"
 }
 
 function PlotKnown {

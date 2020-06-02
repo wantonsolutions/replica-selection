@@ -620,7 +620,7 @@ Ipv4Address getNodeIP(Ptr<Node> node)
 }
 
 //----------------------------------------------RPC Client----------------------------------------------------
-void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouting::FatTreeSwitchType switchType, Ipv4DoppelgangerRouting::LoadBalencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad_update)
+void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouting::FatTreeSwitchType switchType, Ipv4DoppelgangerRouting::LoadBalencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad_update, std::vector<std::vector<LoadEvent>> *serverLoad_log)
 {
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i)
@@ -636,6 +636,7 @@ void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouti
     doppelRouter->SetIPServerMap(ipServerMap);
     doppelRouter->SetGlobalServerLoad(serverLoad);
     doppelRouter->SetGlobalServerLoadUpdate(serverLoad_update);
+    doppelRouter->SetGlobalServerLoadLog(serverLoad_log);
     doppelRouter->SetLoadBalencingStrategy(strat);
     doppelRouter->SetFatTreeSwitchType(switchType);
     doppelRouter->SetAddress(getNodeIP((*i)));
@@ -651,7 +652,7 @@ void SetupRpcClient(
     std::vector<uint32_t> ClientTransmissionDistribution,
     std::vector<uint32_t> RPCServiceDistribution,
     RpcClient::selectionStrategy rpcSelectionStrategy,
-    std::vector<std::vector<int>> rpcServices, uint64_t *serverLoad, Time *serverLoad_update)
+    std::vector<std::vector<int>> rpcServices, uint64_t *serverLoad, Time *serverLoad_update, std::vector<std::vector<LoadEvent>> *serverLoad_log)
 {
   RpcClientHelper rpcClient(addresses[0], int(Ports[0]));
   ApplicationContainer clientApps = rpcClient.Install(nodes.Get(clientIndex));
@@ -677,6 +678,7 @@ void SetupRpcClient(
   uec->SetRpcServices(rpcServices);
   uec->SetGlobalSeverLoad(serverLoad);
   uec->SetGlobalSeverLoadUpdate(serverLoad_update);
+  uec->SetGlobalServerLoadLog(serverLoad_log);
   //Fix this should be checked prior to executing
   uec->SetReplicaSelectionStrategy(rpcSelectionStrategy);
 
@@ -742,7 +744,7 @@ void SetupTraffic(float duration,
                   std::vector<std::vector<int>> rpcServices,
                   uint64_t *serverLoad,
                   Time *serverLoad_update,
-                  std::vector<std::vector<LoadEvent>> serverLoad_log,
+                  std::vector<std::vector<LoadEvent>> *serverLoad_log,
                   std::vector<uint32_t> ServerLoadDistribution)
 {
 
@@ -768,7 +770,7 @@ void SetupTraffic(float duration,
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++)
   {
-    SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad, serverLoad_update);
+    SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad, serverLoad_update, serverLoad_log);
     /*
     for (int j =0 ; j < 100; j++){
       NS_LOG_WARN("ONLY ALLOCATING A SINGLE CLIENT\n");
@@ -1096,8 +1098,6 @@ int main(int argc, char *argv[])
         d = k;
         //printf("Printing IP\n");
         int ip = toIP(a, b, c, d);
-        printIP(ip);
-
         Ptr<Node> node = nodes.Get(itterator);
         SetIpv4NodeDevices(node, ip);
         itterator++;
@@ -1125,7 +1125,6 @@ int main(int argc, char *argv[])
           c = j;
           d = k;
           int ip = toIP(a, b, c, d);
-          printIP(ip);
           Ptr<Ipv4DoppelgangerRouting> router = GetDoppelgangerRouter(node);
           router->AddRoute(Ipv4Address(ip), Ipv4Mask(toIP(255, 0, 0, 0)), 1);
         }
@@ -1144,7 +1143,6 @@ int main(int argc, char *argv[])
       c = j;
       //printf("Printing IP\n");
       int ip = toIP(a, b, c, d);
-      printIP(ip);
       Ptr<Node> node = edge.Get(itterator);
       SetIpv4NodeDevices(node, ip);
       itterator++;
@@ -1172,7 +1170,6 @@ int main(int argc, char *argv[])
           c2 = j;
           d2 = k;
           int ip = toIP(a2, b2, c2, d2);
-          printIP(ip);
 
           //Edge Up
           //IP is in another pod or belonging to a different edge
@@ -1409,11 +1406,8 @@ int main(int argc, char *argv[])
 
   std::vector<uint32_t> ServerLoadDistribution = GetServerLoadDistribution();
 
-  for (uint i=0;i<ServerLoadDistribution.size();i++) {
-    printf("%d,",ServerLoadDistribution[i]);
-  }
 
-  ServerLoadAtTime(0,0,serverLoadLog);
+  ServerLoadAtTime(0,0,&serverLoadLog);
   SetupTraffic(
       duration,
       RpcServerPort,
@@ -1432,14 +1426,14 @@ int main(int argc, char *argv[])
       rpcReplicas,
       serverLoad,
       serverLoad_update,
-      serverLoadLog,
+      &serverLoadLog,
       ServerLoadDistribution);
 
   //printf("setting custom load balencing strats\n");
-  SetDoppelgangerRoutingParameters(nodes, Ipv4DoppelgangerRouting::endhost, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update);
-  SetDoppelgangerRoutingParameters(edge, Ipv4DoppelgangerRouting::edge, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update);
-  SetDoppelgangerRoutingParameters(agg, Ipv4DoppelgangerRouting::agg, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update);
-  SetDoppelgangerRoutingParameters(core, Ipv4DoppelgangerRouting::core, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update);
+  SetDoppelgangerRoutingParameters(nodes, Ipv4DoppelgangerRouting::endhost, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog);
+  SetDoppelgangerRoutingParameters(edge, Ipv4DoppelgangerRouting::edge, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog);
+  SetDoppelgangerRoutingParameters(agg, Ipv4DoppelgangerRouting::agg, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog);
+  SetDoppelgangerRoutingParameters(core, Ipv4DoppelgangerRouting::core, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog);
   //printf("done setting custom load ballencing\n");
 
   //printf("Running the simulator!!\n");

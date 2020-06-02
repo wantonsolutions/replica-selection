@@ -8,6 +8,7 @@
 #include "ns3/channel.h"
 #include "ns3/node.h"
 #include "ns3/flow-id-tag.h"
+#include "ns3/rpc-server.h"
 #include "ipv4-doppelganger-tag.h"
 
 #include <algorithm>
@@ -260,6 +261,10 @@ Ipv4DoppelgangerRouting::ConstructIpv4Route (uint32_t port, Ipv4Address destAddr
     m_serverLoad_update = serverLoad_update;
   }
 
+void Ipv4DoppelgangerRouting::SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log) {
+  m_load_log = global_load_log;
+}
+
   void Ipv4DoppelgangerRouting::SetIPServerMap(std::map<uint32_t,uint32_t> ip_map){
     m_server_ip_map = ip_map;
   }
@@ -336,9 +341,15 @@ Ipv4DoppelgangerRouting::GetInstantenousLoad(int server_id) {
    uint64_t minLoad = UINT64_MAX;
    uint32_t minReplica;
    for (uint i = 0; i < ips.size();i++) {
-     uint32_t serverIndex = m_server_ip_map[ips[i]];
-     if (GetInstantenousLoad(serverIndex) < minLoad){
-       minLoad = GetInstantenousLoad(serverIndex);
+     uint32_t replica = m_server_ip_map[ips[i]];
+     uint64_t dialated_load = ServerLoadAtTime(replica,uint64_t(Simulator::Now().GetNanoSeconds()),m_load_log);
+     uint64_t sanity_load = GetInstantenousLoad(replica);
+     if (dialated_load != sanity_load) {
+       NS_LOG_WARN("What on earth, how can the dialted of current time not be the same as instant load (dialated = " << dialated_load << ") ( sanity " << sanity_load << ")");
+
+     }
+     if (dialated_load < minLoad){
+       minLoad = dialated_load;
        minReplica = ips[i];
      }
    }
@@ -410,6 +421,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
   std::vector<uint32_t> replicas;
   uint32_t * tag_replicas = tag.GetReplicas();
   for (int i=0;i<MAX_REPLICAS;++i){
+    NS_LOG_INFO("Pulling replica " << stringIP(tag_replicas[i]) << " from packet tag");
     replicas.push_back(tag_replicas[i]);
   }
 
@@ -480,7 +492,7 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
         break;
       }
       case coreForcedMinDistanceMinLoad: {
-        NS_LOG_WARN("Reached the Force Core function");
+        NS_LOG_WARN("Running Core Fored Min Distance Min Load (non nessisarily a core router)");
         //All packets must reach the core router before they can be routed down.
         if (m_fattree_switch_type == core) {
           NS_LOG_WARN("Reached the Core");
@@ -490,6 +502,10 @@ Ipv4DoppelgangerRouting::RouteInput (Ptr<const Packet> p, const Ipv4Header &head
         if (tag.GetCanRouteDown()) {
           NS_LOG_WARN("Able to route down the tree");
           std::vector<uint32_t> min_distance_down_replicas = replicaSelectionStrategy_minimumDownwardDistance(replicas);
+          //minimum distance replicas
+          for (uint i=0;i<min_distance_down_replicas.size();i++) {
+            NS_LOG_WARN("min distance replicas("<<i<<"): "<<stringIP(min_distance_down_replicas[i]));
+          }
           uint32_t min_replica = replicaSelectionStrategy_minimumLoad(min_distance_down_replicas);
           Ipv4Address ipv4Addr = headerPrime.GetDestination();
           if(min_replica == ipv4Addr.Get()) {

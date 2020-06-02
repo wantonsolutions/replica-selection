@@ -31,7 +31,7 @@ sys.argv.pop(0)
 
 makeCache = True
 #plot the latencies of each individual measure
-print sys.argv
+#print sys.argv
 
 color_comet=sns.xkcd_rgb["medium blue"]
 colors=dict()
@@ -47,11 +47,11 @@ linetype = ['-',':','--']
 
 
 filenames=sys.argv
-print filenames
+#print filenames
 
 avg_results=dict()
 for filename in filenames:
-    print filename
+    print(filename)
     map_results=dict()
     selections=dict()
     cindex =0
@@ -135,16 +135,16 @@ pickle.dump(multiRunAverage, open ("Avg_Agg_Latency.db", "wb"))
 
 cindex=0
 for selection in selections:
-    print "Final Averages " + selection
+    print ("Final Averages " + selection)
     x=GetAverageArr(multiRunAverage[selection+"_x"])
     y50=GetAverageArr(multiRunAverage[selection+"_50"])
     y50err=GetErrArr(multiRunAverage[selection+"_50"])
     
     y99=GetAverageArr(multiRunAverage[selection+"_99"])
     y99err=GetErrArr(multiRunAverage[selection+"_99"])
-    print multiRunAverage[selection+"_50"]
-    print "-- Average -- "
-    print y50
+    print (multiRunAverage[selection+"_50"])
+    print ("-- Average -- ")
+    print (y50)
     plt.plot(x,y50,label=selection+" 50th",color=colors[selection],linestyle=linetype[0])
     plt.errorbar(x,y50,y50err,fmt=' ',color=colors[selection],capsize=5)
 
@@ -155,7 +155,7 @@ for selection in selections:
 plt.rc('axes.formatter', useoffset=False)
 plt.legend()
 plt.yscale("log")
-plt.ylim(top=4000,bottom=45)
+#plt.ylim(top=4000,bottom=45)
 plt.grid(True, which="both", ls=":", color='0.20')
 plt.xlabel("Request Load (percentage of maximum)", fontweight='bold')
 plt.ylabel("Response latency (us)", fontweight='bold')

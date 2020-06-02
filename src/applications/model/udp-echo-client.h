@@ -25,7 +25,8 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
 
-#define REQUEST_BUFFER_SIZE 16777216
+//#define REQUEST_BUFFER_SIZE 16777216
+#define REQUEST_BUFFER_SIZE 100000
 namespace ns3 {
 
 class Socket;
