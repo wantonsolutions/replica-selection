@@ -35,6 +35,11 @@ struct DoppelgangerRouteEntry {
   uint32_t port;
 };
 
+enum InformationDelayFunction {
+  constant = 0,
+  minLatency = 1,
+  //piggyback //piggybacking on messages requires a bit more phenesse
+};
 
 
 class Ipv4DoppelgangerRouting : public Ipv4RoutingProtocol
@@ -118,6 +123,12 @@ public:
   uint32_t replicaSelectionStrategy_minimumLoad(std::vector<uint32_t> ips);
   std::vector<uint32_t> replicaSelectionStrategy_minimumDownwardDistance(std::vector<uint32_t> ips);
 
+  void SetInformationDelayFunction(InformationDelayFunction delay_function);
+  InformationDelayFunction GetInformationDelayFunction();
+  void SetConstantDelay(uint64_t delay);
+  uint64_t GetConstantDelay();
+
+
 
   /* Inherit From Ipv4RoutingProtocol */
   virtual Ptr<Ipv4Route> RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr);
@@ -195,6 +206,9 @@ private:
   //A count of the number of times a specific router has redirected packets to a different host
   uint64_t m_packet_redirections;
   uint64_t m_total_packets;
+
+  InformationDelayFunction m_delay_function;
+  uint64_t m_constant_information_delay;
 
   uint m_fattree_k;
 

@@ -25,6 +25,7 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/traced-callback.h"
 #include "ns3/ipv4-doppelganger-tag.h"
+#include "ns3/ipv4-doppelganger-routing.h"
 #include "ns3/rpc-server.h"
 
 #define REQUEST_BUFFER_SIZE 100000
@@ -159,6 +160,11 @@ public:
   void SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log);
   void SetReplicaSelectionStrategy(selectionStrategy strategy);
 
+  void SetInformationDelayFunction(InformationDelayFunction delay_function);
+  InformationDelayFunction GetInformationDelayFunction();
+  void SetConstantDelay(uint64_t delay);
+  uint64_t GetConstantDelay();
+
 
 
  void PopulateReplicasNoReplicas(RPCHeader *rpch);
@@ -255,6 +261,9 @@ private:
   std::vector<uint32_t> m_rpc_request_distribution;
 
   std::vector<std::vector<LoadEvent>>  *m_global_load_log;
+
+  InformationDelayFunction m_delay_function;
+  uint64_t m_constant_information_delay;
 
   Time m_requests[REQUEST_BUFFER_SIZE];
 

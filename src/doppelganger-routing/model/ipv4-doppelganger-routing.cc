@@ -304,6 +304,21 @@ void Ipv4DoppelgangerRouting::SetGlobalServerLoadLog(std::vector<std::vector<Loa
   uint Ipv4DoppelgangerRouting::GetFatTreeK(void) {
     return m_fattree_k;
   }
+
+  void Ipv4DoppelgangerRouting::SetInformationDelayFunction(InformationDelayFunction delay_function){
+    m_delay_function = delay_function;
+  }
+  InformationDelayFunction Ipv4DoppelgangerRouting::GetInformationDelayFunction() {
+    return m_delay_function;
+  }
+
+  void Ipv4DoppelgangerRouting::SetConstantDelay(uint64_t delay) {
+    m_constant_information_delay = delay;
+  }
+
+  uint64_t Ipv4DoppelgangerRouting::GetConstantDelay() {
+    return m_constant_information_delay;
+  }
 /* END DoppleGanger Routing function additions*/
 
 Ptr<Ipv4Route>

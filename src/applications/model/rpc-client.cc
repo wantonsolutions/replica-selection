@@ -29,6 +29,7 @@
 #include "ns3/trace-source-accessor.h"
 #include "rpc-client.h"
 #include "ns3/ipv4-doppelganger-tag.h"
+#include "ns3/ipv4-doppelganger-routing.h"
 
 
 //#include "ns3/lte-pdcp-tag.h"
@@ -422,6 +423,22 @@ int RpcClient::FindReplicaAddress(int rpc) {
 void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
   m_selection_strategy = strategy;
 }
+
+
+  void RpcClient::SetInformationDelayFunction(InformationDelayFunction delay_function){
+    m_delay_function = delay_function;
+  }
+  InformationDelayFunction RpcClient::GetInformationDelayFunction() {
+    return m_delay_function;
+  }
+
+  void RpcClient::SetConstantDelay(uint64_t delay) {
+    m_constant_information_delay = delay;
+  }
+
+  uint64_t RpcClient::GetConstantDelay() {
+    return m_constant_information_delay;
+  }
 
  int RpcClient::replicaSelectionStrategy_firstIndex(int rpc){
    return m_rpc_server_replicas[rpc][0];
