@@ -128,6 +128,8 @@ public:
   void SetConstantDelay(uint64_t delay);
   uint64_t GetConstantDelay();
 
+ uint64_t GetInformationTime();
+
 
 
   /* Inherit From Ipv4RoutingProtocol */

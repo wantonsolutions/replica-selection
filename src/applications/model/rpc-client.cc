@@ -448,15 +448,27 @@ void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
    return m_rpc_server_replicas[rpc][randomReplica];
  }
 
+ uint64_t RpcClient::GetInformationTime() {
+   switch (m_delay_function) {
+     case constant:
+     //This requires that we have some measure of distance to the servers that we are going to
+      return Simulator::Now().GetNanoSeconds() - m_constant_information_delay;
+     default:
+      NS_LOG_WARN("The Strategy " << m_delay_function << "is not yet implemented check ipv4-doppleganger-routing.cc (InformationDelayFuction) -- Returning 0 delay");
+      return Simulator::Now().GetNanoSeconds();
+   }
+ }
+
  int RpcClient::replicaSelectionStrategy_minimumLoad(int rpc){
    uint64_t minLoad = UINT64_MAX;
    uint64_t minReplica;
    //printf("accessing min map for rpc %d\n", rpc);
    //printf("why is this not being built?\n");
+   uint64_t time = GetInformationTime(); //This will likely have to be extended 
    for (uint i = 0; i < m_rpc_server_replicas[rpc].size();i++) {
      int replica = m_rpc_server_replicas[rpc][i];
      //printf("checking serverload for server ID %d\n", replica);
-     uint64_t dialated_load = ServerLoadAtTime(replica,uint64_t(Simulator::Now().GetNanoSeconds()),m_global_load_log);
+     uint64_t dialated_load = ServerLoadAtTime(replica,time,m_global_load_log);
      uint64_t sanity_load = GetInstantenousLoad(replica);
      if (dialated_load != sanity_load) {
        NS_LOG_WARN("What on earth, how can the dialted of current time not be the same as instant load (dialated = " << dialated_load << ") ( sanity " << sanity_load << ")");

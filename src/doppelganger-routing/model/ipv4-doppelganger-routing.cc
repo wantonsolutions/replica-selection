@@ -349,15 +349,26 @@ Ipv4DoppelgangerRouting::GetInstantenousLoad(int server_id) {
   return m_serverLoad[server_id];
 }
 
+ uint64_t Ipv4DoppelgangerRouting::GetInformationTime() {
+   switch (m_delay_function) {
+     case constant:
+     //This requires that we have some measure of distance to the servers that we are going to
+      return Simulator::Now().GetNanoSeconds() - m_constant_information_delay;
+     default:
+      NS_LOG_WARN("The Strategy " << m_delay_function << "is not yet implemented check ipv4-doppleganger-routing.cc (InformationDelayFuction) -- Returning 0 delay");
+      return Simulator::Now().GetNanoSeconds();
+   }
+ }
 
 //Returns the IP of a minuimum latency replica
  uint32_t
  Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(std::vector<uint32_t> ips){
    uint64_t minLoad = UINT64_MAX;
    uint32_t minReplica;
+   uint64_t time = GetInformationTime(); //This will likely have to be extended 
    for (uint i = 0; i < ips.size();i++) {
      uint32_t replica = m_server_ip_map[ips[i]];
-     uint64_t dialated_load = ServerLoadAtTime(replica,uint64_t(Simulator::Now().GetNanoSeconds()),m_load_log);
+     uint64_t dialated_load = ServerLoadAtTime(replica,time,m_load_log);
      uint64_t sanity_load = GetInstantenousLoad(replica);
      if (dialated_load != sanity_load) {
        NS_LOG_WARN("What on earth, how can the dialted of current time not be the same as instant load (dialated = " << dialated_load << ") ( sanity " << sanity_load << ")");

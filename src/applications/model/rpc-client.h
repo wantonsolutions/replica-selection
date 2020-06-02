@@ -164,6 +164,7 @@ public:
   InformationDelayFunction GetInformationDelayFunction();
   void SetConstantDelay(uint64_t delay);
   uint64_t GetConstantDelay();
+  uint64_t GetInformationTime();
 
 
 
