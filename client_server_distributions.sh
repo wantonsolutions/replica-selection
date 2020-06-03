@@ -1,8 +1,9 @@
 #!/bin/bash
 
-prefix="EXP_Y12"
-date="2020-06-01"
-dirs=("None" "Min" "Core" "MDML" "MDMLC")
+prefix="Delay2"
+date="2020-06-02"
+#dirs=("None" "Min" "Core" "MDML" "MDMLC")
+dirs=("0" "3500" "7000" "10500" "14000" "17500" "21000" "24500" "28000")
 
 function RunNetLB {
     rounds=3
@@ -12,6 +13,20 @@ function RunNetLB {
     #./run.sh -n="${prefix}_MDML" -r=$rounds -f="RunProportionalMinDistanceMinLoad"
     #./run.sh -n="${prefix}_MDMLC" -r=$rounds -f="RunProportionalMinDistanceMinLoadCore"
 }
+
+function RunDelay {
+    rounds=3
+    ./run.sh -n="${prefix}_0" -r=$rounds -f="Delay0"
+    ./run.sh -n="${prefix}_3500" -r=$rounds -f="Delay3500"
+    ./run.sh -n="${prefix}_7000" -r=$rounds -f="Delay7000"
+    ./run.sh -n="${prefix}_10500" -r=$rounds -f="Delay10500"
+    ./run.sh -n="${prefix}_14000" -r=$rounds -f="Delay14000"
+    ./run.sh -n="${prefix}_17500" -r=$rounds -f="Delay17500"
+    ./run.sh -n="${prefix}_21000" -r=$rounds -f="Delay21000"
+    ./run.sh -n="${prefix}_24500" -r=$rounds -f="Delay24500"
+    ./run.sh -n="${prefix}_28000" -r=$rounds -f="Delay28000"
+}
+
 
 function PlotKnown {
 
@@ -48,5 +63,6 @@ function RunNNAverage {
 
 
 #RunNetLB
+#RunDelay
 PlotKnown
 MoveKnown

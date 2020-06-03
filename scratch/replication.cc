@@ -133,6 +133,11 @@ double ServerLoadDistributionExponentialMultiplier = 0.0;
 const char *ServerLoadDistributionExponentialMinString = "ServerLoadDistributionExponentialMin";
 double ServerLoadDistributionExponentialMin = 0.0;
 
+const char* InformationDelayFunctionValueString = "InformationDelayFunction";
+InformationDelayFunction InformationDelayFunctionValue = constant;
+const char* ConstantInformationDelayString = "InformationDelayConst";
+uint32_t ConstantInformationDelay = 0;
+
 const char *ManifestNameString = "ManifestName";
 const char *ProbeNameString = "ProbeName";
 
@@ -320,8 +325,12 @@ void parseArgs(int argc, char *argv[])
   cmd.AddValue(ServerLoadDistributionExponentialMultiplierString, "Value to multiply exponential distribution by", ServerLoadDistributionExponentialMultiplier);
   cmd.AddValue(ServerLoadDistributionExponentialMinString, "Value to shift exponential distribution by (post multiply)", ServerLoadDistributionExponentialMin);
 
-  //Set manifest and host name
+  //InformationDelayDistribution
+  int placeholderInformationDelayFunctionValue;
+  cmd.AddValue(InformationDelayFunctionValueString, "Set the information delay function", placeholderInformationDelayFunctionValue);
+  cmd.AddValue(ConstantInformationDelayString, "Set the nanosecond value for the infromation delay to all clients and routers", ConstantInformationDelay);
 
+  //Set manifest and host name
   cmd.AddValue(WorkingDirectoryString, "The location of the current working directory", WorkingDirectory);
   cmd.AddValue(ManifestNameString, "Then name of the ouput manifest (includes all configurations)", ManifestName);
   cmd.AddValue(ProbeNameString, "Then name of the output probe CSV", ProbeName);
@@ -329,6 +338,8 @@ void parseArgs(int argc, char *argv[])
 
   rpcSelectionStrategy = (RpcClient::selectionStrategy)placeholderRpcSelectionStrategy;
   networkSelectionStrategy = (Ipv4DoppelgangerRouting::LoadBalencingStrategy)placeholderNetworkSelectionStrategy;
+  InformationDelayFunctionValue = (InformationDelayFunction)placeholderInformationDelayFunctionValue;
+
 
   //mode = DRED;
   //
@@ -375,6 +386,21 @@ bool CheckMutuallyExclusiveConditions(int n_args, ...)
     return false;
   }
   return true;
+}
+
+bool InformationDelayArgsGood() {
+  switch (InformationDelayFunctionValue) {
+    case constant:
+      //bound check constant information delay? For now a default value of 0 is okay
+      return true;
+      break;
+    default:
+      NS_LOG_WARN("Information Delay Function No implmented exiting!!");
+      return false;
+      break;
+      //
+  }
+  return false;
 }
 
 bool ServerLoadArgsGood()
@@ -620,7 +646,9 @@ Ipv4Address getNodeIP(Ptr<Node> node)
 }
 
 //----------------------------------------------RPC Client----------------------------------------------------
-void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouting::FatTreeSwitchType switchType, Ipv4DoppelgangerRouting::LoadBalencingStrategy strat, std::vector<std::vector<int>> rpcServices, std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad_update, std::vector<std::vector<LoadEvent>> *serverLoad_log)
+void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouting::FatTreeSwitchType switchType, Ipv4DoppelgangerRouting::LoadBalencingStrategy strat, std::vector<std::vector<int>> rpcServices, 
+std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad_update, std::vector<std::vector<LoadEvent>> *serverLoad_log,
+    InformationDelayFunction idf,uint32_t information_delay)
 {
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i)
@@ -641,6 +669,8 @@ void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouti
     doppelRouter->SetFatTreeSwitchType(switchType);
     doppelRouter->SetAddress(getNodeIP((*i)));
     doppelRouter->SetFatTreeK(K);
+    doppelRouter->SetInformationDelayFunction(idf);
+    doppelRouter->SetConstantDelay(information_delay); // This might become irrelevent in the future
     //Start here we need to get the list routing protocol
   }
 }
@@ -652,7 +682,9 @@ void SetupRpcClient(
     std::vector<uint32_t> ClientTransmissionDistribution,
     std::vector<uint32_t> RPCServiceDistribution,
     RpcClient::selectionStrategy rpcSelectionStrategy,
-    std::vector<std::vector<int>> rpcServices, uint64_t *serverLoad, Time *serverLoad_update, std::vector<std::vector<LoadEvent>> *serverLoad_log)
+    std::vector<std::vector<int>> rpcServices, uint64_t *serverLoad, Time *serverLoad_update, std::vector<std::vector<LoadEvent>> *serverLoad_log,
+    InformationDelayFunction idf,
+    uint32_t information_delay)
 {
   RpcClientHelper rpcClient(addresses[0], int(Ports[0]));
   ApplicationContainer clientApps = rpcClient.Install(nodes.Get(clientIndex));
@@ -685,6 +717,8 @@ void SetupRpcClient(
   uec->SetPacketSizeDistribution(ClientPacketSizeDistribution);
   uec->SetTransmitionDistribution(ClientTransmissionDistribution);
   uec->SetRPCDistribution(RPCServiceDistribution);
+  uec->SetInformationDelayFunction(idf);
+  uec->SetConstantDelay(information_delay); // This might become irrelevent in the future
 }
 
 void printTM(int tm[NODES][NODES])
@@ -745,7 +779,10 @@ void SetupTraffic(float duration,
                   uint64_t *serverLoad,
                   Time *serverLoad_update,
                   std::vector<std::vector<LoadEvent>> *serverLoad_log,
-                  std::vector<uint32_t> ServerLoadDistribution)
+                  std::vector<uint32_t> ServerLoadDistribution,
+                  InformationDelayFunction idf,
+                  uint32_t information_delay
+                  )
 {
 
   //Assign attributes to RPC Servers
@@ -770,7 +807,10 @@ void SetupTraffic(float duration,
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++)
   {
-    SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad, serverLoad_update, serverLoad_log);
+    SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, 
+    ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad, serverLoad_update, serverLoad_log,
+    idf, information_delay
+    );
     /*
     for (int j =0 ; j < 100; j++){
       NS_LOG_WARN("ONLY ALLOCATING A SINGLE CLIENT\n");
@@ -1389,22 +1429,16 @@ int main(int argc, char *argv[])
   serverApps.Start(Seconds(0));
   serverApps.Stop(Seconds(duration));
 
-  /*
-  Ipv4InterfaceContainer *node2edgePtr = new Ipv4InterfaceContainer[NODES];
-  for (int i = 0; i < NODES; i++)
-  {
-    node2edgePtr[i] = node2edge[i];
-  }*/
-
   //Generate Distributions
   std::vector<uint32_t> ClientPacketSizeDistribution = GetPacketSizeDistribution();
   std::vector<uint32_t> ClientTransmissionDistribution = GetClientTransmissionDistribution();
-  //for( uint i=0; i < ClientTransmissionDistribution.size();i++) {
-  //  printf("d[%d]=%d\n",i,ClientTransmissionDistribution[i]);
-  //}
   std::vector<uint32_t> RPCServiceDistribution = uniform_distribution(rpcReplicas.size() * 500, 0, rpcReplicas.size() - 1); //Uniform requests for RPC servers
 
   std::vector<uint32_t> ServerLoadDistribution = GetServerLoadDistribution();
+
+  if (!InformationDelayArgsGood()) {
+    return -1;
+  }
 
 
   ServerLoadAtTime(0,0,&serverLoadLog);
@@ -1427,13 +1461,15 @@ int main(int argc, char *argv[])
       serverLoad,
       serverLoad_update,
       &serverLoadLog,
-      ServerLoadDistribution);
+      ServerLoadDistribution,
+      InformationDelayFunctionValue,
+      ConstantInformationDelay);
 
   //printf("setting custom load balencing strats\n");
-  SetDoppelgangerRoutingParameters(nodes, Ipv4DoppelgangerRouting::endhost, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog);
-  SetDoppelgangerRoutingParameters(edge, Ipv4DoppelgangerRouting::edge, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog);
-  SetDoppelgangerRoutingParameters(agg, Ipv4DoppelgangerRouting::agg, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog);
-  SetDoppelgangerRoutingParameters(core, Ipv4DoppelgangerRouting::core, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog);
+  SetDoppelgangerRoutingParameters(nodes, Ipv4DoppelgangerRouting::endhost, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay);
+  SetDoppelgangerRoutingParameters(edge, Ipv4DoppelgangerRouting::edge, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay);
+  SetDoppelgangerRoutingParameters(agg, Ipv4DoppelgangerRouting::agg, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay);
+  SetDoppelgangerRoutingParameters(core, Ipv4DoppelgangerRouting::core, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay);
   //printf("done setting custom load ballencing\n");
 
   //printf("Running the simulator!!\n");

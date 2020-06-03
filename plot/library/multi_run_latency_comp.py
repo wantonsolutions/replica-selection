@@ -65,9 +65,9 @@ base = filenames[0]
 filenames.pop(0) #remove the base
 #treatment = filenames[1]
 
-measurement="minimum_99"
+measurement="minimum_50"
 
-
+print(avg_runs)
 xaxis=GetAverageArr(avg_runs[base]["minimum_x"])
 xaxis=[int(x) for x in xaxis]
 min_base_avg=GetAverageArr(avg_runs[base][measurement])
@@ -86,6 +86,8 @@ for filename in filenames:
         else:
             print "unable to append a, dead run"
             min_treatments_run.append(0)
+    
+    min_treatments_run = min_treatments_run[: len(min_treatments_run)-2]
 
     min_treatments_diff.append(min_treatments_run)
 
@@ -112,7 +114,7 @@ im = ax.imshow(min_treatments_diff)
 
 
 # We want to show all ticks...
-print len(xaxis)
+print len(min_treatments_run)
 ax.set_xticks(np.arange(len(xaxis)))
 ax.set_yticks(np.arange(len(filenames)))
 # ... and label them with the respective list entries
@@ -125,7 +127,7 @@ plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
 
 # Loop over data dimensions and create text annotations.
 for i in range(len(filenames)):
-    for j in range(len(xaxis)):
+    for j in range(len(min_treatments_run)):
         #text = ax.text(j, i, str(int(min_treatments_diff[i][j]))+" e "+str(float(min_treatments_diff_err[i][j])),
         text = ax.text(j, i, str(int(min_treatments_diff[i][j])),
                        ha="center", va="center", color="w")

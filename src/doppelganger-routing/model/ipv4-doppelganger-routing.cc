@@ -369,11 +369,12 @@ Ipv4DoppelgangerRouting::GetInstantenousLoad(int server_id) {
    for (uint i = 0; i < ips.size();i++) {
      uint32_t replica = m_server_ip_map[ips[i]];
      uint64_t dialated_load = ServerLoadAtTime(replica,time,m_load_log);
+     /*
      uint64_t sanity_load = GetInstantenousLoad(replica);
      if (dialated_load != sanity_load) {
        NS_LOG_WARN("What on earth, how can the dialted of current time not be the same as instant load (dialated = " << dialated_load << ") ( sanity " << sanity_load << ")");
 
-     }
+     }*/
      if (dialated_load < minLoad){
        minLoad = dialated_load;
        minReplica = ips[i];

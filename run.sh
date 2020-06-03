@@ -23,6 +23,11 @@ function ConfigArgs() {
 	--ManifestName=$filename.config"
 }
 
+function ConstantInformationDelay() {
+	const=$1
+	echo "--InformationDelayFunction=0 
+    --InformationDelayConst=$const "
+}
 function UniformClientTransmission() {
 	min=$1
 	max=$2
@@ -300,6 +305,7 @@ function RunProportionalLoad {
 	packetArgs=$(NormalPacketSizes 128 12)
 	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
 	networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
+	delayArgs=$(ConstantInformationDelay 7000)
 	#proportion=(20 40 60 80 100 120 140 160 180 200)
 	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
 	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
@@ -321,11 +327,70 @@ function RunProportionalLoad {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${networkArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${networkArgs} ${delayArgs}"
 		popd
 
 		#exit
 	done
+}
+
+function RunProportionalLoadMinArgsVariableDelay {
+	local delay="$@"
+	local loadArgs=$(NormalServerLoad 50000 5000) #Normal Distribution
+	#local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
+	local packetArgs=$(NormalPacketSizes 128 12)
+	local delayArgs=$(ConstantInformationDelay $delay)
+	local networkArgs=$(NetworkSelectionStrat minimum)
+	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+	for p in ${proportion[@]}; do
+		let "mean = (50000 * 100) / $p"
+		let "std = ${mean} / 10"
+		local transmissionArgs=$(NormalClientTransmission $mean $std)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${delayArgs} ${networkArgs}"
+		popd
+		#exit
+	done
+}
+
+function Delay0 {
+	RunProportionalLoadMinArgsVariableDelay 0
+}
+
+function Delay3500 {
+	RunProportionalLoadMinArgsVariableDelay 3500
+}
+
+function Delay7000 {
+	RunProportionalLoadMinArgsVariableDelay 7000
+}
+
+function Delay10500 {
+	RunProportionalLoadMinArgsVariableDelay 10500
+}
+
+function Delay14000 {
+	RunProportionalLoadMinArgsVariableDelay 14000
+}
+
+function Delay17500 {
+	RunProportionalLoadMinArgsVariableDelay 17500
+}
+
+function Delay21000 {
+	RunProportionalLoadMinArgsVariableDelay 21000
+}
+
+function Delay24500 {
+	RunProportionalLoadMinArgsVariableDelay 24500
+}
+
+function Delay28000 {
+	RunProportionalLoadMinArgsVariableDelay 28000
 }
 
 function RunProportialLoadArgs {
@@ -334,6 +399,7 @@ function RunProportialLoadArgs {
 	#local loadArgs=$(NormalServerLoad 50000 5000) #Normal Distribution
 	local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
 	local packetArgs=$(NormalPacketSizes 128 12)
+	local delayArgs=$(ConstantInformationDelay 0)
 	#local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
 	#local proportion=(10 12 14 16 18 20 22 24 26 28 30 32 34 36 )
 	#local proportion=(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)
@@ -349,7 +415,7 @@ function RunProportialLoadArgs {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs}"
 		popd
 
 		#exit
@@ -477,9 +543,10 @@ function  RunDebug {
 	networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
 	configArgs=$(ConfigArgs results)
 	currentdir=`pwd`
+	delayArgs=$(ConstantInformationDelay 7000)
 	dirArgs=$(WorkingDirectory $currentdir)
 
-	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs}"
+	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs} ${delayArgs}"
 
 	pushd $topdir
 
@@ -554,7 +621,7 @@ function PlotIntervalExperimentAverage {
 	for a_dir in ./*/; do
 		echo "Plotting in $a_dir"
 		pushd $a_dir
-		#PlotIntervalsExperiment
+		PlotIntervalsExperiment
 		popd
 		latency_files+=("${a_dir}aggregate.dat")
 		switch_files+=("${a_dir}aggregate_switch.dat")
@@ -567,7 +634,7 @@ function PlotIntervalExperimentAverage {
 
 	plotScript="$topdir/plot/library/avg_agg_switch.py"
 	echo "Entering Python Plot"
-	#python $plotScript ${switch_files[@]}
+	python $plotScript ${switch_files[@]}
 
 }
 
@@ -656,7 +723,7 @@ if [ ! -z "$PLOT" ]; then
 	echo "PLOTTTTTOOOTING"
 	echo $plotDIR
 	cd $plotDir
-	#AggregateIntervalExperimentAverage
+	AggregateIntervalExperimentAverage
 	wait
 	PlotIntervalExperimentAverage
 	#exit after plotting
