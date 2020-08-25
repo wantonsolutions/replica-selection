@@ -42,6 +42,9 @@ public:
     void SetHostSojournTime(uint64_t time);
     uint64_t GetHostSojournTime();
 
+    void SetHostLoad(uint64_t load);
+    uint64_t GetHostLoad();
+
     virtual TypeId GetInstanceTypeId (void) const;
 
     virtual uint32_t GetSerializedSize (void) const;
@@ -60,6 +63,7 @@ private:
     uint16_t m_packetID;
     uint32_t m_replicas[MAX_REPLICAS];
     uint64_t m_host_sojourn_time;
+    uint64_t m_host_load;
 };
 
 
@@ -73,7 +77,8 @@ struct RPCHeader {
   uint16_t RequestID; //RPC ID 
   uint16_t PacketID;  //Sequence Number
   uint32_t Replicas[MAX_REPLICAS]; //IP addresses of replicas
-    uint64_t HostSojournTime;
+  uint64_t HostSojournTime;
+  uint64_t HostLoad;
 };
 
 void DecodeRPCHeader(RPCHeader* decodeTo, char * encodedBytes);

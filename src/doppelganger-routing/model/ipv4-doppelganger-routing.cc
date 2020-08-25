@@ -418,8 +418,6 @@ Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(std::vector<uint32
   uint64_t minLoad = UINT64_MAX;
   uint32_t minReplica;
 
-  bool perfectInformation = false;
-  bool piggyback = true;
   uint64_t time = GetInformationTime(); //This will likely have to be extended
   for (uint i = 0; i < ips.size(); i++)
   {
