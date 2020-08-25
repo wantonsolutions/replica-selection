@@ -28,6 +28,8 @@ makeCache = True
 #plot the latencies of each individual measure
 filedict = dict()
 
+percentiles=[0.5 , 0.95, 0.99, 0.999, 0.99999]
+
 f = open("aggregate.dat",'w')
 if makeCache:    
     suffixes = ["dat"]
@@ -55,31 +57,25 @@ for name in filedict:
             x, y = gen_cdf(mslat,cdf_granularity)
             sojx, sojy = gen_cdf(mssoj,cdf_granularity)
             #find 50
-            x50 = 0
-            for i in y:
-                if i < 0.5:
-                    x50 = x50 + 1
-                else:
-                    break
-            x95 = 0
-            for i in y:
-                if i < 0.95:
-                    x95 = x95 + 1
-                else:
-                    break
-            x99 = 0
-            for i in y:
-                if i < 0.99:
-                    x99 = x99 + 1
-                else:
-                    break
+            pIndexes=[]
+            for i in percentiles:
+                index=0
+                for j in y:
+                    if j < i:
+                        index=index+1
+                    else:
+                        break
+                pIndexes.append(index)
 
-            #x50 = (len(x) / 100 ) * 50
-            #x95 = (len(x) / 100 ) * 95
-            #x99 = (len(x) / 100 ) * 99
-            #print x
-            #print nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99]) + "," + str(sojx[x50]) + "," + str(sojx[x95]) + "," + str(sojx[x99])
-            f.write(nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99]) + "," + str(sojx[x50]) + "," + str(sojx[x95]) + "," + str(sojx[x99])+"\n")
+            outputStr=nameagg
+            for percentileIndex in pIndexes:
+                outputStr = outputStr + str(x[percentileIndex]) + ","
+            for percentileIndex in pIndexes:
+                outputStr = outputStr + str(sojx[percentileIndex]) + ","
+            outputStr = outputStr + "\n"
+
+            #f.write(nameagg+str(x[x50]) + "," + str(x[x95]) + "," + str(x[x99]) + "," + str(sojx[x50]) + "," + str(sojx[x95]) + "," + str(sojx[x99])+"\n")
+            f.write(outputStr)
             #plt.plot(x,y,linewidth=i,label=finalname)
 
 f.close()

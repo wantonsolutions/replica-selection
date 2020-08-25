@@ -33,10 +33,14 @@ def toInt(data):
 def GetAverageArr(multiRun):
     a=[]
     for runs in multiRun:
+        empty_runs = 0
         total=0.0
         for j in runs:
+            if j == 0:
+                print("Zero Index")
+                empty_runs = empty_runs + 1
             total = total + j
-        average=total / float(len(runs))
+        average=total / (float(len(runs)) - empty_runs)
         a.append(average)
     return a
 

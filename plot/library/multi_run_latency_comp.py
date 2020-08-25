@@ -67,7 +67,7 @@ filenames.pop(0) #remove the base
 
 measurement="minimum_50"
 
-print(avg_runs)
+#print(avg_runs)
 xaxis=GetAverageArr(avg_runs[base]["minimum_x"])
 xaxis=[int(x) for x in xaxis]
 min_base_avg=GetAverageArr(avg_runs[base][measurement])
@@ -81,13 +81,17 @@ for filename in filenames:
     #min_treatments_run=[ ((a-b)/a)*100.0 for a, b in zip(min_base_avg,min_treatments) if a != 0]
     min_treatments_run=[]
     for a, b in zip(min_base_avg,min_treatments):
-        if a != 0:
+        print ("A: ",a)
+        print ("B: ",b)
+        if a != 0 and b != 0:
             min_treatments_run.append(((a-b)/a)*100.0)
+            #min_treatments_run.append(b)
         else:
             print "unable to append a, dead run"
             min_treatments_run.append(0)
     
-    min_treatments_run = min_treatments_run[: len(min_treatments_run)-2]
+    print ("Min Treatments: ",min_treatments_run)
+    min_treatments_run = min_treatments_run[: len(min_treatments_run) ]
 
     min_treatments_diff.append(min_treatments_run)
 

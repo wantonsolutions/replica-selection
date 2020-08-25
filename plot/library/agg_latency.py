@@ -43,6 +43,7 @@ linetype = ['-',':','--']
 cindex =0
 
 
+suffixes=["_50", "_95", "_99","_99.9", "_99.99", "_soj_50", "_soj_95", "_soj_99","_soj_99.9", "_soj_99.99" ]
 filename=sys.argv[0]
 print filename
 
@@ -56,30 +57,21 @@ with open(filename,'r') as csvfile:
         if not selection in selections:
             selections[selection]=True
             map_results[selection+"_x"]=[]
-            map_results[selection+"_50"]=[]
-            map_results[selection+"_95"]=[]
-            map_results[selection+"_99"]=[]
-            map_results[selection+"_soj_50"]=[]
-            map_results[selection+"_soj_95"]=[]
-            map_results[selection+"_soj_99"]=[]
+            for suffix in suffixes:
+                map_results[selection+suffix]=[]
         #map_results[selection+"_x"].append(int(row[0]) / 1000) # divide by 1000
         map_results[selection+"_x"].append(int(row[0])) # divide by 1000
-        map_results[selection+"_50"].append(float(row[3]))
-        map_results[selection+"_95"].append(float(row[4]))
-        map_results[selection+"_99"].append(float(row[5]))
-        map_results[selection+"_soj_50"].append(float(row[6]))
-        map_results[selection+"_soj_95"].append(float(row[7]))
-        map_results[selection+"_soj_99"].append(float(row[8]))
+        index = 3
+        for suffix in suffixes:
+            map_results[selection+suffix].append(float(row[index]))
+            index=index+1
 
-    
-
+    #Sort the results
     for selection in selections:
-        map_results[selection+"_50"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_50"]))]
-        map_results[selection+"_95"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_95"]))]
-        map_results[selection+"_99"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_99"]))]
-        map_results[selection+"_soj_50"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_soj_50"]))]
-        map_results[selection+"_soj_95"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_soj_95"]))]
-        map_results[selection+"_soj_99"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_soj_99"]))]
+        for suffix in suffixes:
+            map_results[selection+suffix]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+suffix]))]
+        map_results[selection+"_x"]=sorted(map_results[selection+"_x"]) ##Sort X here and no sooner
+
 
     for selection in selections:
         plt.plot(sorted(map_results[selection+"_x"]),map_results[selection+"_50"],label=selection+"_50",color=colors[selection],linestyle=linetype[0], marker="x")

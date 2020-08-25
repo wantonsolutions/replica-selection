@@ -49,6 +49,8 @@ linetype = ['-',':','--']
 filenames=sys.argv
 #print filenames
 
+suffixes=["_50", "_95", "_99","_99.9", "_99.99", "_soj_50", "_soj_95", "_soj_99","_soj_99.9", "_soj_99.99" ]
+
 avg_results=dict()
 for filename in filenames:
     print(filename)
@@ -62,66 +64,42 @@ for filename in filenames:
             if not selection in selections:
                 selections[selection]=True
                 map_results[selection+"_x"]=[]
-                map_results[selection+"_50"]=[]
-                map_results[selection+"_95"]=[]
-                map_results[selection+"_99"]=[]
-                map_results[selection+"_soj_50"]=[]
-                map_results[selection+"_soj_95"]=[]
-                map_results[selection+"_soj_99"]=[]
+                for suffix in suffixes:
+                    map_results[selection+suffix]=[]
             #map_results[selection+"_x"].append(int(row[0]) / 1000) # divide by 1000
             map_results[selection+"_x"].append(int(row[0])) # divide by 1000
-            map_results[selection+"_50"].append(float(row[3]))
-            map_results[selection+"_95"].append(float(row[4]))
-            map_results[selection+"_99"].append(float(row[5]))
-            map_results[selection+"_soj_50"].append(float(row[6]))
-            map_results[selection+"_soj_95"].append(float(row[7]))
-            map_results[selection+"_soj_99"].append(float(row[8]))
-
-        
+            index = 3
+            for suffix in suffixes:
+                map_results[selection+suffix].append(float(row[index]))
+                index=index+1
 
         #Sort the results
         for selection in selections:
-            map_results[selection+"_50"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_50"]))]
-            map_results[selection+"_95"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_95"]))]
-            map_results[selection+"_99"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_99"]))]
-            map_results[selection+"_soj_50"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_soj_50"]))]
-            map_results[selection+"_soj_95"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_soj_95"]))]
-            map_results[selection+"_soj_99"]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+"_soj_99"]))]
+            for suffix in suffixes:
+                map_results[selection+suffix]=[x for _,x in sorted(zip(map_results[selection+"_x"],map_results[selection+suffix]))]
             map_results[selection+"_x"]=sorted(map_results[selection+"_x"]) ##Sort X here and no sooner
         
     avg_results[filename] = map_results
 
 ## Second pass
-## invert for the sake of averating
+## invert for the sake of averaging
 multiRunAverage=dict()
 
 for selection in selections:
     if not selection in multiRunAverage:
         multiRunAverage[selection+"_x"]=[]
-        multiRunAverage[selection+"_50"]=[]
-        multiRunAverage[selection+"_95"]=[]
-        multiRunAverage[selection+"_99"]=[]
-        multiRunAverage[selection+"_soj_50"]=[]
-        multiRunAverage[selection+"_soj_95"]=[]
-        multiRunAverage[selection+"_soj_99"]=[]
+        for suffix in suffixes:
+            multiRunAverage[selection+suffix]=[]
     for filename in filenames:
         i=0
-        for value in avg_results[filename][selection+"_50"]:
-            if len(multiRunAverage[selection+"_50"]) <= i:
+        for value in avg_results[filename][selection+suffixes[0]]:
+            if len(multiRunAverage[selection+suffixes[0]]) <= i:
                 multiRunAverage[selection+"_x"].append([])
-                multiRunAverage[selection+"_50"].append([])
-                multiRunAverage[selection+"_95"].append([])
-                multiRunAverage[selection+"_99"].append([])
-                multiRunAverage[selection+"_soj_50"].append([])
-                multiRunAverage[selection+"_soj_95"].append([])
-                multiRunAverage[selection+"_soj_99"].append([])
+                for suffix in suffixes:
+                    multiRunAverage[selection+suffix].append([])
             multiRunAverage[selection+"_x"][i].append(avg_results[filename][selection+"_x"][i])
-            multiRunAverage[selection+"_50"][i].append(avg_results[filename][selection+"_50"][i])
-            multiRunAverage[selection+"_95"][i].append(avg_results[filename][selection+"_95"][i])
-            multiRunAverage[selection+"_99"][i].append(avg_results[filename][selection+"_99"][i])
-            multiRunAverage[selection+"_soj_50"][i].append(avg_results[filename][selection+"_soj_50"][i])
-            multiRunAverage[selection+"_soj_95"][i].append(avg_results[filename][selection+"_soj_95"][i])
-            multiRunAverage[selection+"_soj_99"][i].append(avg_results[filename][selection+"_soj_99"][i])
+            for suffix in suffixes:
+                multiRunAverage[selection+suffix][i].append(avg_results[filename][selection+suffix][i])
             i=i+1
 
 #print "AVG RESULTs"
@@ -142,6 +120,10 @@ for selection in selections:
     
     y99=GetAverageArr(multiRunAverage[selection+"_99"])
     y99err=GetErrArr(multiRunAverage[selection+"_99"])
+
+    y99_99=GetAverageArr(multiRunAverage[selection+"_99.99"])
+    y99_99err=GetAverageArr(multiRunAverage[selection+"_99.99"])
+
     print (multiRunAverage[selection+"_50"])
     print ("-- Average -- ")
     print (y50)
@@ -150,12 +132,15 @@ for selection in selections:
 
     plt.plot(x,y99,label=selection+" 99th",color=colors[selection],linestyle=linetype[2])
     plt.errorbar(x,y99,y99err,fmt=' ',color=colors[selection],capsize=5)
+
+    plt.plot(x,y99_99,label=selection+" 99.99th",color=colors[selection],linestyle=linetype[1])
+    plt.errorbar(x,y99_99,y99_99err,fmt=' ',color=colors[selection],capsize=5)
     cindex=cindex+1
 
 plt.rc('axes.formatter', useoffset=False)
 plt.legend()
 plt.yscale("log")
-#plt.ylim(top=4000,bottom=45)
+plt.ylim(top=4000,bottom=30)
 plt.grid(True, which="both", ls=":", color='0.20')
 plt.xlabel("Request Load (percentage of maximum)", fontweight='bold')
 plt.ylabel("Response latency (us)", fontweight='bold')
