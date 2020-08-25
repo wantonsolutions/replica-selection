@@ -1,39 +1,56 @@
 #!/bin/bash
 
-prefix="Delay2"
-date="2020-06-02"
-#dirs=("None" "Min" "Core" "MDML" "MDMLC")
-dirs=("0" "3500" "7000" "10500" "14000" "17500" "21000" "24500" "28000")
+#prefix="Hope_2"
+#date="2020-08-11"
+date=`date "+%F"`
+#date="2020-08-18"
+dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor")
+
+#dirs=("0" "3500" "7000" "10500" "14000" "17500" "21000" "24500" "28000")
+#dirs=("0" "3500" ) 
+
+arguments='
+ **HELP** \n
+-n name of the experiment must be supplied\n
+-r number of rounds defaults to 1\n
+-p plot (does not require -n to only plot)\n
+-h this message'
+
+
+
+
+
+
+function RunRandomLoad {
+    ./run.sh -n="${prefix}_None" -r=$RUNS -f="RunProportionalNone"
+}
 
 function RunNetLB {
-    rounds=3
-    ./run.sh -n="${prefix}_None" -r=$rounds -f="RunProportionalNone"
-    ./run.sh -n="${prefix}_Min" -r=$rounds -f="RunProportionalMin"
-    #./run.sh -n="${prefix}_Core" -r=$rounds -f="RunProportionalCoreOnly"
-    #./run.sh -n="${prefix}_MDML" -r=$rounds -f="RunProportionalMinDistanceMinLoad"
-    #./run.sh -n="${prefix}_MDMLC" -r=$rounds -f="RunProportionalMinDistanceMinLoadCore"
+    ./run.sh -n="${prefix}_None" -r=$RUNS -f="RunProportionalNone"
+    #./run.sh -n="${prefix}_Min" -r=$RUNS -f="RunProportionalMin"
+    #./run.sh -n="${prefix}_Core" -r=$RUNS -f="RunProportionalCoreOnly"
+    #./run.sh -n="${prefix}_MDML" -r=$RUNS -f="RunProportionalMinDistanceMinLoad"
+    #./run.sh -n="${prefix}_MDMLC" -r=$RUNS -f="RunProportionalMinDistanceMinLoadCore"
+    ./run.sh -n="${prefix}_Tor" -r=$RUNS -f="RunProportionalTorOnly"
 }
 
 function RunDelay {
-    rounds=3
-    ./run.sh -n="${prefix}_0" -r=$rounds -f="Delay0"
-    ./run.sh -n="${prefix}_3500" -r=$rounds -f="Delay3500"
-    ./run.sh -n="${prefix}_7000" -r=$rounds -f="Delay7000"
-    ./run.sh -n="${prefix}_10500" -r=$rounds -f="Delay10500"
-    ./run.sh -n="${prefix}_14000" -r=$rounds -f="Delay14000"
-    ./run.sh -n="${prefix}_17500" -r=$rounds -f="Delay17500"
-    ./run.sh -n="${prefix}_21000" -r=$rounds -f="Delay21000"
-    ./run.sh -n="${prefix}_24500" -r=$rounds -f="Delay24500"
-    ./run.sh -n="${prefix}_28000" -r=$rounds -f="Delay28000"
+    local min="0"
+    local step="3500"
+    local max="28000"
+    for i in $(seq $min $step $max); do
+        ./run.sh -n="${prefix}_$i" -r=$RUNS -f="RunDelay" --delay="$i"
+        echo "Running delay $i"
+    done
+
 }
 
 
 function PlotKnown {
-
     for dir in ${dirs[@]}; do
         ./run.sh -p -d="${prefix}_${dir}_${date}"
     done
-
+    wait
 }
 
 function MoveKnown {
@@ -61,8 +78,54 @@ function RunNNAverage {
     ./run.sh --plot_multi --dirs="${dirs[@]}"
 }
 
+#arguement parsing
+for i in "$@"; do 
 
-#RunNetLB
-#RunDelay
-PlotKnown
-MoveKnown
+case $i in
+	-n=* | --name=*)
+	prefix="${i#*=}"
+	;;
+	-r=* | --runs=*)
+	RUNS="${i#*=}"
+	;;
+	-p*)
+	PLOT="true"
+	;;
+	-P*)
+	JUSTPLOT="true"
+	;;
+	-h | --help)
+	echo  -e $arguments
+	;;
+	*)
+	echo "$i is an invalid argument - take a look at the code silly billy :^)"
+	exit 1
+esac
+
+done
+
+if [ ! -z "$JUSTPLOT" ]; then
+    echo "Just plotting this round"
+    PlotKnown
+    MoveKnown
+    exit 0
+fi
+
+#require 
+if [ -z "$RUNS" ]; then
+	echo "No runs specified DEFAULT=1 see -r"
+    RUNS="1"
+fi
+
+
+if [ ! -z "$prefix" ]; then
+    #RunDelay
+    RunNetLB
+fi
+#RunRandomLoad
+
+if [ ! -z "$PLOT" ]; then
+    echo "Plotting last set of runs"
+    PlotKnown
+    MoveKnown
+fi

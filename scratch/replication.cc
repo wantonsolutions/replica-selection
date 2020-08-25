@@ -30,6 +30,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdint.h>
+#include <random>
 
 #define CROSS_CORE 0
 #define DISTRIBUTION_SIZE 8192
@@ -148,7 +149,7 @@ const char *TopologyString = "Topology";
 const char *Topology = "PFatTree";
 const char *ParallelString = "Parallel";
 
-#include <random>
+
 //Distributions This should be moved to a seperate file
 std::vector<uint32_t> uniform_distribution(uint32_t size, uint32_t min, uint32_t max)
 {
@@ -179,6 +180,7 @@ std::vector<uint32_t> normal_distribution(uint32_t size, double mean, double std
   std::default_random_engine generator;
   unsigned seed = rand();
   generator.seed(seed);
+
   std::normal_distribution<double> distribution(mean, std);
 
   int tmp_value;
@@ -206,9 +208,11 @@ std::vector<uint32_t> exponential_distribution(uint32_t size, double lambda, dou
   generator.seed(seed);
   std::exponential_distribution<double> distribution(lambda);
 
+  uint32_t server_delay;
   for (uint32_t i = 0; i < size; i++)
   {
-    exponential_sample.push_back(distribution(generator) * multiplier + min);
+    server_delay = (distribution(generator) * multiplier) + min;
+    exponential_sample.push_back(server_delay);
   }
   return exponential_sample;
 }
@@ -394,8 +398,12 @@ bool InformationDelayArgsGood() {
       //bound check constant information delay? For now a default value of 0 is okay
       return true;
       break;
+    case uniformRandomErrorSTD:
+      //bound check constant information delay? For now a default value of 0 is okay
+      return true;
+      break;
     default:
-      NS_LOG_WARN("Information Delay Function No implmented exiting!!");
+      NS_LOG_WARN("Information Delay Function No implmented exiting!! Value: " << InformationDelayFunctionValue);
       return false;
       break;
       //
@@ -1354,7 +1362,7 @@ int main(int argc, char *argv[])
   //Setup Clients
   ///////////////////////////////////////////////////////////////////////////////////
   int RpcServerPort = 10;
-  float duration = 10.0;
+  float duration = 0.05;
   //float duration = 0.003;
 
   uint32_t global_packets_sent = 0;

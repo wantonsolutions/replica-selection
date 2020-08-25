@@ -37,10 +37,12 @@ struct DoppelgangerRouteEntry {
 
 enum InformationDelayFunction {
   constant = 0,
-  minLatency = 1,
+  uniformRandomErrorSTD = 1,
   //piggyback //piggybacking on messages requires a bit more phenesse
 };
 
+
+uint64_t GetInformationDelay(InformationDelayFunction df, uint64_t constant_delay);
 
 class Ipv4DoppelgangerRouting : public Ipv4RoutingProtocol
 {
@@ -53,6 +55,7 @@ public:
     coreOnly = 2,
     minDistanceMinLoad=3,
     coreForcedMinDistanceMinLoad=4,
+    torOnly=5,
   };
 
   enum FatTreeSwitchType
@@ -121,6 +124,7 @@ public:
 
   uint64_t GetInstantenousLoad(int server_id);
   uint32_t replicaSelectionStrategy_minimumLoad(std::vector<uint32_t> ips);
+  uint32_t replicaSelectionStrategy_minimumLoad_correct_delay(std::vector<uint32_t> ips);
   std::vector<uint32_t> replicaSelectionStrategy_minimumDownwardDistance(std::vector<uint32_t> ips);
 
   void SetInformationDelayFunction(InformationDelayFunction delay_function);
@@ -239,6 +243,7 @@ private:
 };
 
 }
+
 
 #endif /* DOPPELGANGER_ROUTING_H */
 

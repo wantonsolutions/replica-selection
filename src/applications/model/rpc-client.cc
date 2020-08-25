@@ -53,7 +53,7 @@ RpcClient::GetTypeId(void)
                           .AddConstructor<RpcClient>()
                           .AddAttribute("MaxPackets",
                                         "The maximum number of packets the application will send",
-                                        UintegerValue(5000),
+                                        UintegerValue(20000),
                                         MakeUintegerAccessor(&RpcClient::m_count),
                                         MakeUintegerChecker<uint32_t>())
                           .AddAttribute("RemoteAddress",
@@ -448,16 +448,10 @@ void RpcClient::SetReplicaSelectionStrategy(selectionStrategy strategy){
    return m_rpc_server_replicas[rpc][randomReplica];
  }
 
- uint64_t RpcClient::GetInformationTime() {
-   switch (m_delay_function) {
-     case constant:
-     //This requires that we have some measure of distance to the servers that we are going to
-      return Simulator::Now().GetNanoSeconds() - m_constant_information_delay;
-     default:
-      NS_LOG_WARN("The Strategy " << m_delay_function << "is not yet implemented check ipv4-doppleganger-routing.cc (InformationDelayFuction) -- Returning 0 delay");
-      return Simulator::Now().GetNanoSeconds();
-   }
- }
+ uint64_t RpcClient::GetInformationTime() 
+{
+  return GetInformationDelay(m_delay_function,m_constant_information_delay);
+}
 
  int RpcClient::replicaSelectionStrategy_minimumLoad(int rpc){
    uint64_t minLoad = UINT64_MAX;

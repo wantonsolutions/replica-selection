@@ -3,8 +3,8 @@
 topdir=`pwd`
 
 declare -A RpcSelectionStrategy
-RpcSelectionStrategy["single"]=0
-RpcSelectionStrategy["random"]=1
+#RpcSelectionStrategy["single"]=0
+#RpcSelectionStrategy["random"]=1
 RpcSelectionStrategy["minimum"]=2
 
 declare -A NetworkSelectionStrategy
@@ -13,8 +13,19 @@ NetworkSelectionStrategy["minimum"]=1
 NetworkSelectionStrategy["coreOnly"]=2
 NetworkSelectionStrategy["minDistanceMinLoad"]=3
 NetworkSelectionStrategy["coreForcedMinDistanceMinLoad"]=4
+NetworkSelectionStrategy["torOnly"]=5
 
 debug=false
+
+#Init locking functions
+startfile="/tmp/startfile"
+stopfile="/tmp/stopfile"
+max_running="30"
+
+rm $startfile
+rm $stopfile
+touch $startfile
+touch $stopfile
 
 function ConfigArgs() {
 	filename=$1
@@ -25,7 +36,7 @@ function ConfigArgs() {
 
 function ConstantInformationDelay() {
 	const=$1
-	echo "--InformationDelayFunction=0 
+	echo "--InformationDelayFunction=1
     --InformationDelayConst=$const "
 }
 function UniformClientTransmission() {
@@ -151,8 +162,10 @@ function RunRpcSelectionStrategies() {
 		pushd $topdir
 
 		./waf --run "scratch/replication
-		${args}" 2>${currentdir}/results.dat &
+		${args}" 2>${currentdir}/results.dat
 		sleep 1
+		##tell the controller that its done running
+		echo ">>>>" >> $stopfile
 
 		#mv results* $currentdir
 		popd
@@ -304,11 +317,13 @@ function RunProportionalLoad {
 	#loadArgs=$(UniformServerLoad 45 55)
 	packetArgs=$(NormalPacketSizes 128 12)
 	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
-	networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
-	delayArgs=$(ConstantInformationDelay 7000)
+	#networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
+	networkArgs=$(NetworkSelectionStrat none)
+	delayArgs=$(ConstantInformationDelay 0)
 	#proportion=(20 40 60 80 100 120 140 160 180 200)
 	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
-	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	proportion=(80 85 90 95 100)
 	#proportion=(10 20 30 40 50 60 70 80 90 100)
 
 	#proportion=(50 55 60 65 70 75 80 85 90 95 100)
@@ -334,89 +349,136 @@ function RunProportionalLoad {
 	done
 }
 
-function RunProportionalLoadMinArgsVariableDelay {
-	local delay="$@"
-	local loadArgs=$(NormalServerLoad 50000 5000) #Normal Distribution
-	#local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
+
+function RunDelay {
+
+	if [ -z "$DELAY" ]; then
+		echo "cannot run delay experiments if a delay variable is not set use --delay= parameter for this function value in us"
+		exit 1
+	fi
+	
+	local delay="$DELAY"
+	echo $delay
+
+	local processing="250"
+	local shift="5000"
+
+	#have to convert this manually
+	local lambda="0.05"
+	local lambdaINV="20"
+
+	local loadArgs=$(ExponentialServerLoad $lambda $processing $shift) #Exponential Distribution
+
 	local packetArgs=$(NormalPacketSizes 128 12)
 	local delayArgs=$(ConstantInformationDelay $delay)
-	local networkArgs=$(NetworkSelectionStrat minimum)
+	#local networkArgs=$(NetworkSelectionStrat none) ##nothing in the network...
+	local networkArgs=$(NetworkSelectionStrat coreOnly) ##nothing in the network...
 	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#local proportion=(85)
+
+	let "expmean = ($shift + ($processing * $lambdaINV))"
+	echo "Expmean = $expmean" >> /home/ssgrant/mean.delay
 
 	for p in ${proportion[@]}; do
-		let "mean = (50000 * 100) / $p"
-		let "std = ${mean} / 10"
+		let "mean = (($shift + ($processing * $lambdaINV)) * 100) / $p"
+		echo "Normal Mean = $mean"
+		let "std = (mean * 100) / 65"
+
 		local transmissionArgs=$(NormalClientTransmission $mean $std)
 
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${delayArgs} ${networkArgs}"
+
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs}" &
+		sleep 1
 		popd
+
+		while true; do
+        #Get Current number of running processes
+			start=`wc $startfile | awk '{print $1}'`
+			stop=`wc $stopfile | awk '{print $1}'`
+			if [[ $stop == "" ]]; then
+				stop="0"
+			fi
+			let 'running=start-stop'
+			echo "Running Jobs $running max allowed $max_running (start $start stop $stop)"
+
+			#Wait for jobs to finish or start a new one
+			if [[ "$running" -gt "$max_running" ]]; then
+				sleep 1
+			else
+				break
+			fi
+		done
+
 		#exit
 	done
 }
 
-function Delay0 {
-	RunProportionalLoadMinArgsVariableDelay 0
-}
-
-function Delay3500 {
-	RunProportionalLoadMinArgsVariableDelay 3500
-}
-
-function Delay7000 {
-	RunProportionalLoadMinArgsVariableDelay 7000
-}
-
-function Delay10500 {
-	RunProportionalLoadMinArgsVariableDelay 10500
-}
-
-function Delay14000 {
-	RunProportionalLoadMinArgsVariableDelay 14000
-}
-
-function Delay17500 {
-	RunProportionalLoadMinArgsVariableDelay 17500
-}
-
-function Delay21000 {
-	RunProportionalLoadMinArgsVariableDelay 21000
-}
-
-function Delay24500 {
-	RunProportionalLoadMinArgsVariableDelay 24500
-}
-
-function Delay28000 {
-	RunProportionalLoadMinArgsVariableDelay 28000
-}
 
 function RunProportialLoadArgs {
 	echo "Running Normal Server Load"
+
+	processing="250"
+	shift="5000"
+	#have to convert this manually
+	lambda="0.05"
+	lambdaINV="20"
+
 	local args="$@"
-	#local loadArgs=$(NormalServerLoad 50000 5000) #Normal Distribution
-	local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
+	#local loadArgs=$(NormalServerLoad $processing $std) #Normal Distribution
+	local loadArgs=$(ExponentialServerLoad $lambda $processing $shift) #Exponential Distribution
+
 	local packetArgs=$(NormalPacketSizes 128 12)
 	local delayArgs=$(ConstantInformationDelay 0)
-	#local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+	let "expmean = ($shift + ($processing * $lambdaINV))"
+	echo "Expmean = $expmean"
+	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#local proportion=(5 10 15 20 25 30 35 40 45 50)
+	#local proportion=(80 85 90 95 100)
 	#local proportion=(10 12 14 16 18 20 22 24 26 28 30 32 34 36 )
 	#local proportion=(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)
-	local proportion=(10 12 14 16 18 20 22 24 26 28 30)
-	#local proportion=(10 20 30 40 50 60 70 80 90 100)
+	#local proportion=(10 50)
+	#local proportion=(10 50 90 100)
 	#local proportion=(50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75)
 
 	for p in ${proportion[@]}; do
-		let "mean = (50000 * 100) / $p"
-		let "std = ${mean} / 10"
+		#let "mean = (($shift + ($processing * $lambdaINV)) * $p) / 100"
+		let "mean = (($shift + ($processing * $lambdaINV)) * 100) / $p"
+		echo "Normal Mean = $mean"
+		let "std = (mean * 100) / 65"
+		#let "std = ${mean} / 10"
+
+		#client mean = Shift + (processing / lambda)
 		local transmissionArgs=$(NormalClientTransmission $mean $std)
+		#local transmissionArgs=$(ExponentialClientTransmission $lambda $mean 0.0)
 
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs}"
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs}" &
+		sleep 1
 		popd
+
+		while true; do
+        #Get Current number of running processes
+			start=`wc $startfile | awk '{print $1}'`
+			stop=`wc $stopfile | awk '{print $1}'`
+			if [[ $stop == "" ]]; then
+				stop="0"
+			fi
+			let 'running=start-stop'
+			echo "Running Jobs $running max allowed $max_running (start $start stop $stop)"
+
+			#Wait for jobs to finish or start a new one
+			if [[ "$running" -gt "$max_running" ]]; then
+				sleep 1
+			else
+				break
+			fi
+		done
 
 		#exit
 	done
@@ -444,6 +506,11 @@ function RunProportionalMinDistanceMinLoad {
 
 function RunProportionalMinDistanceMinLoadCore {
 	local networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
+	RunProportialLoadArgs "${networkArgs} "
+}
+
+function RunProportionalTorOnly {
+	local networkArgs=$(NetworkSelectionStrat torOnly)
 	RunProportialLoadArgs "${networkArgs} "
 }
 
@@ -540,10 +607,11 @@ function  RunDebug {
 	#loadArgs=$(NormalServerLoad 50000 5000)
 	#selectionArgs=$(RpcSelectionStrat single)
 	selectionArgs=$(RpcSelectionStrat minimum)
-	networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
+	#networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
+	networkSelectionArgs=$(NetworkSelectionStrat torOnly)
 	configArgs=$(ConfigArgs results)
 	currentdir=`pwd`
-	delayArgs=$(ConstantInformationDelay 7000)
+	delayArgs=$(ConstantInformationDelay 0)
 	dirArgs=$(WorkingDirectory $currentdir)
 
 	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs} ${delayArgs}"
@@ -551,8 +619,8 @@ function  RunDebug {
 	pushd $topdir
 
 	#./waf --visualize --command-template="gdb --args %s" --run "scratch/replication"
-	#./waf --command-template="gdb %s" --run "scratch/replication" #"${args}" 
-	./waf --run "scratch/replication ${args}" 
+	./waf --run "scratch/replication" --command-template="gdb --args %s ${args}"  
+	#./waf --run "scratch/replication ${args}" 
 
 	mv results* $currentdir
 	popd #topdir
@@ -663,6 +731,9 @@ case $i in
 	;;
 	--dirs=* )
 	DIRECTORIES="${i#*=}"
+	;;
+	--delay=* )
+	DELAY="${i#*=}"
 	;;
 	-f=* | --function=* )
 	FUNCTION="${i#*=}"
@@ -797,9 +868,13 @@ for run in $(seq 1 $RUNS); do
 	pushd $run
 	$FUNCTION
 	popd
-	wait
-	toilet "Done Waiting Round $run/$RUNS"
+	toilet "Done Waiting Round $run/$RUNS ... waiting a bit before starting a new round"
+	sleep 5
 done
+toilet "SYNCRONIZING"
+wait
+
+toilet "!!DONE!!"
 #wait for any parallel tasks before exiting
 
 popd
