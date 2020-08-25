@@ -341,7 +341,6 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       doppelTag.SetHostSojournTime(m_serverLoad[m_id]);
       //printf("Tag 0:%d\n",doppelTag.GetReplica(0));
       packet->AddPacketTag(doppelTag);
-
       ScheduleResponse(NanoSeconds(((m_serverLoad)[m_id])), socket, packet, from, requestProcessingTime);
 
     }
@@ -357,7 +356,20 @@ void RpcServer::ScheduleResponse(Time dt,Ptr<Socket> socket, Ptr<Packet> packet,
 void
 RpcServer::SendResponse(Ptr<Socket> socket, Ptr<Packet> packet, Address from,int load) {
       NS_LOG_LOGIC ("Responding with original Packet");
-      (m_serverLoad)[m_id] = GetInstantenousLoad();
+
+      //Send the current load back along the reply path
+      Ipv4DoppelgangerTag doppelTag;
+      bool found = packet->PeekPacketTag(doppelTag);
+      if (found) {
+        NS_LOG_WARN("Found the packet tag on the end server");
+      } else {
+        NS_LOG_WARN("Packet arrived but it does not have the correct tag");
+      }
+      int current_load = GetInstantenousLoad();
+      packet->RemovePacketTag(doppelTag);
+      doppelTag.SetHostLoad(current_load);
+      packet->AddPacketTag(doppelTag);
+
       socket->SendTo (packet, 0, from);
 
 	      if (InetSocketAddress::IsMatchingType (from))
