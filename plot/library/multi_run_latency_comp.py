@@ -39,6 +39,8 @@ colors["random"]=sns.xkcd_rgb["medium blue"]
 colors["single"]=sns.xkcd_rgb["pale red"]
 colors["minimum"]=sns.xkcd_rgb["medium green"]
 
+client_strategy="random"
+
 
 plt.rcParams.update({'font.size': 4})
 #plt.rcParams.update({'font.size': 1})
@@ -65,10 +67,11 @@ base = filenames[0]
 filenames.pop(0) #remove the base
 #treatment = filenames[1]
 
-measurement="minimum_50"
+measurement=client_strategy+"_95"
 
 #print(avg_runs)
-xaxis=GetAverageArr(avg_runs[base]["minimum_x"])
+print avg_runs[base]
+xaxis=GetAverageArr(avg_runs[base][client_strategy+"_x"])
 xaxis=[int(x) for x in xaxis]
 min_base_avg=GetAverageArr(avg_runs[base][measurement])
 min_base_err=GetErrArr(avg_runs[base][measurement])

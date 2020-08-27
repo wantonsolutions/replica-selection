@@ -4,8 +4,8 @@ topdir=`pwd`
 
 declare -A RpcSelectionStrategy
 #RpcSelectionStrategy["single"]=0
-#RpcSelectionStrategy["random"]=1
-RpcSelectionStrategy["minimum"]=2
+RpcSelectionStrategy["random"]=1
+#RpcSelectionStrategy["minimum"]=2
 
 declare -A NetworkSelectionStrategy
 NetworkSelectionStrategy["none"]=0

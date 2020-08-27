@@ -296,6 +296,18 @@ void Ipv4DoppelgangerRouting::SetGlobalServerLoad(uint64_t *serverLoad)
   m_serverLoad = serverLoad;
 }
 
+void Ipv4DoppelgangerRouting::SetLocalServerLoad(std::map<uint32_t,uint64_t> local_load){
+  m_local_server_load = local_load;
+}
+
+void Ipv4DoppelgangerRouting::InitLocalServerLoad() {
+  std::map<uint32_t, uint32_t>::iterator it;
+  for ( it = m_server_ip_map.begin(); it != m_server_ip_map.end(); it++ )
+  {
+      m_local_server_load[it->first] = 0;
+  }
+}
+
 void Ipv4DoppelgangerRouting::SetGlobalServerLoadUpdate(Time *serverLoad_update)
 {
   m_serverLoad_update = serverLoad_update;
@@ -418,18 +430,48 @@ Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(std::vector<uint32
   uint64_t minLoad = UINT64_MAX;
   uint32_t minReplica;
 
-  uint64_t time = GetInformationTime(); //This will likely have to be extended
-  for (uint i = 0; i < ips.size(); i++)
-  {
-    uint32_t replica = m_server_ip_map[ips[i]];
-    uint64_t dialated_load = ServerLoadAtTime(replica, time, m_load_log);
-    if (dialated_load < minLoad)
+  //TODO 
+  m_information_collection_method = piggyback;
+
+  switch (m_information_collection_method){
+    case instant:
     {
-      minLoad = dialated_load;
-      minReplica = ips[i];
+      uint64_t time = GetInformationTime(); //This will likely have to be extended
+      for (uint i = 0; i < ips.size(); i++)
+      {
+        uint32_t replica = m_server_ip_map[ips[i]];
+        uint64_t dialated_load = ServerLoadAtTime(replica, time, m_load_log);
+        if (dialated_load < minLoad)
+        {
+          minLoad = dialated_load;
+          minReplica = ips[i];
+        }
+      }
+      return minReplica;
+    }
+    case piggyback:
+    {
+      NS_LOG_INFO("Piggyback routing");
+      for (uint i = 0; i < ips.size(); i++)
+      {
+        uint32_t load = m_local_server_load[ips[i]];
+        if (load < minLoad)
+        {
+          minLoad = load;
+          minReplica = ips[i];
+        }
+      }
+      return minReplica;
+    }
+    default:
+    {
+      NS_LOG_WARN("Information collection method " << m_information_collection_method << "is not implemented");
+      break;
     }
   }
-  return minReplica;
+  NS_LOG_WARN("ERROR information not collected - min routing strategy failed");
+  return 0;
+
 }
 
 //Returns the IP of a minuimum latency replica
@@ -716,7 +758,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
         }
         else
         {
-          NS_LOG_INFO("Not rerouting because not a core router.. Fix this in the future to be it's own routing protocol");
+          NS_LOG_INFO("Not rerouting because not a TOR router.. Fix this in the future to be it's own routing protocol");
         }
       }
       tag.SetCanRouteDown(true);
@@ -731,11 +773,9 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
   else if (tag.GetPacketType() == Ipv4DoppelgangerTag::response)
   {
     //TODO use this point to keep track of piggybacking delay information
-    /*
-    Ipv4Address destAddress = headerPrime.GetSource();
-    index = getServerIndex(destAddress);
-    m_server_load[index] = tag.GetLoad();
-    */
+    Ipv4Address source = headerPrime.GetSource();
+    m_local_server_load[source.Get()] = tag.GetHostLoad();
+    NS_LOG_INFO("Updated Server load " << stringIP(source.Get()) << " To " << tag.GetHostLoad());
     NS_LOG_INFO("Routing A Response");
   }
   else

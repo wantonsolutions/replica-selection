@@ -48,6 +48,12 @@ class Ipv4DoppelgangerRouting : public Ipv4RoutingProtocol
 {
 public:
 
+  enum InformationCollection
+  {
+    instant = 0,
+    piggyback = 1,
+  };
+
   enum LoadBalencingStrategy
   {
     none = 0,
@@ -105,6 +111,8 @@ public:
   void SetRpcServices(std::vector<std::vector<int>> rpcServices);
   void SetIPServerMap(std::map<uint32_t,uint32_t> ip_map);
   void SetGlobalServerLoad(uint64_t *serverLoad);
+  void SetLocalServerLoad(std::map<uint32_t, uint64_t> local_load);
+  void InitLocalServerLoad();
   void SetGlobalServerLoadUpdate(Time *serverLoad_update);
   void SetLoadBalencingStrategy(LoadBalencingStrategy strategy);
   void SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log);
@@ -198,7 +206,9 @@ private:
 
   Ipv4Address m_addr;
   // global server load
-  uint64_t *m_serverLoad;                             
+  uint64_t *m_serverLoad;
+  // local server information
+  std::map<uint32_t,uint64_t> m_local_server_load;
   Time *m_serverLoad_update;                             
   std::vector<std::vector<LoadEvent>> *m_load_log;
   //replica locations
@@ -215,6 +225,7 @@ private:
 
   InformationDelayFunction m_delay_function;
   uint64_t m_constant_information_delay;
+  InformationCollection m_information_collection_method;
 
   uint m_fattree_k;
 

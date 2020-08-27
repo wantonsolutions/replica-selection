@@ -679,6 +679,7 @@ std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad
     doppelRouter->SetFatTreeK(K);
     doppelRouter->SetInformationDelayFunction(idf);
     doppelRouter->SetConstantDelay(information_delay); // This might become irrelevent in the future
+    doppelRouter->InitLocalServerLoad();
     //Start here we need to get the list routing protocol
   }
 }
