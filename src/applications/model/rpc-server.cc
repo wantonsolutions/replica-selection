@@ -251,6 +251,22 @@ RpcServer::StartApplication (void)
 
   m_socket->SetRecvCallback (MakeCallback (&RpcServer::HandleRead, this));
   m_socket6->SetRecvCallback (MakeCallback (&RpcServer::HandleRead, this));
+
+  //If periodic information spread is turned on start the loopping process
+  if(m_information_function == periodic) {
+    SpreadLoadInformation();
+  }
+
+}
+
+void 
+RpcServer::SpreadLoadInformation() {
+  NS_LOG_INFO("Spreading information on host " <<  m_id << " To all clients at time " << Simulator::Now().GetNanoSeconds());
+  //create a packet with Load informatyion
+  //Aquire IP's of every client
+  //spread the information to every client
+  Simulator::Schedule(NanoSeconds(m_information_spread_period), &RpcServer::SpreadLoadInformation, this);
+
 }
 
 void 
@@ -337,11 +353,25 @@ RpcServer::HandleRead (Ptr<Socket> socket)
         //printf("%d\n",InetSocketAddress::ConvertFrom (from).GetIpv4().Get());
       }
       doppelTag.SetCanRouteDown(true); //There should be no limitations on how the packet is routed back to the client
-      doppelTag.SetPacketType(Ipv4DoppelgangerTag::response);
-      doppelTag.SetHostSojournTime(m_serverLoad[m_id]);
+      
+      //Piggyback information if piggybacking is set.
+      if (m_information_function == piggyback) {
+        doppelTag.SetPacketType(Ipv4DoppelgangerTag::response_piggyback);
+        doppelTag.SetHostSojournTime(m_serverLoad[m_id]);
+      } else {
+        doppelTag.SetPacketType(Ipv4DoppelgangerTag::response);
+      }
       //printf("Tag 0:%d\n",doppelTag.GetReplica(0));
       packet->AddPacketTag(doppelTag);
       ScheduleResponse(NanoSeconds(((m_serverLoad)[m_id])), socket, packet, from, requestProcessingTime);
+
+      //Inject some periodic delay.
+      if (m_last_delay == 0 || (Simulator::Now().GetNanoSeconds() - m_last_delay) > m_min_time_between_delays) {
+        if (rand() % 500) {
+          (m_serverLoad)[m_id] = GetInstantenousLoad() + m_delay_time;
+           m_last_delay = Simulator::Now().GetNanoSeconds();
+        }
+      }
 
     }
 }

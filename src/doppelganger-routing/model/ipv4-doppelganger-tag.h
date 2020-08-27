@@ -15,6 +15,8 @@ public:
     {
       request = 0,
       response = 1,
+      load = 2,
+      response_piggyback = 3,
     };
 
     Ipv4DoppelgangerTag ();

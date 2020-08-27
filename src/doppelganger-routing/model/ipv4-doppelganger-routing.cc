@@ -778,12 +778,21 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
   }
   else if (tag.GetPacketType() == Ipv4DoppelgangerTag::response)
   {
-    //TODO use this point to keep track of piggybacking delay information
+    NS_LOG_INFO("Received response routing back to client" << stringIP(headerPrime.GetSource().Get()) << " To " << tag.GetHostLoad());
+  }
+  else if (tag.GetPacketType() == Ipv4DoppelgangerTag::load) 
+  {
     Ipv4Address source = headerPrime.GetSource();
     m_local_server_load[source.Get()] = tag.GetHostLoad();
     NS_LOG_INFO("Updated Server load " << stringIP(source.Get()) << " To " << tag.GetHostLoad());
-    NS_LOG_INFO("Routing A Response");
   }
+  else if (tag.GetPacketType() == Ipv4DoppelgangerTag::response_piggyback)
+  {
+    //TODO this should only be used if information is being piggybacked
+    Ipv4Address source = headerPrime.GetSource();
+    m_local_server_load[source.Get()] = tag.GetHostLoad();
+    NS_LOG_INFO("Updated Server load from piggybacked response" << stringIP(source.Get()) << " To " << tag.GetHostLoad());
+  } 
   else
   {
     NS_LOG_INFO("Unknown packet type routing as usual");

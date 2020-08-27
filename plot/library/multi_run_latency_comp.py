@@ -67,7 +67,7 @@ base = filenames[0]
 filenames.pop(0) #remove the base
 #treatment = filenames[1]
 
-measurement=client_strategy+"_99"
+measurement=client_strategy+"_50"
 
 #print(avg_runs)
 print avg_runs[base]
