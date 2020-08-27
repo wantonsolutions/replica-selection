@@ -435,7 +435,8 @@ function RunProportialLoadArgs {
 
 	let "expmean = ($shift + ($processing * $lambdaINV))"
 	echo "Expmean = $expmean"
-	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	local proportion=(5 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200)
 	#local proportion=(5 10 15 20 25 30 35 40 45 50)
 	#local proportion=(80 85 90 95 100)
 	#local proportion=(10 12 14 16 18 20 22 24 26 28 30 32 34 36 )
@@ -606,7 +607,7 @@ function  RunDebug {
 	local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
 	#loadArgs=$(NormalServerLoad 50000 5000)
 	#selectionArgs=$(RpcSelectionStrat single)
-	selectionArgs=$(RpcSelectionStrat minimum)
+	selectionArgs=$(RpcSelectionStrat random)
 	#networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
 	networkSelectionArgs=$(NetworkSelectionStrat torOnly)
 	configArgs=$(ConfigArgs results)

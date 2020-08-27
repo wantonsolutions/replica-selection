@@ -18,31 +18,28 @@ Ipv4DoppelgangerTag::GetTypeId(void)
   return tid;
 }
 
-void
-Ipv4DoppelgangerTag::SetCanRouteDown(bool CanRouteDown)
+void Ipv4DoppelgangerTag::SetCanRouteDown(bool CanRouteDown)
 {
-  m_can_route_down = (uint8_t) CanRouteDown;
+  m_can_route_down = (uint8_t)CanRouteDown;
 }
 
-bool 
-Ipv4DoppelgangerTag::GetCanRouteDown() {
-  return (bool) m_can_route_down;
+bool Ipv4DoppelgangerTag::GetCanRouteDown()
+{
+  return (bool)m_can_route_down;
 }
 
-
-void 
-Ipv4DoppelgangerTag::SetPacketType(Ipv4DoppelgangerTag::PacketType type){
-  m_packet_type=(uint8_t) type;
+void Ipv4DoppelgangerTag::SetPacketType(Ipv4DoppelgangerTag::PacketType type)
+{
+  m_packet_type = (uint8_t)type;
 }
 
-
-Ipv4DoppelgangerTag::PacketType 
-Ipv4DoppelgangerTag::GetPacketType(){
-  return (Ipv4DoppelgangerTag::PacketType) m_packet_type;
+Ipv4DoppelgangerTag::PacketType
+Ipv4DoppelgangerTag::GetPacketType()
+{
+  return (Ipv4DoppelgangerTag::PacketType)m_packet_type;
 }
 
-void 
-Ipv4DoppelgangerTag::SetRequestID(uint16_t requestID)
+void Ipv4DoppelgangerTag::SetRequestID(uint16_t requestID)
 {
   m_requestID = requestID;
 }
@@ -71,23 +68,26 @@ void Ipv4DoppelgangerTag::SetReplicas(uint32_t replicas[MAX_REPLICAS])
   }
 }
 
-  void 
-  Ipv4DoppelgangerTag::SetReplica(uint32_t index, uint32_t replicaAddress) {
-    if (index >= MAX_REPLICAS) {
-      NS_LOG_WARN("Unable to set replica, index " << index << " is out of range of MAX_REPLICAS " << MAX_REPLICAS);
-      return;
-    }
-    m_replicas[index] = replicaAddress;
+void Ipv4DoppelgangerTag::SetReplica(uint32_t index, uint32_t replicaAddress)
+{
+  if (index >= MAX_REPLICAS)
+  {
+    NS_LOG_WARN("Unable to set replica, index " << index << " is out of range of MAX_REPLICAS " << MAX_REPLICAS);
+    return;
   }
+  m_replicas[index] = replicaAddress;
+}
 
-  uint32_t
-  Ipv4DoppelgangerTag::GetReplica(uint32_t index){
-    if (index >= MAX_REPLICAS) {
-      NS_LOG_WARN("Unable to get replica, index " << index << " is out of range of MAX_REPLICAS " << MAX_REPLICAS);
-      return 0;
-    }
-    return m_replicas[index];
+uint32_t
+Ipv4DoppelgangerTag::GetReplica(uint32_t index)
+{
+  if (index >= MAX_REPLICAS)
+  {
+    NS_LOG_WARN("Unable to get replica, index " << index << " is out of range of MAX_REPLICAS " << MAX_REPLICAS);
+    return 0;
   }
+  return m_replicas[index];
+}
 
 uint32_t *
 Ipv4DoppelgangerTag::GetReplicas(void) const
@@ -95,24 +95,37 @@ Ipv4DoppelgangerTag::GetReplicas(void) const
   return (uint32_t *)m_replicas;
 }
 
-void 
-Ipv4DoppelgangerTag::SetHostSojournTime(uint64_t time){
-  m_host_sojourn_time=time;
+void Ipv4DoppelgangerTag::SetHostSojournTime(uint64_t time)
+{
+  m_host_sojourn_time = time;
 }
 
-uint64_t 
-Ipv4DoppelgangerTag::GetHostSojournTime(){
+uint64_t
+Ipv4DoppelgangerTag::GetHostSojournTime()
+{
   return m_host_sojourn_time;
 }
 
-void 
-Ipv4DoppelgangerTag::SetHostLoad(uint64_t load){
-  m_host_load=load;
+void Ipv4DoppelgangerTag::SetHostLoad(uint64_t load)
+{
+  m_host_load = load;
 }
 
-uint64_t 
-Ipv4DoppelgangerTag::GetHostLoad(){
+uint64_t
+Ipv4DoppelgangerTag::GetHostLoad()
+{
   return m_host_load;
+}
+
+void Ipv4DoppelgangerTag::SetRedirections(uint8_t redirections)
+{
+  m_redirections = redirections;
+  return;
+}
+
+uint8_t Ipv4DoppelgangerTag::GetRedirections()
+{
+  return m_redirections;
 }
 
 TypeId
@@ -125,12 +138,13 @@ uint32_t
 Ipv4DoppelgangerTag::GetSerializedSize(void) const
 {
   return sizeof(uint8_t) +
-        sizeof(uint8_t) +
-        sizeof(uint16_t) +
-        sizeof(uint16_t) +
-        (sizeof(uint32_t) * MAX_REPLICAS) + //replicas
-        sizeof(uint64_t) + //sojour_time
-        sizeof(uint64_t); //load
+         sizeof(uint8_t) +
+         sizeof(uint16_t) +
+         sizeof(uint16_t) +
+         (sizeof(uint32_t) * MAX_REPLICAS) + //replicas
+         sizeof(uint64_t) +                  //sojour_time
+         sizeof(uint64_t) +                   //load
+         sizeof(uint8_t);                     //redirections
 }
 
 void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
@@ -145,6 +159,7 @@ void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
   }
   i.WriteU64(m_host_sojourn_time);
   i.WriteU64(m_host_load);
+  i.WriteU8(m_redirections);
 }
 
 void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
@@ -159,6 +174,7 @@ void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
   }
   m_host_sojourn_time = i.ReadU64();
   m_host_load = i.ReadU64();
+  m_redirections = i.ReadU8();
 }
 
 void Ipv4DoppelgangerTag::Print(std::ostream &os) const
@@ -171,8 +187,9 @@ void Ipv4DoppelgangerTag::Print(std::ostream &os) const
   {
     os << "Replica " << itt << " " << m_replicas[itt];
   }
-  os << "host sojourn time = "<< m_host_sojourn_time;
-  os << "host load = "<< m_host_load;
+  os << "host sojourn time = " << m_host_sojourn_time;
+  os << "host load = " << m_host_load;
+  os << "redirections = " << m_redirections;
 }
 
 } // namespace ns3

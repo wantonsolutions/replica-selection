@@ -45,6 +45,9 @@ public:
     void SetHostLoad(uint64_t load);
     uint64_t GetHostLoad();
 
+    void SetRedirections(uint8_t redirections);
+    uint8_t GetRedirections();
+
     virtual TypeId GetInstanceTypeId (void) const;
 
     virtual uint32_t GetSerializedSize (void) const;
@@ -64,6 +67,7 @@ private:
     uint32_t m_replicas[MAX_REPLICAS];
     uint64_t m_host_sojourn_time;
     uint64_t m_host_load;
+    uint8_t m_redirections;
 };
 
 
@@ -79,6 +83,7 @@ struct RPCHeader {
   uint32_t Replicas[MAX_REPLICAS]; //IP addresses of replicas
   uint64_t HostSojournTime;
   uint64_t HostLoad;
+  uint8_t Redirections;
 };
 
 void DecodeRPCHeader(RPCHeader* decodeTo, char * encodedBytes);

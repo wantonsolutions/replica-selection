@@ -430,7 +430,7 @@ Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(std::vector<uint32
   uint64_t minLoad = UINT64_MAX;
   uint32_t minReplica;
 
-  //TODO 
+  //TODO make this a command line argument
   m_information_collection_method = piggyback;
 
   switch (m_information_collection_method){
@@ -617,7 +617,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
     {
       uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
       Ipv4Address ipv4Addr = headerPrime.GetDestination();
-      if (min_replica == ipv4Addr.Get())
+      if (min_replica == ipv4Addr.Get() || tag.GetRedirections() >= MAX_REPLICAS)
       {
         NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
       }
@@ -626,6 +626,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
         NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
         destAddress.Set(min_replica);
         headerPrime.SetDestination(destAddress);
+        tag.SetRedirections(tag.GetRedirections() + 1);
         m_packet_redirections++;
       }
       //Tag can be routed down from anywhere
@@ -654,6 +655,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
           destAddress.Set(min_replica);
           headerPrime.SetDestination(destAddress);
           tag.SetCanRouteDown(true);
+          tag.SetRedirections(tag.GetRedirections() + 1);
           m_packet_redirections++;
         }
         else
@@ -678,6 +680,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
         destAddress.Set(min_replica);
         headerPrime.SetDestination(destAddress);
         tag.SetCanRouteDown(true);
+        tag.SetRedirections(tag.GetRedirections() + 1);
         m_packet_redirections++;
       }
       tag.SetCanRouteDown(true);
@@ -713,6 +716,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
           NS_LOG_WARN("Host: " << stringIP(m_addr.Get()) << " the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
           destAddress.Set(min_replica);
           headerPrime.SetDestination(destAddress);
+          tag.SetRedirections(tag.GetRedirections() + 1);
           m_packet_redirections++;
         }
       }
@@ -748,12 +752,14 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
       }
       else
       {
-        if (m_fattree_switch_type == edge)
+        //.if (m_fattree_switch_type == edge && tag.GetRedirections() <= MAX_REPLICAS) 
+        if (m_fattree_switch_type == edge && tag.GetRedirections() <= MAX_REPLICAS && m_local_server_load[headerPrime.GetDestination().Get()] > 30000 ) 
         {
           NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
           destAddress.Set(min_replica);
           headerPrime.SetDestination(destAddress);
           tag.SetCanRouteDown(true);
+          tag.SetRedirections(tag.GetRedirections() + 1);
           m_packet_redirections++;
         }
         else

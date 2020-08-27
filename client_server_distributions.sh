@@ -4,9 +4,9 @@
 #date="2020-08-11"
 date=`date "+%F"`
 #date="2020-08-18"
-#dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor")
+dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor")
 
-dirs=("0" "3500" "7000" "10500" "14000" "17500" "21000" "24500" "28000")
+#dirs=("0" "3500" "7000" "10500" "14000" "17500" "21000" "24500" "28000")
 #dirs=("0" "3500" ) 
 
 arguments='
@@ -119,8 +119,8 @@ fi
 
 
 if [ ! -z "$prefix" ]; then
-    RunDelay
-    #RunNetLB
+    #RunDelay
+    RunNetLB
 fi
 #RunRandomLoad
 

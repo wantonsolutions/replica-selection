@@ -579,6 +579,7 @@ void RpcClient::Send(void)
   ipv4DoppelgangerTag.SetPacketType(Ipv4DoppelgangerTag::request);
   ipv4DoppelgangerTag.SetPacketID(0); 
   ipv4DoppelgangerTag.SetHostSojournTime(0);
+  ipv4DoppelgangerTag.SetRedirections(0);
 
   // Generate the location of the next reuqest
   uint32_t request_id = GetNextRPC();
