@@ -160,6 +160,8 @@ public:
   void SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log);
   void SetReplicaSelectionStrategy(selectionStrategy strategy);
 
+  void SetLocalPort(uint16_t);
+
   void SetInformationDelayFunction(InformationDelayFunction delay_function);
   InformationDelayFunction GetInformationDelayFunction();
   void SetConstantDelay(uint64_t delay);
@@ -240,6 +242,8 @@ private:
   EventId m_sendEvent; //!< Event to send the next packet
 
   bool m_parallel; //true if running on a parallel fat-tree
+
+  uint16_t m_local_port;
 
   uint32_t m_numPeers;                     //Total Number of peers
   Address **m_peerAddresses_parallel;    //Array of Peer Addresses

@@ -685,7 +685,7 @@ std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad
 }
 
 void SetupRpcClient(
-    float duration, uint16_t Ports[NODES], Address addresses[NODES], int trafficMatrix[NODES][NODES], NodeContainer nodes,
+    float duration, uint16_t local_port, uint16_t Ports[NODES], Address addresses[NODES], int trafficMatrix[NODES][NODES], NodeContainer nodes,
     int clientIndex, uint32_t *global_packets_sent,
     std::vector<uint32_t> ClientPacketSizeDistribution,
     std::vector<uint32_t> ClientTransmissionDistribution,
@@ -714,6 +714,7 @@ void SetupRpcClient(
   }
   //uec->SetAllAddresses((Address **)(addresses),(uint16_t **)(Ports),PARALLEL,NODES);
   //uec->SetAllAddresses(addrs, ports, tm, PARALLEL, NODES);
+  uec->SetLocalPort(local_port);
   uec->SetAllAddresses(addrs, ports, tm, NODES);
   uec->SetGlobalPackets(global_packets_sent);
   uec->SetRpcServices(rpcServices);
@@ -778,7 +779,7 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
 
 void SetupTraffic(float duration,
 
-                  int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], RpcClient::selectionStrategy rpcSelectionStrategy, Address rpcServerAddresses[NODES], uint16_t Ports[NODES],
+                  uint16_t clientport, int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], RpcClient::selectionStrategy rpcSelectionStrategy, Address rpcServerAddresses[NODES], uint16_t Ports[NODES],
                   uint32_t *global_packets_sent,
                   std::vector<uint32_t> ClientPacketSizeDistribution,
                   std::vector<uint32_t> ClientTransmissionDistribution,
@@ -816,7 +817,7 @@ void SetupTraffic(float duration,
   //Setup clients on every node
   for (int i = 0; i < numNodes; i++)
   {
-    SetupRpcClient(duration, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, 
+    SetupRpcClient(duration, clientport, Ports, rpcServerAddresses, tm, nodes, i, global_packets_sent, ClientPacketSizeDistribution, 
     ClientTransmissionDistribution, RPCServiceDistribution, rpcSelectionStrategy, rpcReplicas, serverLoad, serverLoad_update, serverLoad_log,
     idf, information_delay
     );
@@ -1363,6 +1364,7 @@ int main(int argc, char *argv[])
   //Setup Clients
   ///////////////////////////////////////////////////////////////////////////////////
   int RpcServerPort = 10;
+  uint16_t RpcClientPort = 25;
   float duration = 0.05;
   //float duration = 0.003;
 
@@ -1453,6 +1455,7 @@ int main(int argc, char *argv[])
   ServerLoadAtTime(0,0,&serverLoadLog);
   SetupTraffic(
       duration,
+      RpcClientPort,
       RpcServerPort,
       nodes,
       NODES,         //total nodes
