@@ -272,6 +272,37 @@ void
 RpcServer::SpreadLoadInformation() {
   NS_LOG_INFO("Spreading information on host " <<  m_id << " To all clients at time " << Simulator::Now().GetNanoSeconds());
   //create a packet with Load informatyion
+
+  //Generate a packet based on the size of the next request
+  //TODO generate a schema by which multiple packets are sent per request
+  Ptr<Packet> p;
+  uint32_t packet_size = 128;
+  p = Create<Packet>(packet_size);
+  Ipv4DoppelgangerTag ipv4DoppelgangerTag;
+  ipv4DoppelgangerTag.SetCanRouteDown(false);
+  ipv4DoppelgangerTag.SetPacketType(Ipv4DoppelgangerTag::load);
+  ipv4DoppelgangerTag.SetPacketID(0); 
+  ipv4DoppelgangerTag.SetHostSojournTime(0);
+  ipv4DoppelgangerTag.SetRedirections(0);
+  ipv4DoppelgangerTag.SetRequestID(0);
+  ipv4DoppelgangerTag.SetHostLoad(GetInstantenousLoad());
+  p->AddPacketTag(ipv4DoppelgangerTag);
+
+
+  for(uint i =0; i<m_client_addresses.size();i++){ 
+    // PacketID is an analog for sequence number, for now request are a single packet so always set to 0
+    p->RemovePacketTag(ipv4DoppelgangerTag);
+    for(uint r=0;r<MAX_REPLICAS;r++) {
+      ipv4DoppelgangerTag.SetReplica(i,Ipv4Address::ConvertFrom(m_client_addresses[i]).Get());
+    }
+    p->AddPacketTag(ipv4DoppelgangerTag);
+
+    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_client_addresses[i]), m_client_ports[i]));
+    m_socket->Send(p);
+  }
+
+
+
   //Aquire IP's of every client
   //spread the information to every client
   Simulator::Schedule(NanoSeconds(m_information_spread_period), &RpcServer::SpreadLoadInformation, this);

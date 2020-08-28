@@ -621,6 +621,11 @@ void RpcClient::HandleRead(Ptr<Socket> socket)
         return;
       }
 
+      if (ipv4DoppelgangerTag.GetPacketType() == Ipv4DoppelgangerTag::load) {
+          //server_local_load[id] == ipv4DoppelgangerTag.GetHostLoad();
+          NS_LOG_INFO("Got Host load of " << ipv4DoppelgangerTag.GetHostLoad() << " from " << InetSocketAddress::ConvertFrom(from).GetIpv4() );
+      }
+
       m_rec++;
       //NS_LOG_INFO("Tag ID" << idtag.GetSenderTimestamp());
       //NS_LOG_INFO("timestamp index " << idtag.GetSenderTimestamp().GetNanoSeconds());

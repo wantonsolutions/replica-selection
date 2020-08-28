@@ -133,8 +133,8 @@ done
 
 if [ ! -z "$JUSTPLOT" ]; then
     echo "Just plotting this round"
-    #PlotKnown
-    #MoveKnown
+    PlotKnown
+    MoveKnown
     PlotAgg
     exit 0
 fi
