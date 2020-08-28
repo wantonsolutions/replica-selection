@@ -62,6 +62,33 @@ function MoveKnown {
         cp ${prefix}_${dir}_${date}/Avg_Agg_Latency.db ${prefix}/${dir}.db
         cp ${prefix}_${dir}_${date}/Avg_Agg_Switch.db ${prefix}/${dir}_switch.db
     done
+    popd
+}
+
+function PlotAgg {
+    pushd Experiments/${prefix}
+    mkdir switch
+    mv *_switch.db switch
+    mkdir node
+    mv *.db node
+    pushd node
+
+    pwd
+
+    args=""
+    for dir in ${dirs[@]}; do
+        args="$args ${dir}.db"
+    done
+    python ../../../plot/library/multi_run_latency_comp.py "50" $args
+    python ../../../plot/library/multi_run_latency_comp.py "95" $args
+    python ../../../plot/library/multi_run_latency_comp.py "99" $args
+    python ../../../plot/library/multi_run_latency_comp.py "99.9" $args
+    python ../../../plot/library/multi_run_latency_comp.py "99.99" $args
+    mv *.pdf ../
+    popd 
+    popd
+
+    
 }
 
 function RunNNAverage {
@@ -106,8 +133,9 @@ done
 
 if [ ! -z "$JUSTPLOT" ]; then
     echo "Just plotting this round"
-    PlotKnown
-    MoveKnown
+    #PlotKnown
+    #MoveKnown
+    PlotAgg
     exit 0
 fi
 
@@ -128,4 +156,5 @@ if [ ! -z "$PLOT" ]; then
     echo "Plotting last set of runs"
     PlotKnown
     MoveKnown
+    PlotAgg
 fi

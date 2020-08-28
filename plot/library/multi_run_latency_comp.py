@@ -50,6 +50,9 @@ linetype = ['-',':','--']
 
 #figure(num=None, figsize=(15, 15), dpi=80, facecolor='w', edgecolor='k')
 
+#first argument is percentage
+percentage=sys.argv.pop(0)
+
 filenames=sys.argv
 print (filenames)
 
@@ -67,7 +70,7 @@ base = filenames[0]
 filenames.pop(0) #remove the base
 #treatment = filenames[1]
 
-measurement=client_strategy+"_50"
+measurement=client_strategy+"_"+percentage
 
 #print(avg_runs)
 print avg_runs[base]
@@ -149,7 +152,7 @@ for i in range(len(filenames)):
 #plt.xlabel("Server Delay Mean", fontweight='bold')
 plt.tight_layout()
 #plt.tight_layout(rect=(0,0.1,1,1))
-plt.savefig("Heatmap.pdf")
+plt.savefig("Heatmap_"+percentage+".pdf")
 
 plt.clf()
 
