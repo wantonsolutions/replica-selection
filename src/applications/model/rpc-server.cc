@@ -175,6 +175,15 @@ RpcServer::GetRequestLoad(){
   return m_load_distribution[rand() % m_load_distribution.size()];
 }
 
+
+void 
+RpcServer::SetClientAddresses(uint32_t num_clients, uint16_t port, Address * addresses) {
+  for (uint i=0;i<num_clients;i++) {
+    m_client_addresses.push_back(addresses[i]);
+    m_client_ports.push_back(port);
+  }
+}
+
 uint32_t
 RpcServer::GetInstantenousLoad() {
   Time now = Simulator::Now();

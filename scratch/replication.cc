@@ -779,7 +779,14 @@ void populateTrafficMatrix(int tm[NODES][NODES], int pattern)
 
 void SetupTraffic(float duration,
 
-                  uint16_t clientport, int serverport, NodeContainer nodes, int numNodes, int tm[NODES][NODES], RpcClient::selectionStrategy rpcSelectionStrategy, Address rpcServerAddresses[NODES], uint16_t Ports[NODES],
+                  uint16_t clientport, 
+                  int serverport, 
+                  NodeContainer nodes, 
+                  int numNodes,
+                  int tm[NODES][NODES], 
+                  RpcClient::selectionStrategy rpcSelectionStrategy,
+                  Address rpcServerAddresses[NODES],
+                  uint16_t Ports[NODES],
                   uint32_t *global_packets_sent,
                   std::vector<uint32_t> ClientPacketSizeDistribution,
                   std::vector<uint32_t> ClientTransmissionDistribution,
@@ -812,6 +819,7 @@ void SetupTraffic(float duration,
     server->SetGlobalLoadLog(serverLoad_log);
     server->SetID(i);
     server->SetLoadDistribution(ServerLoadDistribution);
+    server->SetClientAddresses(NODES,clientport,rpcServerAddresses);
   }
 
   //Setup clients on every node

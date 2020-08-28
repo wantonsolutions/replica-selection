@@ -73,6 +73,8 @@ public:
   void SetGlobalLoadLog(std::vector<std::vector<LoadEvent>>* global_load_log);
   void SetID(int id);
 
+  void SetClientAddresses(uint32_t num_clients, uint16_t port, Address * addresses);    //Array of Peer Addresses
+
   void SetLoadDistribution(std::vector<uint32_t> loadDistribution);
   std::vector<uint32_t> GetLoadDistribution();
   void SpreadLoadInformation();
@@ -119,6 +121,10 @@ private:
   uint64_t m_min_time_between_delays = 500000;
   uint64_t m_delay_time = 500000;
   uint64_t m_last_delay = 0;
+
+
+  std::vector<Address> m_client_addresses;    //Array of Peer Addresses
+  std::vector<uint16_t> m_client_ports;          //Corresponding array of peer ports
 
 
   std::vector<int> m_serviceable_rpcs;
