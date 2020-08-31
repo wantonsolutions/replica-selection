@@ -530,7 +530,14 @@ RpcClient::GetInstantenousLoad(int server_id) {
      return 0;
    }
    //TODO change rand to rand seed for future experiments
-   uint32_t index = m_rpc_request_distribution[rand() % m_rpc_request_distribution.size()];
+   
+   //Random Uniform
+   //uint32_t index = m_rpc_request_distribution[rand() % m_rpc_request_distribution.size()];
+
+   //Round robin deterministic
+   //This picks a single service and blasts it for 5 microseconds from all servers
+   uint32_t index = (Simulator::Now().GetMicroSeconds() / 200) % 16;
+   
 
    if(index >= m_rpc_server_replicas.size()) {
      NS_LOG_WARN(this << " server RPC " << index << " requested is out of range of the known services, check the generation code for RPC generation, (returning 0, this will likely cause incast");

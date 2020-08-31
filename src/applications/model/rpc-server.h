@@ -115,9 +115,10 @@ private:
   uint64_t *m_serverLoad; // global server load in nanoseconds
   Time *m_serverLoad_update; //The last time load was observed on this server, used to calculate instantenous load.
 
-  InformationSpreadingFunction m_information_function = periodic;
+  InformationSpreadingFunction m_information_function = piggyback;
   uint64_t m_information_spread_period = 3500;
 
+  bool m_gc_delay = false;
   uint64_t m_min_time_between_delays = 500000;
   uint64_t m_delay_time = 500000;
   uint64_t m_last_delay = 0;

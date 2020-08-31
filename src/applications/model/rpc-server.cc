@@ -406,10 +406,12 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       ScheduleResponse(NanoSeconds(((m_serverLoad)[m_id])), socket, packet, from, requestProcessingTime);
 
       //Inject some periodic delay.
-      if (m_last_delay == 0 || (Simulator::Now().GetNanoSeconds() - m_last_delay) > m_min_time_between_delays) {
-        if (rand() % 500) {
-          (m_serverLoad)[m_id] = GetInstantenousLoad() + m_delay_time;
-           m_last_delay = Simulator::Now().GetNanoSeconds();
+      if (m_gc_delay) {
+        if (m_last_delay == 0 || (Simulator::Now().GetNanoSeconds() - m_last_delay) > m_min_time_between_delays) {
+          if (rand() % 500) {
+            (m_serverLoad)[m_id] = GetInstantenousLoad() + m_delay_time;
+            m_last_delay = Simulator::Now().GetNanoSeconds();
+          }
         }
       }
 
