@@ -2,7 +2,7 @@
 #define NS3_IPV4_DOPPELGANGER_TAG
 
 #define MAX_REPLICAS 2
-
+#define KTAG 4
 #include "ns3/tag.h"
 
 namespace ns3 {
@@ -11,6 +11,7 @@ class Ipv4DoppelgangerTag: public Tag
 {
 public:
 
+
     enum PacketType
     {
       request = 0,
@@ -18,6 +19,7 @@ public:
       load = 2,
       response_piggyback = 3,
     };
+
 
     Ipv4DoppelgangerTag ();
 
@@ -40,6 +42,10 @@ public:
 
     void SetReplica(uint32_t index, uint32_t replicaAddress);
     uint32_t GetReplica(uint32_t index);
+
+    void SetTorQueueDepth(uint32_t index, uint32_t serverAddress, uint8_t depth);
+    uint32_t GetTorReplica(uint32_t index);
+    uint8_t GetTorReplicaQueueDepth(uint32_t index);
 
     void SetHostSojournTime(uint64_t time);
     uint64_t GetHostSojournTime();
@@ -70,6 +76,8 @@ private:
     uint64_t m_host_sojourn_time;
     uint64_t m_host_load;
     uint8_t m_redirections;
+    uint32_t m_tor_ip[KTAG/2];
+    uint8_t m_tor_ip_queue_depth[KTAG/2];
 };
 
 
@@ -86,6 +94,9 @@ struct RPCHeader {
   uint64_t HostSojournTime;
   uint64_t HostLoad;
   uint8_t Redirections;
+  uint32_t TorIP[KTAG/2];
+  uint8_t TorIPQueueDepth[KTAG/2];
+
 };
 
 void DecodeRPCHeader(RPCHeader* decodeTo, char * encodedBytes);

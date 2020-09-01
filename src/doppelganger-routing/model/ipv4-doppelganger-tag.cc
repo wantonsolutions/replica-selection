@@ -89,6 +89,21 @@ Ipv4DoppelgangerTag::GetReplica(uint32_t index)
   return m_replicas[index];
 }
 
+
+ void Ipv4DoppelgangerTag::SetTorQueueDepth(uint32_t index, uint32_t serverAddress, uint8_t depth){
+   m_tor_ip[index]=serverAddress;
+   m_tor_ip_queue_depth[index]=depth;
+   return;
+ }
+
+ uint32_t Ipv4DoppelgangerTag::GetTorReplica(uint32_t index){
+   return m_tor_ip[index];
+ }
+ 
+ uint8_t Ipv4DoppelgangerTag::GetTorReplicaQueueDepth(uint32_t index) {
+   return m_tor_ip_queue_depth[index];
+ }
+
 uint32_t *
 Ipv4DoppelgangerTag::GetReplicas(void) const
 {
@@ -144,7 +159,9 @@ Ipv4DoppelgangerTag::GetSerializedSize(void) const
          (sizeof(uint32_t) * MAX_REPLICAS) + //replicas
          sizeof(uint64_t) +                  //sojour_time
          sizeof(uint64_t) +                   //load
-         sizeof(uint8_t);                     //redirections
+         sizeof(uint8_t) +                     //redirections
+         sizeof(uint32_t) * (KTAG/2) +          //servers under the tor
+         sizeof(uint8_t) * (KTAG/2);            //queue depth for a sever under the tor
 }
 
 void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
@@ -160,6 +177,11 @@ void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
   i.WriteU64(m_host_sojourn_time);
   i.WriteU64(m_host_load);
   i.WriteU8(m_redirections);
+  for (int itt = 0; itt < KTAG/2; itt++)
+  {
+    i.WriteU32(m_tor_ip[itt]);
+    i.WriteU8(m_tor_ip_queue_depth[itt]);
+  }
 }
 
 void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
@@ -175,6 +197,12 @@ void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
   m_host_sojourn_time = i.ReadU64();
   m_host_load = i.ReadU64();
   m_redirections = i.ReadU8();
+
+  for (int itt = 0; itt < KTAG/2; itt++)
+  {
+    m_tor_ip[itt] = i.ReadU32();
+    m_tor_ip_queue_depth[itt] = i.ReadU8();
+  }
 }
 
 void Ipv4DoppelgangerTag::Print(std::ostream &os) const
@@ -190,6 +218,10 @@ void Ipv4DoppelgangerTag::Print(std::ostream &os) const
   os << "host sojourn time = " << m_host_sojourn_time;
   os << "host load = " << m_host_load;
   os << "redirections = " << m_redirections;
+  for (int itt = 0; itt < KTAG/2; itt++)
+  {
+    os << "Tor Sever " << itt << " " << m_tor_ip[itt] << "Has Queue Depth " << m_tor_ip_queue_depth;
+  }
 }
 
 } // namespace ns3

@@ -1374,7 +1374,7 @@ int main(int argc, char *argv[])
   ///////////////////////////////////////////////////////////////////////////////////
   int RpcServerPort = 10;
   uint16_t RpcClientPort = 25;
-  float duration = 1.0;
+  float duration = 5.0;
   //float duration = 0.003;
 
   uint32_t global_packets_sent = 0;
