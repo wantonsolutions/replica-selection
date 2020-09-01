@@ -97,6 +97,14 @@ bool SamePod(Ipv4Address first, Ipv4Address second)
   return b1 == b2;
 }
 
+bool ClientBelowTor(uint32_t torIp, uint32_t clientIp){
+  int a1, b1, c1, d1, a2, b2, c2, d2;
+  translateIp(torIp, &a1, &b1, &c1, &d1);
+  translateIp(clientIp, &a2, &b2, &c2, &d2);
+  return (a1 == a2 && b1 == b2 && c1 == c2);
+
+}
+
 uint32_t OtherPodAddress(Ipv4Address current, int K)
 {
   int a, b, c, d;
@@ -386,6 +394,11 @@ uint64_t Ipv4DoppelgangerRouting::GetConstantDelay()
 {
   return m_constant_information_delay;
 }
+
+void Ipv4DoppelgangerRouting::SetGlobalTorQueueDepth(std::map<uint32_t,uint32_t> *tor_service_queue_depth){
+  m_tor_service_queue_depth = tor_service_queue_depth;
+}
+
 /* END DoppleGanger Routing function additions*/
 
 Ptr<Ipv4Route>
@@ -719,7 +732,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
           tag.SetRedirections(tag.GetRedirections() + 1);
           m_packet_redirections++;
         }
-      }
+      } 
       else
       {
         NS_LOG_WARN("Still Routing UP The tree");
@@ -770,6 +783,61 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
       tag.SetCanRouteDown(true);
       break;
     }
+    case torQueueDepth:
+    {
+      if (m_fattree_switch_type == edge) {
+        //Find the global min tor queue
+        uint32_t min = UINT32_MAX;
+        uint32_t min_replica;
+        for(uint i=0;i<replicas.size();i++) {
+          if((*m_tor_service_queue_depth)[replicas[i]] < min) {
+            min_replica = replicas[i];
+          }
+        }
+
+        uint32_t selected_replica;
+
+        //Check if the packet has been redirected
+        Ipv4Address ipv4Addr = headerPrime.GetDestination();
+        if (min_replica == ipv4Addr.Get())
+        {
+          NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
+        } 
+        else {
+          NS_LOG_INFO("min tor has changed. potentiall prevent additonal routing");
+        }
+
+
+        //TODO these decisions should be made together
+        // Check that a threshold is met before re-routing
+        if ( (*m_tor_service_queue_depth)[min_replica] < (*m_tor_service_queue_depth)[ipv4Addr.Get()] ) {
+          selected_replica = min_replica;
+        } else {
+          selected_replica = ipv4Addr.Get();
+        }
+
+        // Over ride desicion if the packet has been redirected allready
+        //Only redirect a packet if another replica is available don't send in network indefinatly
+        if (tag.GetRedirections() >= (MAX_REPLICAS - 1)) {
+          selected_replica = ipv4Addr.Get();
+        }
+
+        //Set the minimum destination
+        destAddress.Set(selected_replica);
+        headerPrime.SetDestination(destAddress);
+        tag.SetCanRouteDown(true);
+        tag.SetRedirections(tag.GetRedirections() + 1);
+        m_packet_redirections++;
+
+        //Increment Tor counter if the request is below
+        if (ClientBelowTor(m_addr.Get(), destAddress.Get())) {
+
+          NS_LOG_INFO("Tor " << stringIP(m_addr.Get()) << " passing new request queue incremend");
+          (*m_tor_service_queue_depth)[destAddress.Get()]++;
+          NS_LOG_INFO("Tor  queu depth now " << (*m_tor_service_queue_depth)[destAddress.Get()]);
+        }
+      }
+    }
 
     default:
       NS_LOG_WARN("Unable to find load ballencing strategy");
@@ -792,6 +860,31 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
     Ipv4Address source = headerPrime.GetSource();
     m_local_server_load[source.Get()] = tag.GetHostLoad();
     NS_LOG_INFO("Updated Server load from piggybacked response" << stringIP(source.Get()) << " To " << tag.GetHostLoad());
+
+
+    //This is the incorrect place to put this becasue it has perfect information, it should not be under piggyback.
+    switch (m_load_balencing_strategy)
+    {
+      case torQueueDepth:
+      {
+        if (m_fattree_switch_type == edge) {
+          NS_LOG_INFO("Checking Tor Queue Depth");
+          Ipv4Address source = headerPrime.GetSource();
+          //Increment Tor counter if the request is below
+          NS_LOG_INFO("Server Address " << stringIP(source.Get()) << " Tor IP " << stringIP(m_addr.Get()));
+          if (ClientBelowTor(m_addr.Get(), source.Get())) {
+            NS_LOG_INFO("Tor " << stringIP(m_addr.Get()) << " completed request subtracting queue");
+            (*m_tor_service_queue_depth)[source.Get()]--;
+            NS_LOG_INFO("Tor  queu depth now " << (*m_tor_service_queue_depth)[source.Get()]);
+          }
+        }
+        break;
+      }
+      default:
+      {
+        NS_LOG_INFO("Not doing anything special based on load balancing strategy (piggyback)");
+      }
+    }
   } 
   else
   {

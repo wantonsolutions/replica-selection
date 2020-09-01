@@ -14,6 +14,8 @@ NetworkSelectionStrategy["coreOnly"]=2
 NetworkSelectionStrategy["minDistanceMinLoad"]=3
 NetworkSelectionStrategy["coreForcedMinDistanceMinLoad"]=4
 NetworkSelectionStrategy["torOnly"]=5
+NetworkSelectionStrategy["torQueueDepth"]=6
+
 
 debug=false
 
@@ -420,11 +422,12 @@ function RunDelay {
 function RunProportialLoadArgs {
 	echo "Running Normal Server Load"
 
-	processing="250"
+	#processing="250"
+	processing="10000"
 	shift="5000"
 	#have to convert this manually
-	lambda="0.05"
-	lambdaINV="20"
+	lambda="0.005"
+	lambdaINV="200"
 
 	local args="$@"
 	#local loadArgs=$(NormalServerLoad $processing $std) #Normal Distribution
@@ -436,14 +439,6 @@ function RunProportialLoadArgs {
 	let "expmean = ($shift + ($processing * $lambdaINV))"
 	echo "Expmean = $expmean"
 	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
-	#local proportion=(5 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200)
-	#local proportion=(5 10 15 20 25 30 35 40 45 50)
-	#local proportion=(80 85 90 95 100)
-	#local proportion=(10 12 14 16 18 20 22 24 26 28 30 32 34 36 )
-	#local proportion=(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)
-	#local proportion=(10 50)
-	#local proportion=(10 50 90 100)
-	#local proportion=(50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75)
 
 	for p in ${proportion[@]}; do
 		#let "mean = (($shift + ($processing * $lambdaINV)) * $p) / 100"
@@ -512,6 +507,11 @@ function RunProportionalMinDistanceMinLoadCore {
 
 function RunProportionalTorOnly {
 	local networkArgs=$(NetworkSelectionStrat torOnly)
+	RunProportialLoadArgs "${networkArgs} "
+}
+
+function RunProportionalTorQueueDepth {
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
 	RunProportialLoadArgs "${networkArgs} "
 }
 
@@ -598,6 +598,93 @@ function RunProportionalLoadUU {
 	done
 }
 
+
+function RunProcessingSkew {
+	echo "Running Normal Server Load"
+
+	processing="$@"
+	shift="5000"
+	#have to convert this manually
+	lambda="0.05"
+	lambdaINV="20"
+
+	#local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local networkArgs=$(NetworkSelectionStrat none)
+	#local loadArgs=$(NormalServerLoad $processing $std) #Normal Distribution
+	local loadArgs=$(ExponentialServerLoad $lambda $processing $shift) #Exponential Distribution
+
+	local packetArgs=$(NormalPacketSizes 128 12)
+	local delayArgs=$(ConstantInformationDelay 0)
+
+	let "expmean = ($shift + ($processing * $lambdaINV))"
+	echo "Expmean = $expmean"
+	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+	for p in ${proportion[@]}; do
+		#let "mean = (($shift + ($processing * $lambdaINV)) * $p) / 100"
+		let "mean = (($shift + ($processing * $lambdaINV)) * 100) / $p"
+		echo "Normal Mean = $mean"
+		let "std = (mean * 100) / 65"
+		#let "std = ${mean} / 10"
+
+		#client mean = Shift + (processing / lambda)
+		local transmissionArgs=$(NormalClientTransmission $mean $std)
+		#local transmissionArgs=$(ExponentialClientTransmission $lambda $mean 0.0)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs}" &
+		sleep 1
+		popd
+
+		while true; do
+        #Get Current number of running processes
+			start=`wc $startfile | awk '{print $1}'`
+			stop=`wc $stopfile | awk '{print $1}'`
+			if [[ $stop == "" ]]; then
+				stop="0"
+			fi
+			let 'running=start-stop'
+			echo "Running Jobs $running max allowed $max_running (start $start stop $stop)"
+
+			#Wait for jobs to finish or start a new one
+			if [[ "$running" -gt "$max_running" ]]; then
+				sleep 1
+			else
+				break
+			fi
+		done
+
+		#exit
+	done
+}
+
+function RunProcessingSkew250 {
+	RunProcessingSkew "250"
+}
+
+function RunProcessingSkew500 {
+ 	RunProcessingSkew "500"
+}
+
+function RunProcessingSkew1000 {
+ 	RunProcessingSkew "1000"
+}
+
+function RunProcessingSkew2000 {
+ 	RunProcessingSkew "2000"
+}
+
+function RunProcessingSkew5000 {
+ 	RunProcessingSkew "5000"
+}
+
+function RunProcessingSkew10000 {
+ 	RunProcessingSkew "10000"
+}
+
+
 function  RunDebug {
 	debug=true
 	echo "Running Debug"
@@ -609,7 +696,7 @@ function  RunDebug {
 	#selectionArgs=$(RpcSelectionStrat single)
 	selectionArgs=$(RpcSelectionStrat random)
 	#networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
-	networkSelectionArgs=$(NetworkSelectionStrat torOnly)
+	networkSelectionArgs=$(NetworkSelectionStrat torQueueDepth)
 	configArgs=$(ConfigArgs results)
 	currentdir=`pwd`
 	delayArgs=$(ConstantInformationDelay 0)

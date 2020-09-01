@@ -536,7 +536,7 @@ RpcClient::GetInstantenousLoad(int server_id) {
 
    //Round robin deterministic
    //This picks a single service and blasts it for 5 microseconds from all servers
-   uint32_t index = (Simulator::Now().GetMicroSeconds() / 200) % 16;
+   uint32_t index = (Simulator::Now().GetMicroSeconds() / 50) % 16;
    
 
    if(index >= m_rpc_server_replicas.size()) {

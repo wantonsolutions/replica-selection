@@ -72,6 +72,8 @@ filenames.pop(0) #remove the base
 
 measurement=client_strategy+"_"+percentage
 
+calibration=[-100.0, 100.0]
+
 #print(avg_runs)
 print avg_runs[base]
 xaxis=GetAverageArr(avg_runs[base][client_strategy+"_x"])
@@ -120,7 +122,7 @@ for filename in filenames:
 #plt.bar(xaxis,diff,width=4.5,color=colors["minimum"])
 fig, ax = plt.subplots()
 #im = ax.imshow(min_treatments_diff_err)
-im = ax.imshow(min_treatments_diff)
+im = ax.imshow(min_treatments_diff, vmin=-100, vmax=100)
 
 
 # We want to show all ticks...

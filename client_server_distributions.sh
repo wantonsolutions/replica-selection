@@ -4,7 +4,9 @@
 #date="2020-08-11"
 date=`date "+%F"`
 #date="2020-08-18"
-dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor")
+dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor" "TorQ")
+
+#dirs=("250" "500" "1000" "2000" "5000" "10000")
 
 #dirs=("0" "3500" "7000" "10500" "14000" "17500" "21000" "24500" "28000")
 #dirs=("0" "3500" ) 
@@ -32,6 +34,7 @@ function RunNetLB {
     ./run.sh -n="${prefix}_MDML" -r=$RUNS -f="RunProportionalMinDistanceMinLoad"
     ./run.sh -n="${prefix}_MDMLC" -r=$RUNS -f="RunProportionalMinDistanceMinLoadCore"
     ./run.sh -n="${prefix}_Tor" -r=$RUNS -f="RunProportionalTorOnly"
+    ./run.sh -n="${prefix}_TorQ" -r=$RUNS -f="RunProportionalTorQueueDepth"
 }
 
 function RunDelay {
@@ -42,7 +45,15 @@ function RunDelay {
         ./run.sh -n="${prefix}_$i" -r=$RUNS -f="RunDelay" --delay="$i"
         echo "Running delay $i"
     done
+}
 
+function RunSkew {
+    ./run.sh -n="${prefix}_250" -r=$RUNS -f="RunProcessingSkew250"
+    ./run.sh -n="${prefix}_500" -r=$RUNS -f="RunProcessingSkew500"
+    ./run.sh -n="${prefix}_1000" -r=$RUNS -f="RunProcessingSkew1000"
+    ./run.sh -n="${prefix}_2000" -r=$RUNS -f="RunProcessingSkew2000"
+    ./run.sh -n="${prefix}_5000" -r=$RUNS -f="RunProcessingSkew5000"
+    ./run.sh -n="${prefix}_10000" -r=$RUNS -f="RunProcessingSkew10000"
 }
 
 
@@ -149,6 +160,7 @@ fi
 if [ ! -z "$prefix" ]; then
     #RunDelay
     RunNetLB
+    #RunSkew
 fi
 #RunRandomLoad
 

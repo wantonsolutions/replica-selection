@@ -62,6 +62,7 @@ public:
     minDistanceMinLoad=3,
     coreForcedMinDistanceMinLoad=4,
     torOnly=5,
+    torQueueDepth=6,
   };
 
   enum FatTreeSwitchType
@@ -116,6 +117,7 @@ public:
   void SetGlobalServerLoadUpdate(Time *serverLoad_update);
   void SetLoadBalencingStrategy(LoadBalencingStrategy strategy);
   void SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log);
+  void SetGlobalTorQueueDepth(std::map<uint32_t,uint32_t> *tor_service_queue_depth);
 
   void SetFatTreeSwitchType(FatTreeSwitchType ftst);
   FatTreeSwitchType GetFatTreeSwitchType();
@@ -139,8 +141,8 @@ public:
   InformationDelayFunction GetInformationDelayFunction();
   void SetConstantDelay(uint64_t delay);
   uint64_t GetConstantDelay();
-
  uint64_t GetInformationTime();
+
 
 
 
@@ -214,6 +216,8 @@ private:
   //replica locations
   std::vector<std::vector<int>> m_rpc_server_replicas;
   //Ip to replica index
+
+  std::map<uint32_t,uint32_t> *m_tor_service_queue_depth;
   std::map<uint32_t,uint32_t> m_server_ip_map;
   //in network load ballencing strategy
   LoadBalencingStrategy m_load_balencing_strategy;
