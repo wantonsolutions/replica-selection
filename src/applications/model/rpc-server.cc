@@ -401,6 +401,7 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       } else {
         doppelTag.SetPacketType(Ipv4DoppelgangerTag::response);
       }
+      doppelTag.SetTorQueuesNULL();
       //printf("Tag 0:%d\n",doppelTag.GetReplica(0));
       packet->AddPacketTag(doppelTag);
       ScheduleResponse(NanoSeconds(((m_serverLoad)[m_id])), socket, packet, from, requestProcessingTime);

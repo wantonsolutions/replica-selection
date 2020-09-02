@@ -49,6 +49,13 @@ const int CORE = (K / 2) * (K / 2);
 const int NODE = K / 2;
 const int NODES = PODS * EDGE * NODE;
 
+enum ReplicaPlacementAlgorithm {
+  none = 0,
+  randomPlacement = 1,
+  crossCore = 2,
+  sameTor = 3,
+};
+
 RpcClient::selectionStrategy rpcSelectionStrategy = RpcClient::noReplica;
 const char *RpcSelectionStrategyString = "RpcSelectionStrategy";
 Ipv4DoppelgangerRouting::LoadBalencingStrategy networkSelectionStrategy = Ipv4DoppelgangerRouting::none;
@@ -133,6 +140,12 @@ const char *ServerLoadDistributionExponentialMultiplierString = "ServerLoadDistr
 double ServerLoadDistributionExponentialMultiplier = 0.0;
 const char *ServerLoadDistributionExponentialMinString = "ServerLoadDistributionExponentialMin";
 double ServerLoadDistributionExponentialMin = 0.0;
+
+const char *NumReplicasString= "NumReplicas";
+uint32_t NumReplicas = 2;
+
+const char *ReplicaPlacementAlgorithmString="ReplicaPlacementAlgorithm";
+ReplicaPlacementAlgorithm replicaPlacementAlgorithm = crossCore;
 
 const char* InformationDelayFunctionValueString = "InformationDelayFunction";
 InformationDelayFunction InformationDelayFunctionValue = constant;
@@ -334,6 +347,11 @@ void parseArgs(int argc, char *argv[])
   cmd.AddValue(InformationDelayFunctionValueString, "Set the information delay function", placeholderInformationDelayFunctionValue);
   cmd.AddValue(ConstantInformationDelayString, "Set the nanosecond value for the infromation delay to all clients and routers", ConstantInformationDelay);
 
+  //Replica count and algorithm
+  cmd.AddValue(NumReplicasString, "The number of replicas in the simulation", NumReplicas); 
+  int placeholderReplicaPlacementAlgorithm;
+  cmd.AddValue(ReplicaPlacementAlgorithmString, "The placement of the replicas (none, crossCore, sameTor, random)", placeholderReplicaPlacementAlgorithm);
+
   //Set manifest and host name
   cmd.AddValue(WorkingDirectoryString, "The location of the current working directory", WorkingDirectory);
   cmd.AddValue(ManifestNameString, "Then name of the ouput manifest (includes all configurations)", ManifestName);
@@ -342,6 +360,7 @@ void parseArgs(int argc, char *argv[])
 
   rpcSelectionStrategy = (RpcClient::selectionStrategy)placeholderRpcSelectionStrategy;
   networkSelectionStrategy = (Ipv4DoppelgangerRouting::LoadBalencingStrategy)placeholderNetworkSelectionStrategy;
+  replicaPlacementAlgorithm = (ReplicaPlacementAlgorithm)placeholderReplicaPlacementAlgorithm;
   InformationDelayFunctionValue = (InformationDelayFunction)placeholderInformationDelayFunctionValue;
 
 
@@ -681,6 +700,7 @@ std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad
     doppelRouter->SetConstantDelay(information_delay); // This might become irrelevent in the future
     doppelRouter->InitLocalServerLoad();
     doppelRouter->SetGlobalTorQueueDepth(tor_service_queue_depth);
+    doppelRouter->SetLocalTorQueueDepth(*tor_service_queue_depth);
     //Start here we need to get the list routing protocol
   }
 }
@@ -853,25 +873,55 @@ void translateIp(int base, int *a, int *b, int *c, int *d)
 
 //Replication Placement Strategies
 //No replication, each server performs exactly 1 RPC
-void replicationStrategy_noReplication(std::vector<std::vector<int>> *replicas)
+void replicationStrategy_noReplication(std::vector<std::vector<int>> *replicas, uint32_t num_replicas)
 {
   for (int i = 0; i < NODES; i++)
   {
     //Each server serves their own ID's RPC
-    (*replicas)[i].push_back(i);
+    for (uint32_t j=0;j<num_replicas;j++){
+      (*replicas)[i].push_back(i);
+    }
   }
 }
 
 //Replicate each service so that there are 2 instances of the RPC, and they live on oposite halfs ove the fat tree
-void replicationStrategy_crossCoreReplication(std::vector<std::vector<int>> *replicas)
+void replicationStrategy_crossCoreReplication(std::vector<std::vector<int>> *replicas, uint32_t num_replicas)
 {
-  for (int i = 0; i < NODES; i++)
+  for (uint i = 0; i < NODES; i++)
   {
-    //Each server serves their own ID's RPC
-    (*replicas)[i].push_back(i);
-    (*replicas)[i].push_back((i + (NODES / 2)) % NODES);
+    uint32_t current_replica_position = i;
+    for (uint32_t j=0;j<num_replicas;j++){
+      (*replicas)[i].push_back(current_replica_position);
+      current_replica_position = current_replica_position + (NODES / K);
+      if ((current_replica_position % NODES) < current_replica_position) {
+        current_replica_position = (current_replica_position % NODES) + 1;
+      }
+    }
+  }
+  for (uint i = 0; i < NODES; i++) {
+    for (uint j = 0; j< (*replicas)[i].size(); j++ ) {
+      NS_LOG_INFO((*replicas)[i][j]);
+    }
+    NS_LOG_INFO("------");
+  }
+  
+}
+
+//Replicate each service so that there are 2 instances of the RPC, and they live on oposite halfs ove the fat tree
+void replicationStrategy_random(std::vector<std::vector<int>> *replicas, uint32_t num_replicas) {
+  for (uint i = 0; i < NODES; i++)
+  {
+    for (uint32_t j=0;j<num_replicas;j++){
+      (*replicas)[i].push_back(rand() % NODES);
+    }
   }
 }
+
+
+void replicationStrategy_sameTor(std::vector<std::vector<int>> *replicas, uint32_t num_replicas) {
+  NS_LOG_WARN("NOT IMPLEMENTED");
+}
+
 
 int toIP(int a, int b, int c, int d)
 {
@@ -1398,8 +1448,26 @@ int main(int argc, char *argv[])
 
   //Create Server RPC database
   std::vector<std::vector<int>> servicesPerServer(NODES, std::vector<int>(0));
-  //replicationStrategy_noReplication(&servicesPerServer);
-  replicationStrategy_crossCoreReplication(&servicesPerServer);
+
+
+
+  //choose replication strategy
+  switch(replicaPlacementAlgorithm){
+    case ReplicaPlacementAlgorithm::none:
+      replicationStrategy_noReplication(&servicesPerServer,NumReplicas);
+      break;
+    case ReplicaPlacementAlgorithm::randomPlacement:
+      replicationStrategy_random(&servicesPerServer,NumReplicas);
+      break;
+    case ReplicaPlacementAlgorithm::crossCore:
+      replicationStrategy_crossCoreReplication(&servicesPerServer,NumReplicas);
+      break;
+    case ReplicaPlacementAlgorithm::sameTor:
+      replicationStrategy_sameTor(&servicesPerServer,NumReplicas);
+      break;
+    default:
+      NS_LOG_WARN("Replica Selection strategy not found");
+  }
 
   //Create Client Database for servers - each index is an RPC. This is an
   //inverted index of the servers. If a client wants to find which servers can

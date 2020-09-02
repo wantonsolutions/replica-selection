@@ -16,6 +16,12 @@ NetworkSelectionStrategy["coreForcedMinDistanceMinLoad"]=4
 NetworkSelectionStrategy["torOnly"]=5
 NetworkSelectionStrategy["torQueueDepth"]=6
 
+declare -A ReplicaPlacementAlgorithm
+ReplicaPlacementAlgorithm["none"]=0
+ReplicaPlacementAlgorithm["random"]=1
+ReplicaPlacementAlgorithm["crossCore"]=2
+ReplicaPlacementAlgorithm["sameTor"]=3
+
 
 debug=false
 
@@ -34,6 +40,11 @@ function ConfigArgs() {
 	echo "--Debug=$debug
     --ProbeName=$filename.csv
 	--ManifestName=$filename.config"
+}
+
+function NumReplicas() {
+	replicas="$1"
+	echo "--NumReplicas=$1"
 }
 
 function ConstantInformationDelay() {
@@ -124,6 +135,11 @@ function RpcSelectionStrat() {
 	echo "--RpcSelectionStrategy=${RpcSelectionStrategy[${select}]} "
 }
 
+function ReplicaPlacementStrat() {
+	select=$1
+	echo "--ReplicaPlacementAlgorithm=${ReplicaPlacementAlgorithm[${select}]}"
+}
+
 function NetworkSelectionStrat() {
 	select=$1
 	echo "--NetworkSelectionStrategy=${NetworkSelectionStrategy[${select}]} "
@@ -198,160 +214,6 @@ function PlotInterval() {
 
 }
 
-function RunUniformTransmissionExperiment() {
-	intervals=(100000 50000 25000 12500 6250 3125 1562)
-
-	for i in ${intervals[@]}; do
-		echo $i
-		let "min = $i - ( $i / 2 )"
-		let "max = $i + ( $i / 2 )"
-		dirname="${i}"
-		mkdir $dirname
-		pushd $dirname
-
-		transmissionArgs=$(UniformClientTransmission $min $max)
-		RunRpcSelectionStrategies ${transmissionArgs}
-		popd
-	done
-}
-
-function RunNormalTransmissionExperiment {
-	echo "Running Normal Experiment"
-	intervals=(100000 50000 25000 12500 6250 3125 1562)
-	for i in ${intervals[@]}; do
-		mean=${i}
-		#std="1.0"
-		#let "std = ( $i / 10 )" #10% std
-		let "std = ( $i / 4 )" #25% std
-		dirname="${i}"
-		mkdir $dirname
-		pushd $dirname
-
-		transmissionArgs=$(NormalClientTransmission $mean $std)
-		RunRpcSelectionStrategies ${transmissionArgs}
-
-		popd
-	done
-}
-
-function RunExponentialTransmissionExperiment {
-	echo "Running Exponential transmission Experiment"
-	intervals=(100000 50000 25000 12500 6250 3125 1562)
-	for i in ${intervals[@]}; do
-		lambda="1.0"
-		let "multiplier = ${i} * 2"
-		let "minimum = 1"
-
-		dirname="${i}"
-		mkdir $dirname
-		pushd $dirname
-
-		transmissionArgs=$(ExponentialClientTransmission $lambda $multiplier $minimum)
-		RunRpcSelectionStrategies ${transmissionArgs}
-		popd
-
-	done
-}
-
-function RunUniformPacketUniformTransmissionExperiment {
-	echo "Running "
-	#25us mean uniform transmission
-	#transmissionArgs=$(UniformClientTransmission 50000 50000)
-	transmissionArgs=$(NormalClientTransmission 50000 5000)
-	packetSizes=(64 128 256 512 1024 2048 4096 8192 16384 32768)
-	for packet_size in ${packetSizes[@]}; do
-		packetArgs=$(UniformPacketSize $packet_size $packet_size)
-
-		dirname="${packet_size}"
-		mkdir $dirname
-		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs}"
-		popd
-	done
-}
-
-function RunNormalServerLoad {
-	echo "Running Normal Server Load"
-	#25us mean uniform transmission
-	#transmissionArgs=$(UniformClientTransmission 50000 50000)
-	transmissionArgs=$(NormalClientTransmission 50000 5000)
-	packetArgs=$(NormalPacketSizes 128 12)
-	serverLoad=(1 2 4 8 16 32 64 128 256 512 1024)
-	for load in ${serverLoad[@]}; do
-		let "std = 1 + ($load / 10)"
-		loadArgs=$(NormalServerLoad $load $std)
-
-		dirname="${load}"
-		mkdir $dirname
-		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
-		popd
-	done
-}
-
-function RunExponentialServerLoad {
-	echo "Running Normal Server Load"
-	#25us mean uniform transmission
-	#transmissionArgs=$(UniformClientTransmission 50000 50000)
-	transmissionArgs=$(NormalClientTransmission 50000 5000)
-	packetArgs=$(NormalPacketSizes 128 12)
-	serverLoad=(1 2 4 8 16 32 64 128 256 512)
-	for load in ${serverLoad[@]}; do
-		lambda="1.0"
-		let "multiplier = ${load} * 2"
-		let "minimum = 1"
-		loadArgs=$(ExponentialServerLoad $lambda $multiplier $minimum)
-
-		dirname="${load}"
-		mkdir $dirname
-		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
-		popd
-	done
-}
-
-function RunProportionalLoad {
-	echo "Running Normal Server Load"
-	#25us mean uniform transmission
-	#transmissionArgs=$(UniformClientTransmission 50000 50000)
-	#loadArgs=$(NormalServerLoad 50000 5000)
-	loadArgs=$(ExponentialServerLoad 1.0 50000 1) #Normal Distribution
-	#loadArgs=$(UniformServerLoad 45 55)
-	packetArgs=$(NormalPacketSizes 128 12)
-	#clientTransmission=(1000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000)
-	#networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
-	networkArgs=$(NetworkSelectionStrat none)
-	delayArgs=$(ConstantInformationDelay 0)
-	#proportion=(20 40 60 80 100 120 140 160 180 200)
-	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200)
-	#proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
-	proportion=(80 85 90 95 100)
-	#proportion=(10 20 30 40 50 60 70 80 90 100)
-
-	#proportion=(50 55 60 65 70 75 80 85 90 95 100)
-	#proportion=(50 75 100)
-
-	for p in ${proportion[@]}; do
-		let "mean = (50000 * 100) / $p"
-		let "std = ${mean} / 10"
-		transmissionArgs=$(NormalClientTransmission $mean $std)
-
-		#let "min = $mean - ( $std * 2 )"
-		#let "max = $mean + ( $std * 2 )"
-		#transmissionArgs=$(UniformClientTransmission $min $max)
-
-
-		dirname="${p}"
-		mkdir $dirname
-		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${networkArgs} ${delayArgs}"
-		popd
-
-		#exit
-	done
-}
-
-
 function RunDelay {
 
 	if [ -z "$DELAY" ]; then
@@ -373,6 +235,9 @@ function RunDelay {
 
 	local packetArgs=$(NormalPacketSizes 128 12)
 	local delayArgs=$(ConstantInformationDelay $delay)
+
+	local placementArgs=$(ReplicaPlacementStrat crossCore)
+	local numReplicaArgs=$(NumReplicas 2)
 	#local networkArgs=$(NetworkSelectionStrat none) ##nothing in the network...
 	local networkArgs=$(NetworkSelectionStrat coreOnly) ##nothing in the network...
 	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
@@ -392,7 +257,7 @@ function RunDelay {
 		mkdir $dirname
 		pushd $dirname
 
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs}" &
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs} ${placementArgs} ${numReplicaArgs}" &
 		sleep 1
 		popd
 
@@ -422,7 +287,6 @@ function RunDelay {
 function RunProportialLoadArgs {
 	echo "Running Normal Server Load"
 
-	#processing="250"
 	processing="10000"
 	shift="5000"
 	#have to convert this manually
@@ -435,6 +299,10 @@ function RunProportialLoadArgs {
 
 	local packetArgs=$(NormalPacketSizes 128 12)
 	local delayArgs=$(ConstantInformationDelay 0)
+
+
+	local placementArgs=$(ReplicaPlacementStrat crossCore)
+	local numReplicaArgs=$(NumReplicas 2)
 
 	let "expmean = ($shift + ($processing * $lambdaINV))"
 	echo "Expmean = $expmean"
@@ -454,7 +322,7 @@ function RunProportialLoadArgs {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs}" &
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs} ${placementArgs} ${numReplicaArgs}" &
 		sleep 1
 		popd
 
@@ -515,106 +383,25 @@ function RunProportionalTorQueueDepth {
 	RunProportialLoadArgs "${networkArgs} "
 }
 
-
-function RunProportionalLoadNN {
-	echo "Running Normal Server Normal Client"
-	loadArgs=$(NormalServerLoad 50000 5000)
-	packetArgs=$(NormalPacketSizes 128 12)
-	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
-	#proportion=(50 75 100)
-
-	for p in ${proportion[@]}; do
-		let "mean = (50000 * 100) / $p"
-		let "std = ${mean} / 10"
-		transmissionArgs=$(NormalClientTransmission $mean $std)
-
-		dirname="${p}"
-		mkdir $dirname
-		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
-		popd
-	done
-}
-
-function RunProportionalLoadNU {
-	echo "Running Normal Server Uniform Client"
-	loadArgs=$(NormalServerLoad 50000 5000)
-	packetArgs=$(NormalPacketSizes 128 12)
-	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
-
-	for p in ${proportion[@]}; do
-		let "mean = (50000 * 100) / $p"
-		let "std = ${mean} / 10"
-		let "min = $mean - ( $std * 2 )"
-		let "max = $mean + ( $std * 2 )"
-		transmissionArgs=$(UniformClientTransmission $min $max)
-
-		dirname="${p}"
-		mkdir $dirname
-		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
-		popd
-	done
-}
-
-function RunProportionalLoadUN {
-	echo "Running Uniform Server Normal Client"
-	loadArgs=$(UniformServerLoad 45000 55000)
-	packetArgs=$(NormalPacketSizes 128 12)
-	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
-
-	for p in ${proportion[@]}; do
-		let "mean = (50000 * 100) / $p"
-		let "std = ${mean} / 10"
-		transmissionArgs=$(NormalClientTransmission $mean $std)
-
-		dirname="${p}"
-		mkdir $dirname
-		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
-		popd
-	done
-}
-
-function RunProportionalLoadUU {
-	echo "Running Uniform Server Normal Client"
-	loadArgs=$(UniformServerLoad 45000 55000)
-	packetArgs=$(NormalPacketSizes 128 12)
-	proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
-
-	for p in ${proportion[@]}; do
-		let "mean = (50000 * 100) / $p"
-		let "std = ${mean} / 10"
-		let "min = $mean - ( $std * 2 )"
-		let "max = $mean + ( $std * 2 )"
-		transmissionArgs=$(UniformClientTransmission $min $max)
-
-
-		dirname="${p}"
-		mkdir $dirname
-		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs}"
-		popd
-	done
-}
-
-
-function RunProcessingSkew {
+function RunReplicaArgs {
 	echo "Running Normal Server Load"
 
-	processing="$@"
+	processing="10000"
 	shift="5000"
 	#have to convert this manually
-	lambda="0.05"
-	lambdaINV="20"
+	lambda="0.005"
+	lambdaINV="200"
 
-	#local networkArgs=$(NetworkSelectionStrat torQueueDepth)
-	local networkArgs=$(NetworkSelectionStrat none)
+	local args="$@"
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
 	#local loadArgs=$(NormalServerLoad $processing $std) #Normal Distribution
 	local loadArgs=$(ExponentialServerLoad $lambda $processing $shift) #Exponential Distribution
 
 	local packetArgs=$(NormalPacketSizes 128 12)
 	local delayArgs=$(ConstantInformationDelay 0)
+
+
+	local placementArgs=$(ReplicaPlacementStrat crossCore)
 
 	let "expmean = ($shift + ($processing * $lambdaINV))"
 	echo "Expmean = $expmean"
@@ -634,7 +421,96 @@ function RunProcessingSkew {
 		dirname="${p}"
 		mkdir $dirname
 		pushd $dirname
-		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs}" &
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs} ${placementArgs} ${numReplicaArgs} ${networkArgs}" &
+		sleep 1
+		popd
+
+		while true; do
+        #Get Current number of running processes
+			start=`wc $startfile | awk '{print $1}'`
+			stop=`wc $stopfile | awk '{print $1}'`
+			if [[ $stop == "" ]]; then
+				stop="0"
+			fi
+			let 'running=start-stop'
+			echo "Running Jobs $running max allowed $max_running (start $start stop $stop)"
+
+			#Wait for jobs to finish or start a new one
+			if [[ "$running" -gt "$max_running" ]]; then
+				sleep 1
+			else
+				break
+			fi
+		done
+
+		#exit
+	done
+}
+
+function RunReplicas1 {
+	local numReplicaArgs=$(NumReplicas 1)
+	RunReplicaArgs "${replicaArgs} "
+}
+
+function RunReplicas2 {
+	local numReplicaArgs=$(NumReplicas 2)
+	RunReplicaArgs "${replicaArgs} "
+}
+
+function RunReplicas3 {
+	local numReplicaArgs=$(NumReplicas 3)
+	RunReplicaArgs "${replicaArgs} "
+}
+
+function RunReplicas4 {
+	local numReplicaArgs=$(NumReplicas 3)
+	RunReplicaArgs "${replicaArgs} "
+}
+
+function RunReplicas5 {
+	local numReplicaArgs=$(NumReplicas 3)
+	RunReplicaArgs "${replicaArgs} "
+}
+
+function RunProcessingSkew {
+	echo "Running Normal Server Load"
+
+	processing="$@"
+	shift="5000"
+	#have to convert this manually
+	lambda="0.05"
+	lambdaINV="20"
+
+	#local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local networkArgs=$(NetworkSelectionStrat none)
+	#local loadArgs=$(NormalServerLoad $processing $std) #Normal Distribution
+	local loadArgs=$(ExponentialServerLoad $lambda $processing $shift) #Exponential Distribution
+
+	local packetArgs=$(NormalPacketSizes 128 12)
+	local delayArgs=$(ConstantInformationDelay 0)
+
+	local placementArgs=$(ReplicaPlacementStrat crossCore)
+	local numReplicaArgs=$(NumReplicas 2)
+
+	let "expmean = ($shift + ($processing * $lambdaINV))"
+	echo "Expmean = $expmean"
+	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+	for p in ${proportion[@]}; do
+		#let "mean = (($shift + ($processing * $lambdaINV)) * $p) / 100"
+		let "mean = (($shift + ($processing * $lambdaINV)) * 100) / $p"
+		echo "Normal Mean = $mean"
+		let "std = (mean * 100) / 65"
+		#let "std = ${mean} / 10"
+
+		#client mean = Shift + (processing / lambda)
+		local transmissionArgs=$(NormalClientTransmission $mean $std)
+		#local transmissionArgs=$(ExponentialClientTransmission $lambda $mean 0.0)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunRpcSelectionStrategies "${transmissionArgs} ${packetArgs} ${loadArgs} ${args} ${delayArgs} ${placementArgs} ${numReplicaArgs}" &
 		sleep 1
 		popd
 
@@ -697,12 +573,17 @@ function  RunDebug {
 	selectionArgs=$(RpcSelectionStrat random)
 	#networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
 	networkSelectionArgs=$(NetworkSelectionStrat torQueueDepth)
+
+
+	local placementArgs=$(ReplicaPlacementStrat crossCore)
+	local numReplicaArgs=$(NumReplicas 3)
+
 	configArgs=$(ConfigArgs results)
 	currentdir=`pwd`
 	delayArgs=$(ConstantInformationDelay 0)
 	dirArgs=$(WorkingDirectory $currentdir)
 
-	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs} ${delayArgs}"
+	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs} ${delayArgs} ${placementArgs} ${numReplicaArgs}"
 
 	pushd $topdir
 

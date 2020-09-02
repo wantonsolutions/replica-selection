@@ -4,7 +4,9 @@
 #date="2020-08-11"
 date=`date "+%F"`
 #date="2020-08-18"
-dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor" "TorQ")
+#dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor" "TorQ")
+#dirs=("None" "TorQ")
+dirs=("1" "2" "3" "4" "5")
 
 #dirs=("250" "500" "1000" "2000" "5000" "10000")
 
@@ -35,6 +37,14 @@ function RunNetLB {
     ./run.sh -n="${prefix}_MDMLC" -r=$RUNS -f="RunProportionalMinDistanceMinLoadCore"
     ./run.sh -n="${prefix}_Tor" -r=$RUNS -f="RunProportionalTorOnly"
     ./run.sh -n="${prefix}_TorQ" -r=$RUNS -f="RunProportionalTorQueueDepth"
+}
+
+function RunReplicas {
+    ./run.sh -n="${prefix}_1" -r=$RUNS -f="RunReplicas1"
+    ./run.sh -n="${prefix}_2" -r=$RUNS -f="RunReplicas2"
+    ./run.sh -n="${prefix}_3" -r=$RUNS -f="RunReplicas3"
+    ./run.sh -n="${prefix}_4" -r=$RUNS -f="RunReplicas4"
+    ./run.sh -n="${prefix}_5" -r=$RUNS -f="RunReplicas5"
 }
 
 function RunDelay {
@@ -159,8 +169,9 @@ fi
 
 if [ ! -z "$prefix" ]; then
     #RunDelay
-    RunNetLB
+    #RunNetLB
     #RunSkew
+    RunReplicas
 fi
 #RunRandomLoad
 

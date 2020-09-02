@@ -118,6 +118,10 @@ public:
   void SetLoadBalencingStrategy(LoadBalencingStrategy strategy);
   void SetGlobalServerLoadLog(std::vector<std::vector<LoadEvent>> *global_load_log);
   void SetGlobalTorQueueDepth(std::map<uint32_t,uint32_t> *tor_service_queue_depth);
+  void SetLocalTorQueueDepth(std::map<uint32_t,uint32_t> tor_service_queue_depth);
+
+  void UpdateLocalTorQueueDepth(Ipv4DoppelgangerTag tag);
+  void SetTagTorQueueDepth(Ipv4DoppelgangerTag *tag);
 
   void SetFatTreeSwitchType(FatTreeSwitchType ftst);
   FatTreeSwitchType GetFatTreeSwitchType();
@@ -218,6 +222,7 @@ private:
   //Ip to replica index
 
   std::map<uint32_t,uint32_t> *m_tor_service_queue_depth;
+  std::map<uint32_t,uint32_t> m_local_tor_service_queue_depth;
   std::map<uint32_t,uint32_t> m_server_ip_map;
   //in network load ballencing strategy
   LoadBalencingStrategy m_load_balencing_strategy;
@@ -229,7 +234,7 @@ private:
 
   InformationDelayFunction m_delay_function;
   uint64_t m_constant_information_delay;
-  InformationCollection m_information_collection_method;
+  InformationCollection m_information_collection_method = piggyback;
 
   uint m_fattree_k;
 

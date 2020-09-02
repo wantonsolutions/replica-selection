@@ -1,7 +1,7 @@
 #ifndef NS3_IPV4_DOPPELGANGER_TAG
 #define NS3_IPV4_DOPPELGANGER_TAG
 
-#define MAX_REPLICAS 2
+#define MAX_REPLICAS 5
 #define KTAG 4
 #include "ns3/tag.h"
 
@@ -46,6 +46,8 @@ public:
     void SetTorQueueDepth(uint32_t index, uint32_t serverAddress, uint8_t depth);
     uint32_t GetTorReplica(uint32_t index);
     uint8_t GetTorReplicaQueueDepth(uint32_t index);
+    void SetTorQueuesNULL();
+    bool TorQueuesAreNULL();
 
     void SetHostSojournTime(uint64_t time);
     uint64_t GetHostSojournTime();

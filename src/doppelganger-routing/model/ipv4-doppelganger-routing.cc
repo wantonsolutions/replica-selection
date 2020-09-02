@@ -397,7 +397,36 @@ uint64_t Ipv4DoppelgangerRouting::GetConstantDelay()
 
 void Ipv4DoppelgangerRouting::SetGlobalTorQueueDepth(std::map<uint32_t,uint32_t> *tor_service_queue_depth){
   m_tor_service_queue_depth = tor_service_queue_depth;
+  //cheating for now, this is also going to intialize the local tor Queue Depth
 }
+
+void Ipv4DoppelgangerRouting::SetLocalTorQueueDepth(std::map<uint32_t,uint32_t> tor_service_queue_depth) {
+  m_local_tor_service_queue_depth = tor_service_queue_depth;
+}
+
+void Ipv4DoppelgangerRouting::UpdateLocalTorQueueDepth(Ipv4DoppelgangerTag tag){
+  if (tag.TorQueuesAreNULL()){
+    return;
+  }
+  for(int i=0;i<KTAG/2;i++) {
+    m_local_tor_service_queue_depth[tag.GetTorReplica(i)] = tag.GetTorReplicaQueueDepth(i);
+  }
+}
+
+ void Ipv4DoppelgangerRouting::SetTagTorQueueDepth(Ipv4DoppelgangerTag *tag) {
+   uint i=0;
+
+   std::map<uint32_t,uint32_t>::iterator it;
+
+    for ( it = m_local_tor_service_queue_depth.begin(); it != m_local_tor_service_queue_depth.end(); it++ )
+    {
+        if( ClientBelowTor(m_addr.Get(), it->first) ) {
+          tag->SetTorQueueDepth(i,it->first,m_local_tor_service_queue_depth[it->first]);
+          i++;
+        }
+    }
+ }
+
 
 /* END DoppleGanger Routing function additions*/
 
@@ -444,8 +473,6 @@ Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumLoad(std::vector<uint32
   uint32_t minReplica;
 
   //TODO make this a command line argument
-  m_information_collection_method = piggyback;
-
   switch (m_information_collection_method){
     case instant:
     {
@@ -573,6 +600,7 @@ Ipv4DoppelgangerRouting::replicaSelectionStrategy_minimumDownwardDistance(std::v
     return min_distance_replicas;
   }
 }
+
 
 bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
                                          UnicastForwardCallback ucb, MulticastForwardCallback mcb,
@@ -787,10 +815,24 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
     {
       if (m_fattree_switch_type == edge) {
         //Find the global min tor queue
+        //Choose between local and global routing
+        std::map<uint32_t,uint32_t>* tor_queue_depths;
+        switch (m_information_collection_method){
+          case instant:
+          {
+            tor_queue_depths=m_tor_service_queue_depth;
+          }
+          case piggyback:
+          {
+            tor_queue_depths=&m_local_tor_service_queue_depth;
+            UpdateLocalTorQueueDepth(tag);
+          }
+        }
+
         uint32_t min = UINT32_MAX;
         uint32_t min_replica;
         for(uint i=0;i<replicas.size();i++) {
-          if((*m_tor_service_queue_depth)[replicas[i]] < min) {
+          if((*tor_queue_depths)[replicas[i]] < min) {
             min_replica = replicas[i];
           }
         }
@@ -810,7 +852,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
 
         //TODO these decisions should be made together
         // Check that a threshold is met before re-routing
-        if ( (*m_tor_service_queue_depth)[min_replica] < (*m_tor_service_queue_depth)[ipv4Addr.Get()] ) {
+        if ( (*tor_queue_depths)[min_replica] < (*tor_queue_depths)[ipv4Addr.Get()] ) {
           selected_replica = min_replica;
         } else {
           selected_replica = ipv4Addr.Get();
@@ -823,19 +865,24 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
         }
 
         //Set the minimum destination
-        destAddress.Set(selected_replica);
-        headerPrime.SetDestination(destAddress);
-        tag.SetCanRouteDown(true);
-        tag.SetRedirections(tag.GetRedirections() + 1);
-        m_packet_redirections++;
+        if (selected_replica != ipv4Addr.Get()) {
+          destAddress.Set(selected_replica);
+          headerPrime.SetDestination(destAddress);
+          tag.SetCanRouteDown(true);
+          tag.SetRedirections(tag.GetRedirections() + 1);
+          m_packet_redirections++;
+        }
 
         //Increment Tor counter if the request is below
         if (ClientBelowTor(m_addr.Get(), destAddress.Get())) {
 
           NS_LOG_INFO("Tor " << stringIP(m_addr.Get()) << " passing new request queue incremend");
-          (*m_tor_service_queue_depth)[destAddress.Get()]++;
-          NS_LOG_INFO("Tor  queu depth now " << (*m_tor_service_queue_depth)[destAddress.Get()]);
+          (*tor_queue_depths)[destAddress.Get()]++;
+
         }
+
+        
+        SetTagTorQueueDepth(&tag);
       }
     }
 
@@ -868,15 +915,31 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
       case torQueueDepth:
       {
         if (m_fattree_switch_type == edge) {
+
+          std::map<uint32_t,uint32_t>* tor_queue_depths;
+          switch (m_information_collection_method){
+            case instant:
+            {
+              tor_queue_depths=m_tor_service_queue_depth;
+            }
+            case piggyback:
+            {
+              tor_queue_depths=&m_local_tor_service_queue_depth;
+              UpdateLocalTorQueueDepth(tag);
+            }
+          }
           NS_LOG_INFO("Checking Tor Queue Depth");
           Ipv4Address source = headerPrime.GetSource();
           //Increment Tor counter if the request is below
           NS_LOG_INFO("Server Address " << stringIP(source.Get()) << " Tor IP " << stringIP(m_addr.Get()));
           if (ClientBelowTor(m_addr.Get(), source.Get())) {
             NS_LOG_INFO("Tor " << stringIP(m_addr.Get()) << " completed request subtracting queue");
-            (*m_tor_service_queue_depth)[source.Get()]--;
-            NS_LOG_INFO("Tor  queu depth now " << (*m_tor_service_queue_depth)[source.Get()]);
+            (*tor_queue_depths)[source.Get()]--;
+            NS_LOG_INFO("Tor  queu depth now " << (*tor_queue_depths)[source.Get()]);
           }
+          SetTagTorQueueDepth(&tag);
+
+
         }
         break;
       }

@@ -104,6 +104,22 @@ Ipv4DoppelgangerTag::GetReplica(uint32_t index)
    return m_tor_ip_queue_depth[index];
  }
 
+ void Ipv4DoppelgangerTag::SetTorQueuesNULL() {
+   for (int i=0; i<KTAG/2;i++) {
+     SetTorQueueDepth(i,0,0);
+   }
+ }
+
+ bool Ipv4DoppelgangerTag::TorQueuesAreNULL() {
+   for (int i=0; i<KTAG/2;i++) {
+     if (GetTorReplica(i) != 0) {
+       return false;
+     }
+   }
+   return true;
+ }
+
+
 uint32_t *
 Ipv4DoppelgangerTag::GetReplicas(void) const
 {
