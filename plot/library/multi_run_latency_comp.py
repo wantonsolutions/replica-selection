@@ -131,7 +131,8 @@ ax.set_xticks(np.arange(len(xaxis)))
 ax.set_yticks(np.arange(len(filenames)))
 # ... and label them with the respective list entries
 ax.set_xticklabels(xaxis)
-ax.set_yticklabels(filenames)
+trimmednames=[ name.replace(".db", "") + "--" for name in filenames]
+ax.set_yticklabels(trimmednames)
 
 # Rotate the tick labels and set their alignment.
 plt.setp(ax.get_xticklabels(), rotation=45, ha="right",

@@ -367,6 +367,7 @@ void RpcClient::PopulateReplicasReplicas(RPCHeader *rpch) {
     Ipv4Address addr = Ipv4Address::ConvertFrom(m_peerAddresses[m_rpc_server_replicas[rpc_service][i]]);
     rpch->Replicas[i] = addr.Get();
   }
+  rpch->ReplicaCount=m_rpc_server_replicas[rpc_service].size();
 }
 
 void RpcClient::PopulateReplicasReplicas(Ipv4DoppelgangerTag *idgt) {
@@ -378,6 +379,7 @@ void RpcClient::PopulateReplicasReplicas(Ipv4DoppelgangerTag *idgt) {
     Ipv4Address addr = Ipv4Address::ConvertFrom(m_peerAddresses[m_rpc_server_replicas[rpc_service][i]]);
     idgt->SetReplica(i,addr.Get());
   }
+  idgt->SetReplicaCount(m_rpc_server_replicas[rpc_service].size());
 }
 
 int RpcClient::FindReplicaAddress(int rpc) {

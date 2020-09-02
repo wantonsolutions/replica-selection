@@ -49,6 +49,14 @@ Ipv4DoppelgangerTag::GetRequestID(void) const
   return m_requestID;
 }
 
+void Ipv4DoppelgangerTag::SetReplicaCount(uint8_t replica_count) {
+  m_replica_count = replica_count;
+}
+
+uint8_t Ipv4DoppelgangerTag::GetReplicaCount(){
+  return m_replica_count;
+}
+
 void Ipv4DoppelgangerTag::SetPacketID(uint16_t packetID)
 {
   m_packetID = packetID;
@@ -168,10 +176,12 @@ Ipv4DoppelgangerTag::GetInstanceTypeId(void) const
 uint32_t
 Ipv4DoppelgangerTag::GetSerializedSize(void) const
 {
-  return sizeof(uint8_t) +
-         sizeof(uint8_t) +
-         sizeof(uint16_t) +
-         sizeof(uint16_t) +
+  return 
+         sizeof(uint8_t) + //replica_count
+         sizeof(uint8_t) + //can_route_down
+         sizeof(uint8_t) + //packet_type
+         sizeof(uint16_t) + //request_id
+         sizeof(uint16_t) + //packet_id
          (sizeof(uint32_t) * MAX_REPLICAS) + //replicas
          sizeof(uint64_t) +                  //sojour_time
          sizeof(uint64_t) +                   //load
@@ -182,6 +192,7 @@ Ipv4DoppelgangerTag::GetSerializedSize(void) const
 
 void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
 {
+  i.WriteU8(m_replica_count);
   i.WriteU8(m_can_route_down);
   i.WriteU8(m_packet_type);
   i.WriteU16(m_requestID);
@@ -202,6 +213,7 @@ void Ipv4DoppelgangerTag::Serialize(TagBuffer i) const
 
 void Ipv4DoppelgangerTag::Deserialize(TagBuffer i)
 {
+  m_replica_count = i.ReadU8();
   m_can_route_down = i.ReadU8();
   m_packet_type = i.ReadU8();
   m_requestID = i.ReadU16();

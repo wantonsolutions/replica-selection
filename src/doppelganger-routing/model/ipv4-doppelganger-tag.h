@@ -31,6 +31,9 @@ public:
     void SetPacketType(PacketType type);
     PacketType GetPacketType();
 
+    void SetReplicaCount(uint8_t replica_count);
+    uint8_t GetReplicaCount();
+
     void SetRequestID(uint16_t requestID);
     uint16_t GetRequestID(void) const;
 
@@ -70,6 +73,7 @@ public:
 
 private:
 
+    uint8_t m_replica_count;
     uint8_t m_can_route_down;
     uint8_t m_packet_type;
     uint16_t m_requestID;
@@ -88,6 +92,7 @@ struct RPCHeader {
   //TODO refactor RequestID to RPCType
   //TODO add RequestID hash
   //TODO size_id
+  uint8_t ReplicaCount;
   uint8_t CanRouteDown;
   uint8_t PacketType;
   uint16_t RequestID; //RPC ID 

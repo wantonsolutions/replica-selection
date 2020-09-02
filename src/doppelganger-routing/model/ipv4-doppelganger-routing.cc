@@ -633,7 +633,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
 
   std::vector<uint32_t> replicas;
   uint32_t *tag_replicas = tag.GetReplicas();
-  for (int i = 0; i < MAX_REPLICAS; ++i)
+  for (int i = 0; i < tag.GetReplicaCount(); ++i)
   {
     NS_LOG_INFO("Pulling replica " << stringIP(tag_replicas[i]) << " from packet tag");
     replicas.push_back(tag_replicas[i]);
@@ -658,7 +658,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
     {
       uint32_t min_replica = replicaSelectionStrategy_minimumLoad(replicas);
       Ipv4Address ipv4Addr = headerPrime.GetDestination();
-      if (min_replica == ipv4Addr.Get() || tag.GetRedirections() >= MAX_REPLICAS)
+      if (min_replica == ipv4Addr.Get() || tag.GetRedirections() >= tag.GetReplicaCount())
       {
         NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
       }
@@ -794,7 +794,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
       else
       {
         //.if (m_fattree_switch_type == edge && tag.GetRedirections() <= MAX_REPLICAS) 
-        if (m_fattree_switch_type == edge && tag.GetRedirections() <= MAX_REPLICAS && m_local_server_load[headerPrime.GetDestination().Get()] > 30000 ) 
+        if (m_fattree_switch_type == edge && tag.GetRedirections() <= tag.GetReplicaCount() && m_local_server_load[headerPrime.GetDestination().Get()] > 30000 ) 
         {
           NS_LOG_INFO("the best case replica has changed since source send:" << stringIP(ipv4Addr.Get()) << " --> " << stringIP(min_replica));
           destAddress.Set(min_replica);
@@ -860,7 +860,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
 
         // Over ride desicion if the packet has been redirected allready
         //Only redirect a packet if another replica is available don't send in network indefinatly
-        if (tag.GetRedirections() >= (MAX_REPLICAS - 1)) {
+        if (tag.GetRedirections() >= (tag.GetReplicaCount() - 1)) {
           selected_replica = ipv4Addr.Get();
         }
 

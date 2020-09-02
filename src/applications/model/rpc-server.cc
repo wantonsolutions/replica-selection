@@ -286,6 +286,7 @@ RpcServer::SpreadLoadInformation() {
   ipv4DoppelgangerTag.SetRedirections(0);
   ipv4DoppelgangerTag.SetRequestID(0);
   ipv4DoppelgangerTag.SetHostLoad(GetInstantenousLoad());
+  ipv4DoppelgangerTag.SetReplicaCount(MAX_REPLICAS);
   p->AddPacketTag(ipv4DoppelgangerTag);
 
 
@@ -364,7 +365,7 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       }
 
 
-      for (int i =0; i < MAX_REPLICAS; i++) {
+      for (int i =0; i < doppelTag.GetReplicaCount(); i++) {
         NS_LOG_INFO("Service also servicable by " << stringIP(doppelTag.GetReplica(i)));
       }
 
@@ -388,7 +389,7 @@ RpcServer::HandleRead (Ptr<Socket> socket)
       //Remove the replica tags for the server, the client has only one response location
       packet->RemovePacketTag(doppelTag);
       //TODO add the rest of the packet fields for the return trip
-      for (int i =0; i < MAX_REPLICAS; i++) {
+      for (int i =0; i < doppelTag.GetReplicaCount(); i++) {
         doppelTag.SetReplica(i,InetSocketAddress::ConvertFrom (from).GetIpv4().Get());
         //printf("%d\n",InetSocketAddress::ConvertFrom (from).GetIpv4().Get());
       }
