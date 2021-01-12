@@ -40,7 +40,11 @@ def GetAverageArr(multiRun):
                 print("Zero Index")
                 empty_runs = empty_runs + 1
             total = total + j
-        average=total / (float(len(runs)) - empty_runs)
+            denom = (float(len(runs)) - empty_runs)
+            if denom == 0:
+                average = 0
+            else :
+                average=total / (float(len(runs)) - empty_runs)
         a.append(average)
     return a
 

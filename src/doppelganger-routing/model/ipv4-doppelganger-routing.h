@@ -120,6 +120,7 @@ public:
   void SetGlobalTorQueueDepth(std::map<uint32_t,uint32_t> *tor_service_queue_depth);
   void SetLocalTorQueueDepth(std::map<uint32_t,uint32_t> tor_service_queue_depth);
 
+  void InitTorMsgTimerMap(std::map<uint32_t, uint32_t> server_ip_map);
   void UpdateLocalTorQueueDepth(Ipv4DoppelgangerTag tag);
   void SetTagTorQueueDepth(Ipv4DoppelgangerTag *tag);
 
@@ -137,6 +138,8 @@ public:
 
 
   uint64_t GetInstantenousLoad(int server_id);
+  uint64_t GetDuration(void);
+  void SetDuration(uint64_t duration);
   uint32_t replicaSelectionStrategy_minimumLoad(std::vector<uint32_t> ips);
   uint32_t replicaSelectionStrategy_minimumLoad_correct_delay(std::vector<uint32_t> ips);
   std::vector<uint32_t> replicaSelectionStrategy_minimumDownwardDistance(std::vector<uint32_t> ips);
@@ -146,6 +149,9 @@ public:
   void SetConstantDelay(uint64_t delay);
   uint64_t GetConstantDelay();
  uint64_t GetInformationTime();
+  void SpreadLoadInfo(Ipv4Header header, UnicastForwardCallback ucb);
+
+void UpdateMsgTimers(Ipv4DoppelgangerTag tag);
 
 
 
@@ -224,6 +230,7 @@ private:
   std::map<uint32_t,uint32_t> *m_tor_service_queue_depth;
   std::map<uint32_t,uint32_t> m_local_tor_service_queue_depth;
   std::map<uint32_t,uint32_t> m_server_ip_map;
+  std::map<uint32_t,uint64_t> m_tor_msg_timer_map;
   //in network load ballencing strategy
   LoadBalencingStrategy m_load_balencing_strategy;
   // Location in a fat tree network
@@ -235,6 +242,12 @@ private:
   InformationDelayFunction m_delay_function;
   uint64_t m_constant_information_delay;
   InformationCollection m_information_collection_method = piggyback;
+
+  bool m_spread_load_info = false;
+  bool m_started_spreading_info = false;
+  uint64_t m_load_spread_interval = 100000;
+
+  uint64_t m_duration = 0;
 
   uint m_fattree_k;
 

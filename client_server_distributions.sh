@@ -5,8 +5,12 @@
 date=`date "+%F"`
 #date="2020-08-18"
 #dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor" "TorQ")
-#dirs=("None" "TorQ")
-dirs=("1" "2" "3" "4" "5")
+#dirs=("None" "MDMLC" "TorQ")
+#dirs=("None" "MDMLC")
+dirs=("None" "TorQ")
+#dirs=("1" "2" "3" "4" "5")
+
+#dirs=("None" "Random" "CrossCore" "SameTor")
 
 #dirs=("250" "500" "1000" "2000" "5000" "10000")
 
@@ -31,11 +35,11 @@ function RunRandomLoad {
 
 function RunNetLB {
     ./run.sh -n="${prefix}_None" -r=$RUNS -f="RunProportionalNone"
-    ./run.sh -n="${prefix}_Min" -r=$RUNS -f="RunProportionalMin"
-    ./run.sh -n="${prefix}_Core" -r=$RUNS -f="RunProportionalCoreOnly"
-    ./run.sh -n="${prefix}_MDML" -r=$RUNS -f="RunProportionalMinDistanceMinLoad"
-    ./run.sh -n="${prefix}_MDMLC" -r=$RUNS -f="RunProportionalMinDistanceMinLoadCore"
-    ./run.sh -n="${prefix}_Tor" -r=$RUNS -f="RunProportionalTorOnly"
+   #./run.sh -n="${prefix}_Min" -r=$RUNS -f="RunProportionalMin"
+    #./run.sh -n="${prefix}_Core" -r=$RUNS -f="RunProportionalCoreOnly"
+   # ./run.sh -n="${prefix}_MDML" -r=$RUNS -f="RunProportionalMinDistanceMinLoad"
+  #  ./run.sh -n="${prefix}_MDMLC" -r=$RUNS -f="RunProportionalMinDistanceMinLoadCore"
+  # ./run.sh -n="${prefix}_Tor" -r=$RUNS -f="RunProportionalTorOnly"
     ./run.sh -n="${prefix}_TorQ" -r=$RUNS -f="RunProportionalTorQueueDepth"
 }
 
@@ -45,6 +49,13 @@ function RunReplicas {
     ./run.sh -n="${prefix}_3" -r=$RUNS -f="RunReplicas3"
     ./run.sh -n="${prefix}_4" -r=$RUNS -f="RunReplicas4"
     ./run.sh -n="${prefix}_5" -r=$RUNS -f="RunReplicas5"
+}
+
+function RunPlacement {
+    ./run.sh -n="${prefix}_None" -r=$RUNS -f="RunPlacementNone"
+    ./run.sh -n="${prefix}_Random" -r=$RUNS -f="RunPlacementRandom"
+    ./run.sh -n="${prefix}_CrossCore" -r=$RUNS -f="RunPlacementCrossCore"
+    ./run.sh -n="${prefix}_SameTor" -r=$RUNS -f="RunPlacementSameTor"
 }
 
 function RunDelay {
@@ -169,9 +180,10 @@ fi
 
 if [ ! -z "$prefix" ]; then
     #RunDelay
-    #RunNetLB
+    RunNetLB
     #RunSkew
-    RunReplicas
+    #RunReplicas
+    #RunPlacement
 fi
 #RunRandomLoad
 

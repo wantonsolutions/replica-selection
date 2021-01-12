@@ -331,6 +331,31 @@ void Ipv4DoppelgangerRouting::SetIPServerMap(std::map<uint32_t, uint32_t> ip_map
   m_server_ip_map = ip_map;
 }
 
+uint64_t Ipv4DoppelgangerRouting::GetDuration() {
+  return m_duration;
+}
+
+void Ipv4DoppelgangerRouting::SetDuration(uint64_t duration) {
+  m_duration = duration;
+}
+
+void Ipv4DoppelgangerRouting::InitTorMsgTimerMap(std::map<uint32_t, uint32_t> server_ip_map) {
+  std::map<uint32_t,uint64_t> tor_msg_timer_map;
+
+  int a, b, c, d;
+  std::map<uint32_t, uint32_t>::iterator it;
+  for ( it = server_ip_map.begin(); it != server_ip_map.end(); it++ )
+  {
+      uint32_t server_ip = it->first;
+      translateIp(server_ip, &a, &b, &c, &d);
+      uint32_t tor_ip = toIP(a,b,c,1);
+      tor_msg_timer_map[tor_ip] = 0;
+      //m_local_server_load[it->first] = 0;
+  }
+  m_tor_msg_timer_map = tor_msg_timer_map;
+
+}
+
 void Ipv4DoppelgangerRouting::SetLoadBalencingStrategy(LoadBalencingStrategy strat)
 {
   m_load_balencing_strategy = strat;
@@ -411,6 +436,16 @@ void Ipv4DoppelgangerRouting::UpdateLocalTorQueueDepth(Ipv4DoppelgangerTag tag){
   for(int i=0;i<KTAG/2;i++) {
     m_local_tor_service_queue_depth[tag.GetTorReplica(i)] = tag.GetTorReplicaQueueDepth(i);
   }
+  UpdateMsgTimers(tag);
+}
+
+void Ipv4DoppelgangerRouting::UpdateMsgTimers(Ipv4DoppelgangerTag tag) {
+  //Update information about the timing of the last update
+  uint32_t host_ip = tag.GetTorReplica(0); //use any endhost
+  int a,b,c,d;
+  translateIp(host_ip,&a,&b,&c,&d);
+  uint32_t tor_ip = toIP(a,b,c,1);
+  m_tor_msg_timer_map[tor_ip] = Simulator::Now().GetNanoSeconds();
 }
 
  void Ipv4DoppelgangerRouting::SetTagTorQueueDepth(Ipv4DoppelgangerTag *tag) {
@@ -613,6 +648,11 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
 
   Ipv4Header headerPrime = header;
 
+  if ((m_spread_load_info) && (m_fattree_switch_type == edge) && (m_load_balencing_strategy == torQueueDepth) && (!m_started_spreading_info)) {
+    NS_LOG_INFO("Load information being spread for the first time on " << stringIP(m_addr.Get()));
+    SpreadLoadInfo(headerPrime, ucb);
+  }
+
   Ptr<Packet> packet = ConstCast<Packet>(p);
   Ipv4Address destAddress = headerPrime.GetDestination();
 
@@ -635,7 +675,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
   uint32_t *tag_replicas = tag.GetReplicas();
   for (int i = 0; i < tag.GetReplicaCount(); ++i)
   {
-    NS_LOG_INFO("Pulling replica " << stringIP(tag_replicas[i]) << " from packet tag");
+    //NS_LOG_INFO("Pulling replica " << stringIP(tag_replicas[i]) << " from packet tag");
     replicas.push_back(tag_replicas[i]);
   }
 
@@ -733,7 +773,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
       //All packets must reach the core router before they can be routed down.
       if (m_fattree_switch_type == core)
       {
-        NS_LOG_WARN("Reached the Core");
+        NS_LOG_WARN("-------------Reached the Core--------------");
         tag.SetCanRouteDown(true);
       }
       //If a packet is on it's way down the tree use the min load balencing with minimum distance strategy
@@ -852,39 +892,46 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
 
         //TODO these decisions should be made together
         // Check that a threshold is met before re-routing
-        if ( (*tor_queue_depths)[min_replica] < (*tor_queue_depths)[ipv4Addr.Get()] ) {
-          selected_replica = min_replica;
-        } else {
-          selected_replica = ipv4Addr.Get();
-        }
 
-        // Over ride desicion if the packet has been redirected allready
-        //Only redirect a packet if another replica is available don't send in network indefinatly
-        if (tag.GetRedirections() >= (tag.GetReplicaCount() - 1)) {
-          selected_replica = ipv4Addr.Get();
-        }
+        //Only make a routing decision if the client is below you
+        if( ClientBelowTor(m_addr.Get(),ipv4Addr.Get())) {
+          //if ( (*tor_queue_depths)[min_replica] + 2 < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 1) {
+          if ( (*tor_queue_depths)[min_replica] < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 2) {
+            selected_replica = min_replica;
+          } else {
+            selected_replica = ipv4Addr.Get();
+          }
 
-        //Set the minimum destination
-        if (selected_replica != ipv4Addr.Get()) {
-          destAddress.Set(selected_replica);
-          headerPrime.SetDestination(destAddress);
-          tag.SetCanRouteDown(true);
-          tag.SetRedirections(tag.GetRedirections() + 1);
-          m_packet_redirections++;
-        }
+          // Over ride desicion if the packet has been redirected allready
+          //Only redirect a packet if another replica is available don't send in network indefinatly
+          //if (tag.GetRedirections() >= (tag.GetReplicaCount() - 1)) {
+          if (tag.GetRedirections() >= 1) {
+            selected_replica = ipv4Addr.Get();
+          }
 
-        //Increment Tor counter if the request is below
-        if (ClientBelowTor(m_addr.Get(), destAddress.Get())) {
+          //Set the minimum destination, and increment packet redirections if nessisary
+          if (selected_replica != ipv4Addr.Get()) {
+            destAddress.Set(selected_replica);
+            headerPrime.SetDestination(destAddress);
+            tag.SetCanRouteDown(true);
+            tag.SetRedirections(tag.GetRedirections() + 1);
+            m_packet_redirections++;
+          }
 
-          NS_LOG_INFO("Tor " << stringIP(m_addr.Get()) << " passing new request queue incremend");
-          (*tor_queue_depths)[destAddress.Get()]++;
+          //Increment Tor counter if the request is to be routed down
+          if (ClientBelowTor(m_addr.Get(), destAddress.Get())) {
 
+            NS_LOG_INFO("Tor " << stringIP(m_addr.Get()) << " passing new request queue incremend");
+            (*tor_queue_depths)[destAddress.Get()]++;
+
+          }
         }
 
         
         SetTagTorQueueDepth(&tag);
       }
     }
+    break;
 
     default:
       NS_LOG_WARN("Unable to find load ballencing strategy");
@@ -939,7 +986,6 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
           }
           SetTagTorQueueDepth(&tag);
 
-
         }
         break;
       }
@@ -949,6 +995,15 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
       }
     }
   } 
+  else if (tag.GetPacketType() == Ipv4DoppelgangerTag::tor_to_tor_load) {
+    if (m_load_balencing_strategy == torQueueDepth && m_fattree_switch_type == edge){
+          NS_LOG_INFO("RECEIVED LOAD PACKET FROM " << stringIP(header.GetSource().Get()) << "Updateing local tor queue depth");
+          UpdateLocalTorQueueDepth(tag);
+    } else {
+        NS_LOG_INFO("Not doing anything with tor load queue info");
+    }
+    return true;
+  }
   else
   {
     NS_LOG_INFO("Unknown packet type routing as usual");
@@ -983,6 +1038,82 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
   ucb(route, packet, headerPrime);
 
   return true;
+}
+
+void Ipv4DoppelgangerRouting::SpreadLoadInfo(Ipv4Header header, UnicastForwardCallback ucb) {
+  m_started_spreading_info = true;
+  NS_LOG_INFO("<<<<<<<<<<<<<<<<<<SPREADING TOR LOAD INFO>>>>>>>>>>>>>>>>>> On Host " << stringIP(m_addr.Get()) << " At Time: " << Simulator::Now().GetNanoSeconds());
+  std::map<uint32_t, uint64_t>::iterator it;
+  for ( it = m_tor_msg_timer_map.begin(); it != m_tor_msg_timer_map.end(); it++ )
+  {
+
+      NS_LOG_INFO("Inspecting TOR IP " << stringIP(it->first));
+      uint32_t tor_ip = it->first;
+      uint64_t last_msg = it->second;
+
+      if (tor_ip == m_addr.Get()) {
+        NS_LOG_INFO("Tor Info to self inspected... I don't need to update myself... skipping");
+        continue;
+      }
+
+      if ((Simulator::Now().GetNanoSeconds() - last_msg) > m_load_spread_interval) {
+        NS_LOG_INFO(">>>>>>>>>> Last Message to " << stringIP(tor_ip) << " is " << Simulator::Now().GetNanoSeconds() << " ns out of date sending info");
+
+        //create a fake dest address
+        //Set it to the first host under the selected TOR
+        int a, b, c, d;
+        translateIp(tor_ip,&a,&b,&c,&d);
+        Ipv4Address destAddress = Ipv4Address(toIP(a,b,c,2));
+        
+
+        Ptr<Packet> p;
+        uint32_t packet_size = 128;
+        p = Create<Packet>(packet_size);
+
+
+        Ipv4DoppelgangerTag ipv4DoppelgangerTag;
+        
+        // PacketID is an analog for sequence number, for now request are a single packet so always set to 0
+        ipv4DoppelgangerTag.SetCanRouteDown(true);
+        ipv4DoppelgangerTag.SetPacketType(Ipv4DoppelgangerTag::tor_to_tor_load);
+        ipv4DoppelgangerTag.SetPacketID(0); 
+        ipv4DoppelgangerTag.SetHostSojournTime(0);
+        ipv4DoppelgangerTag.SetRedirections(0);
+        ipv4DoppelgangerTag.SetTorQueuesNULL();
+
+        // Generate the location of the next reuqest
+        ipv4DoppelgangerTag.SetRequestID(0);
+        for (uint i=0;i<MAX_REPLICAS;i++) {
+          ipv4DoppelgangerTag.SetReplica(0,destAddress.Get());
+        }
+        SetTagTorQueueDepth(&ipv4DoppelgangerTag);
+        p->AddPacketTag(ipv4DoppelgangerTag);
+
+
+        std::vector<DoppelgangerRouteEntry> routeEntries = Ipv4DoppelgangerRouting::LookupDoppelgangerRouteEntriesIP(destAddress);
+        //Find routing entry for the given IP
+        if (routeEntries.size() > 0)
+        {
+          NS_LOG_WARN("<tor_load> Host: " << stringIP(m_addr.Get()) << " Entry Hit for " << stringIP(destAddress.Get()) << " Found " << routeEntries.size() << " Entries");
+        }
+        else
+        {
+          NS_LOG_WARN("<tor_load> Host: " << stringIP(m_addr.Get()) << " Entries MISS for " << stringIP(destAddress.Get()));
+        }
+
+        //Ecmp
+        uint32_t selectedPort = routeEntries[rand() % routeEntries.size()].port;
+        Ptr<Ipv4Route> route = Ipv4DoppelgangerRouting::ConstructIpv4Route(selectedPort, destAddress);
+        header.SetDestination(destAddress);
+
+        //ucb (route, packet, header);
+        ucb(route, p, header);
+        m_tor_msg_timer_map[tor_ip] = Simulator::Now().GetNanoSeconds();
+      }
+  }
+  if (Simulator::Now().GetNanoSeconds() < NanoSeconds(m_duration)) {
+    Simulator::Schedule(NanoSeconds((m_load_spread_interval/2)), &Ipv4DoppelgangerRouting::SpreadLoadInfo, this, header, ucb);
+  }
 }
 
 void Ipv4DoppelgangerRouting::NotifyInterfaceUp(uint32_t interface)

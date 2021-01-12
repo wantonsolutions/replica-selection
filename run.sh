@@ -214,6 +214,63 @@ function PlotInterval() {
 
 }
 
+
+function RunWithArgs {
+	args="$@"
+
+	processing="10000"
+	shift="5000"
+	#have to convert this manually
+	lambda="0.005"
+	lambdaINV="200"
+	local loadArgs=$(ExponentialServerLoad $lambda $processing $shift) #Exponential Distribution
+
+	let "expmean = ($shift + ($processing * $lambdaINV))"
+	echo "Expmean = $expmean"
+	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+
+
+	for p in ${proportion[@]}; do
+		#let "mean = (($shift + ($processing * $lambdaINV)) * $p) / 100"
+		let "mean = (($shift + ($processing * $lambdaINV)) * 100) / $p"
+		echo "Normal Mean = $mean"
+		let "std = (mean * 100) / 65"
+		#let "std = ${mean} / 10"
+
+		#client mean = Shift + (processing / lambda)
+		local transmissionArgs=$(NormalClientTransmission $mean $std)
+		#local transmissionArgs=$(ExponentialClientTransmission $lambda $mean 0.0)
+
+		dirname="${p}"
+		mkdir $dirname
+		pushd $dirname
+		RunRpcSelectionStrategies "${args} ${loadArgs} ${transmissionArgs}" &
+		sleep 1
+		popd
+
+		while true; do
+        #Get Current number of running processes
+			start=`wc $startfile | awk '{print $1}'`
+			stop=`wc $stopfile | awk '{print $1}'`
+			if [[ $stop == "" ]]; then
+				stop="0"
+			fi
+			let 'running=start-stop'
+			echo "Running Jobs $running max allowed $max_running (start $start stop $stop)"
+
+			#Wait for jobs to finish or start a new one
+			if [[ "$running" -gt "$max_running" ]]; then
+				sleep 1
+			else
+				break
+			fi
+		done
+
+		#exit
+	done
+}
+
+
 function RunDelay {
 
 	if [ -z "$DELAY" ]; then
@@ -287,11 +344,20 @@ function RunDelay {
 function RunProportialLoadArgs {
 	echo "Running Normal Server Load"
 
-	processing="10000"
+	#processing="10000"
+	#processing="5000"
+	#processing="1000"
+	#processing="500"
+	#processing="125"
+	processing="5"
 	shift="5000"
 	#have to convert this manually
-	lambda="0.005"
-	lambdaINV="200"
+	#lambda="0.005"
+	#lambdaINV="200"
+	lambda="0.05"
+	lambdaINV="20"
+	#lambda="0.5"
+	#lambdaINV="2"
 
 	local args="$@"
 	#local loadArgs=$(NormalServerLoad $processing $std) #Normal Distribution
@@ -301,8 +367,8 @@ function RunProportialLoadArgs {
 	local delayArgs=$(ConstantInformationDelay 0)
 
 
-	local placementArgs=$(ReplicaPlacementStrat crossCore)
-	local numReplicaArgs=$(NumReplicas 2)
+	local placementArgs=$(ReplicaPlacementStrat random)
+	local numReplicaArgs=$(NumReplicas 3)
 
 	let "expmean = ($shift + ($processing * $lambdaINV))"
 	echo "Expmean = $expmean"
@@ -393,7 +459,8 @@ function RunReplicaArgs {
 	lambdaINV="200"
 
 	local args="$@"
-	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	#local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local networkArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
 	#local loadArgs=$(NormalServerLoad $processing $std) #Normal Distribution
 	local loadArgs=$(ExponentialServerLoad $lambda $processing $shift) #Exponential Distribution
 
@@ -402,6 +469,8 @@ function RunReplicaArgs {
 
 
 	local placementArgs=$(ReplicaPlacementStrat crossCore)
+	#local placementArgs=$(ReplicaPlacementStrat random)
+	#local placementArgs=$(ReplicaPlacementStrat sameTor)
 
 	let "expmean = ($shift + ($processing * $lambdaINV))"
 	echo "Expmean = $expmean"
@@ -463,14 +532,43 @@ function RunReplicas3 {
 }
 
 function RunReplicas4 {
-	local numReplicaArgs=$(NumReplicas 3)
+	local numReplicaArgs=$(NumReplicas 4)
 	RunReplicaArgs "${replicaArgs} "
 }
 
 function RunReplicas5 {
-	local numReplicaArgs=$(NumReplicas 3)
+	local numReplicaArgs=$(NumReplicas 5)
 	RunReplicaArgs "${replicaArgs} "
 }
+
+
+function RunPlacementArgs {
+	echo "Running Placement Strategies"
+
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local packetArgs=$(NormalPacketSizes 128 12)
+	local delayArgs=$(ConstantInformationDelay 0)
+	local numReplicaArgs=$(NumReplicas 3)
+	local placementArgs="$@"
+	args="${networkArgs} ${packetArgs} ${delayArgs} ${numReplicaArgs} ${placementArgs}"
+	RunWithArgs ${args}
+}
+
+function RunPlacementNone {
+	RunPlacementArgs $(ReplicaPlacementStrat none)
+}
+
+function RunPlacementRandom {
+	RunPlacementArgs $(ReplicaPlacementStrat random)
+}
+
+function RunPlacementCrossCore {
+	RunPlacementArgs $(ReplicaPlacementStrat crossCore)
+}
+function RunPlacementSameTor {
+	RunPlacementArgs $(ReplicaPlacementStrat sameTor)
+}
+
 
 function RunProcessingSkew {
 	echo "Running Normal Server Load"
@@ -564,18 +662,39 @@ function RunProcessingSkew10000 {
 function  RunDebug {
 	debug=true
 	echo "Running Debug"
-	transmissionArgs=$(NormalClientTransmission 500000 50000)
+
+	processing="10000"
+	shift="5000"
+	#have to convert this manually
+	lambda="0.005"
+	lambdaINV="200"
+
+	let "expmean = ($shift + ($processing * $lambdaINV))"
+	echo "Expmean = $expmean"
+
+	p="50"
+
+	let "mean = (($shift + ($processing * $lambdaINV)) * 100) / $p"
+	echo "Normal Mean = $mean"
+	let "std = (mean * 100) / 65"
+	#let "std = ${mean} / 10"
+
+	#client mean = Shift + (processing / lambda)
+	local transmissionArgs=$(NormalClientTransmission $mean $std)
+
+	#transmissionArgs=$(NormalClientTransmission 500000 50000)
+	#transmissionArgs=$(NormalClientTransmission 5000000 500000)
 	packetArgs=$(NormalPacketSizes 128 12)
 	#local loadArgs=$(ExponentialServerLoad 0.1 50000 1) #Exponential Distribution
 	local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
 	#loadArgs=$(NormalServerLoad 50000 5000)
 	#selectionArgs=$(RpcSelectionStrat single)
 	selectionArgs=$(RpcSelectionStrat random)
-	#networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
-	networkSelectionArgs=$(NetworkSelectionStrat torQueueDepth)
+	networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
+	#networkSelectionArgs=$(NetworkSelectionStrat torQueueDepth)
 
 
-	local placementArgs=$(ReplicaPlacementStrat crossCore)
+	local placementArgs=$(ReplicaPlacementStrat random)
 	local numReplicaArgs=$(NumReplicas 3)
 
 	configArgs=$(ConfigArgs results)

@@ -18,6 +18,7 @@ public:
       response = 1,
       load = 2,
       response_piggyback = 3,
+      tor_to_tor_load = 4,
     };
 
 

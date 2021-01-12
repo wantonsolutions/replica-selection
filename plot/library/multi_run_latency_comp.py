@@ -66,6 +66,8 @@ for filename in filenames:
     avg_run=pickle.load( open(filename, "rb"))
     avg_runs[filename]=avg_run
 
+all_files=filenames
+
 base = filenames[0]
 filenames.pop(0) #remove the base
 #treatment = filenames[1]
@@ -84,6 +86,8 @@ min_treatments_diff=[]
 min_treatments_diff_err=[]
 min_treatments_sum=[]
 for filename in filenames:
+    print filename
+    print avg_runs[filename]
     min_treatments = GetAverageArr(avg_runs[filename][measurement])
     min_treatments_err = GetErrArr(avg_runs[filename][measurement])
     #min_treatments_run=[ ((a-b)/a)*100.0 for a, b in zip(min_base_avg,min_treatments) if a != 0]
