@@ -220,6 +220,14 @@ void Ipv4DoppelgangerRouting::EnableEcmpMode()
   m_ecmpMode = true;
 }
 
+void Ipv4DoppelgangerRouting::SetQueueDelta(uint32_t delta) {
+  m_delta_queue_difference = delta;
+}
+
+uint32_t Ipv4DoppelgangerRouting::GetQueueDelta() {
+  return m_delta_queue_difference;
+}
+
 void Ipv4DoppelgangerRouting::InitCongestion(uint32_t leafId, uint32_t port, uint32_t congestion)
 {
   std::map<uint32_t, std::map<uint32_t, std::pair<Time, uint32_t>>>::iterator itr =
@@ -896,9 +904,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
 
         //Only make a routing decision if the client is below you
         if( ClientBelowTor(m_addr.Get(),ipv4Addr.Get())) {
-          //if ( (*tor_queue_depths)[min_replica] + 2 < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 1) {
-          //if ( (*tor_queue_depths)[min_replica] < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 2) {
-          if ( (*tor_queue_depths)[min_replica] + 5 < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 2) {
+          if ((*tor_queue_depths)[min_replica] + m_delta_queue_difference < (*tor_queue_depths)[ipv4Addr.Get()]) {
             selected_replica = min_replica;
           } else {
             selected_replica = ipv4Addr.Get();

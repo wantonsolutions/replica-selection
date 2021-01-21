@@ -151,6 +151,10 @@ public:
  uint64_t GetInformationTime();
   void SpreadLoadInfo(Ipv4Header header, UnicastForwardCallback ucb);
 
+
+  void SetQueueDelta(uint32_t delta);
+  uint32_t GetQueueDelta();
+
 void UpdateMsgTimers(Ipv4DoppelgangerTag tag);
 
 
@@ -247,6 +251,10 @@ private:
   bool m_started_spreading_info = false;
   uint64_t m_load_spread_interval = 100000;
 
+  //routing function variables
+  uint32_t m_delta_queue_difference = 0;
+  //uint32_t m_minimum_queue_difference = 0;
+  //uint32_t m_age_nanosecond; // the function of this variable is not super clear yet..
   uint64_t m_duration = 0;
 
   uint m_fattree_k;
