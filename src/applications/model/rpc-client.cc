@@ -534,11 +534,11 @@ RpcClient::GetInstantenousLoad(int server_id) {
    //TODO change rand to rand seed for future experiments
    
    //Random Uniform
-   //uint32_t index = m_rpc_request_distribution[rand() % m_rpc_request_distribution.size()];
+   uint32_t index = m_rpc_request_distribution[rand() % m_rpc_request_distribution.size()];
 
    //Round robin deterministic
    //This picks a single service and blasts it for 5 microseconds from all servers
-   uint32_t index = (Simulator::Now().GetMicroSeconds() / 50) % 16;
+   //uint32_t index = (Simulator::Now().GetMicroSeconds() / 50) % 16;
    
 
    if(index >= m_rpc_server_replicas.size()) {

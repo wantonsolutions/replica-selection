@@ -184,9 +184,8 @@ std::vector<uint32_t> uniform_distribution(uint32_t size, uint32_t min, uint32_t
   return uniform_sample;
 }
 
-//This function returns an aproximate normal sample of integers. If the mean
-//and the STD are too small the array will cluster to a small number of
-//integers
+//returns an aproximate normal sample of integers. If the mean and the STD are
+//too small the array will cluster to a small number of integers
 std::vector<uint32_t> normal_distribution(uint32_t size, double mean, double std)
 {
   std::vector<uint32_t> normal_sample;
@@ -1462,7 +1461,7 @@ int main(int argc, char *argv[])
   uint16_t RpcClientPort = 25;
   //float duration = 5.0;
   //float duration = 1.5;
-  float duration = 0.5;
+  float duration = 0.1;
   uint64_t ns_duration = uint64_t(duration * 1000000000);
   //float duration = 0.003;
 

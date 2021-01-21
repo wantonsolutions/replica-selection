@@ -659,6 +659,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
   Ipv4DoppelgangerTag tag;
   bool found = packet->PeekPacketTag(tag);
 
+  //Check that the packet has a doppleganger tag, return if not found
   if (found)
   {
     //printf("Found the packet tag\n");
@@ -896,7 +897,8 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
         //Only make a routing decision if the client is below you
         if( ClientBelowTor(m_addr.Get(),ipv4Addr.Get())) {
           //if ( (*tor_queue_depths)[min_replica] + 2 < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 1) {
-          if ( (*tor_queue_depths)[min_replica] < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 2) {
+          //if ( (*tor_queue_depths)[min_replica] < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 2) {
+          if ( (*tor_queue_depths)[min_replica] + 5 < (*tor_queue_depths)[ipv4Addr.Get()] && (*tor_queue_depths)[ipv4Addr.Get()] > 2) {
             selected_replica = min_replica;
           } else {
             selected_replica = ipv4Addr.Get();
