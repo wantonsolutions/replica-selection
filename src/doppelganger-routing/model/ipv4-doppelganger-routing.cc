@@ -918,7 +918,6 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
 
           // Over ride desicion if the packet has been redirected allready
           //Only redirect a packet if another replica is available don't send in network indefinatly
-          //if (tag.GetRedirections() >= (tag.GetReplicaCount() - 1)) {
           if (tag.GetRedirections() >= 1) {
             selected_replica = ipv4Addr.Get();
           }
@@ -1126,7 +1125,7 @@ void Ipv4DoppelgangerRouting::SpreadLoadInfo(Ipv4Header header, UnicastForwardCa
       }
   }
   if (Simulator::Now().GetNanoSeconds() < NanoSeconds(m_duration)) {
-    Simulator::Schedule(NanoSeconds((m_load_spread_interval/2)), &Ipv4DoppelgangerRouting::SpreadLoadInfo, this, header, ucb);
+    Simulator::Schedule(NanoSeconds((m_load_spread_interval)), &Ipv4DoppelgangerRouting::SpreadLoadInfo, this, header, ucb);
   }
 }
 

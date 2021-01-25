@@ -7,8 +7,8 @@ date=`date "+%F"`
 #dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor" "TorQ")
 #dirs=("None" "MDMLC" "TorQ")
 #dirs=("None" "MDMLC")
-#dirs=("None" "TorQ")
-dirs=("None" "TorQ_0" "TorQ_1" "TorQ_2" "TorQ_3" "TorQ_4" "TorQ_5")
+dirs=("None" "TorQ")
+#dirs=("None" "TorQ_0" "TorQ_1" "TorQ_2" "TorQ_3" "TorQ_4" "TorQ_5")
 #dirs=("None" "TorQ_5")
 #dirs=("1" "2" "3" "4" "5")
 
@@ -198,10 +198,10 @@ done
 
 if [ ! -z "$JUSTPLOT" ]; then
     echo "Just plotting this round"
-    #PlotKnown
-    #MoveKnown
-    #PlotAgg
-    PlotDeltaQueue
+    PlotKnown
+    MoveKnown
+    PlotAgg
+    #PlotDeltaQueue
     exit 0
 fi
 
@@ -214,8 +214,8 @@ fi
 
 if [ ! -z "$prefix" ]; then
     #RunDelay
-    #RunNetLB
-    RunQueueDepth
+    RunNetLB
+    #RunQueueDepth
     #RunSkew
     #RunReplicas
     #RunPlacement

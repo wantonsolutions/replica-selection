@@ -247,9 +247,11 @@ private:
   uint64_t m_constant_information_delay;
   InformationCollection m_information_collection_method = piggyback;
 
-  bool m_spread_load_info = false;
+  bool m_spread_load_info = true;
   bool m_started_spreading_info = false;
-  uint64_t m_load_spread_interval = 100000;
+  //uint64_t m_load_spread_interval = 100000;
+  uint64_t m_load_spread_interval = 25000;
+  //uint64_t m_load_spread_interval = 50000;
 
   //routing function variables
   uint32_t m_delta_queue_difference = 0;

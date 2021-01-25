@@ -354,8 +354,9 @@ function RunProportialLoadArgs {
 	#processing="1000"
 	#processing="500"
 	#processing="125"
-	processing="500"
-	shift="5000"
+	#processing="500"
+	processing="1000"
+	shift="10000"
 	#have to convert this manually
 	#lambda="0.005"
 	#lambdaINV="200"
@@ -488,6 +489,7 @@ function RunProportionalTorOnly {
 
 function RunProportionalTorQueueDepth {
 	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local queueArgs=$(QueueDelta 2)
 	RunProportialLoadArgs "${networkArgs} "
 }
 
