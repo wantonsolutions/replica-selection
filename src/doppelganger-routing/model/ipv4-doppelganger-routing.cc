@@ -884,6 +884,9 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
           if((*tor_queue_depths)[replicas[i]] < min) {
             min_replica = replicas[i];
           }
+          //Debugging info
+          uint32_t depth = (*tor_queue_depths)[replicas[i]];
+          NS_LOG_INFO(stringIP(replicas[i]) << " -- " << depth);
         }
 
         uint32_t selected_replica;
@@ -895,7 +898,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
           NS_LOG_INFO("replica is the same as the min! Replica: " << stringIP(min_replica));
         } 
         else {
-          NS_LOG_INFO("min tor has changed. potentiall prevent additonal routing");
+          NS_LOG_INFO("min tor has changed. potentiall prevent additonal routing was: " << stringIP(ipv4Addr.Get()) << " is:  " << stringIP(min_replica));
         }
 
 
@@ -905,6 +908,9 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
         //Only make a routing decision if the client is below you
         if( ClientBelowTor(m_addr.Get(),ipv4Addr.Get())) {
           if ((*tor_queue_depths)[min_replica] + m_delta_queue_difference < (*tor_queue_depths)[ipv4Addr.Get()]) {
+            NS_LOG_INFO("&&&&&&&&&&&&&&&&&&&&&&& TOR QUEUE DIFF " << m_delta_queue_difference);
+            //printf("TOR QUEUE DEPTH %d\n", m_delta_queue_difference);
+            //exit(0);
             selected_replica = min_replica;
           } else {
             selected_replica = ipv4Addr.Get();

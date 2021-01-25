@@ -130,6 +130,11 @@ function ExponentialServerLoad() {
 	--ServerLoadDistributionExponentialMin=$min "
 }
 
+function QueueDelta() {
+	local delta="$1"
+	echo "--QueueDelta=${delta} "
+}
+
 function RpcSelectionStrat() {
 	select=$1
 	echo "--RpcSelectionStrategy=${RpcSelectionStrategy[${select}]} "
@@ -349,7 +354,7 @@ function RunProportialLoadArgs {
 	#processing="1000"
 	#processing="500"
 	#processing="125"
-	processing="5"
+	processing="500"
 	shift="5000"
 	#have to convert this manually
 	#lambda="0.005"
@@ -373,6 +378,7 @@ function RunProportialLoadArgs {
 	let "expmean = ($shift + ($processing * $lambdaINV))"
 	echo "Expmean = $expmean"
 	local proportion=(5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
+	#local proportion=(5 10 25 50 75 90 100)
 
 	for p in ${proportion[@]}; do
 		#let "mean = (($shift + ($processing * $lambdaINV)) * $p) / 100"
@@ -412,6 +418,42 @@ function RunProportialLoadArgs {
 
 		#exit
 	done
+}
+
+function RunProportionalDeltaQueueDepth0 {
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local queueArgs=$(QueueDelta 0)
+	RunProportialLoadArgs "${networkArgs} ${queueArgs}"
+}
+
+function RunProportionalDeltaQueueDepth1 {
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local queueArgs=$(QueueDelta 1)
+	RunProportialLoadArgs "${networkArgs} ${queueArgs}"
+}
+
+function RunProportionalDeltaQueueDepth2 {
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local queueArgs=$(QueueDelta 2)
+	RunProportialLoadArgs "${networkArgs} ${queueArgs}"
+}
+
+function RunProportionalDeltaQueueDepth3 {
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local queueArgs=$(QueueDelta 3)
+	RunProportialLoadArgs "${networkArgs} ${queueArgs}"
+}
+
+function RunProportionalDeltaQueueDepth4 {
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local queueArgs=$(QueueDelta 4)
+	RunProportialLoadArgs "${networkArgs} ${queueArgs}"
+}
+
+function RunProportionalDeltaQueueDepth5 {
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local queueArgs=$(QueueDelta 5)
+	RunProportialLoadArgs "${networkArgs} ${queueArgs}"
 }
 
 function RunProportionalNone {
@@ -666,8 +708,8 @@ function  RunDebug {
 	processing="10000"
 	shift="5000"
 	#have to convert this manually
-	lambda="0.005"
-	lambdaINV="200"
+	lambda="0.5"
+	lambdaINV="2"
 
 	let "expmean = ($shift + ($processing * $lambdaINV))"
 	echo "Expmean = $expmean"
@@ -689,9 +731,11 @@ function  RunDebug {
 	local loadArgs=$(ExponentialServerLoad 0.1 5000 1) #Exponential Distribution
 	#loadArgs=$(NormalServerLoad 50000 5000)
 	#selectionArgs=$(RpcSelectionStrat single)
+
+	queueArgs=$(QueueDelta 1)
 	selectionArgs=$(RpcSelectionStrat random)
-	networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
-	#networkSelectionArgs=$(NetworkSelectionStrat torQueueDepth)
+	#networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
+	networkSelectionArgs=$(NetworkSelectionStrat torQueueDepth)
 
 
 	local placementArgs=$(ReplicaPlacementStrat random)
@@ -702,13 +746,13 @@ function  RunDebug {
 	delayArgs=$(ConstantInformationDelay 0)
 	dirArgs=$(WorkingDirectory $currentdir)
 
-	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs} ${delayArgs} ${placementArgs} ${numReplicaArgs}"
+	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs} ${delayArgs} ${placementArgs} ${numReplicaArgs} ${queueArgs}"
 
 	pushd $topdir
 
 	#./waf --visualize --command-template="gdb --args %s" --run "scratch/replication"
-	./waf --run "scratch/replication" --command-template="gdb --args %s ${args}"  
-	#./waf --run "scratch/replication ${args}" 
+	#./waf --run "scratch/replication" --command-template="gdb --args %s ${args}"  
+	./waf --run "scratch/replication ${args}" 
 
 	mv results* $currentdir
 	popd #topdir

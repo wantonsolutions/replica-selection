@@ -7,7 +7,9 @@ date=`date "+%F"`
 #dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor" "TorQ")
 #dirs=("None" "MDMLC" "TorQ")
 #dirs=("None" "MDMLC")
-dirs=("None" "TorQ")
+#dirs=("None" "TorQ")
+dirs=("None" "TorQ_0" "TorQ_1" "TorQ_2" "TorQ_3" "TorQ_4" "TorQ_5")
+#dirs=("None" "TorQ_5")
 #dirs=("1" "2" "3" "4" "5")
 
 #dirs=("None" "Random" "CrossCore" "SameTor")
@@ -42,6 +44,17 @@ function RunNetLB {
   # ./run.sh -n="${prefix}_Tor" -r=$RUNS -f="RunProportionalTorOnly"
     ./run.sh -n="${prefix}_TorQ" -r=$RUNS -f="RunProportionalTorQueueDepth"
 }
+
+function RunQueueDepth {
+    ./run.sh -n="${prefix}_None" -r="$RUNS" -f="RunProportionalNone"
+    ./run.sh -n="${prefix}_TorQ_0" -r="$RUNS" -f="RunProportionalDeltaQueueDepth0"
+    ./run.sh -n="${prefix}_TorQ_1" -r="$RUNS" -f="RunProportionalDeltaQueueDepth1"
+    ./run.sh -n="${prefix}_TorQ_2" -r="$RUNS" -f="RunProportionalDeltaQueueDepth2"
+    ./run.sh -n="${prefix}_TorQ_3" -r="$RUNS" -f="RunProportionalDeltaQueueDepth3"
+    ./run.sh -n="${prefix}_TorQ_4" -r="$RUNS" -f="RunProportionalDeltaQueueDepth4"
+    ./run.sh -n="${prefix}_TorQ_5" -r="$RUNS" -f="RunProportionalDeltaQueueDepth5"
+}
+
 
 function RunReplicas {
     ./run.sh -n="${prefix}_1" -r=$RUNS -f="RunReplicas1"
@@ -119,9 +132,29 @@ function PlotAgg {
     mv *.pdf ../
     popd 
     popd
-
-    
 }
+
+function PlotDeltaQueue {
+    pushd Experiments/${prefix}
+    mkdir switch
+    mv *_switch.db switch
+    mkdir node
+    mv *.db node
+    pushd node
+
+    pwd
+
+    #arguments are just the directory names
+    args=""
+    for dir in ${dirs[@]}; do
+        args="$args ${dir}.db"
+    done
+    python ../../../plot/library/delta_queue.py $args
+    mv *.pdf ../
+    popd 
+    popd
+}
+
 
 function RunNNAverage {
     dirs=()
@@ -165,9 +198,10 @@ done
 
 if [ ! -z "$JUSTPLOT" ]; then
     echo "Just plotting this round"
-    PlotKnown
-    MoveKnown
-    PlotAgg
+    #PlotKnown
+    #MoveKnown
+    #PlotAgg
+    PlotDeltaQueue
     exit 0
 fi
 
@@ -180,7 +214,8 @@ fi
 
 if [ ! -z "$prefix" ]; then
     #RunDelay
-    RunNetLB
+    #RunNetLB
+    RunQueueDepth
     #RunSkew
     #RunReplicas
     #RunPlacement
