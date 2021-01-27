@@ -6,6 +6,8 @@ namespace ns3
 
 NS_LOG_COMPONENT_DEFINE("Ipv4DoppelgangerTag");
 
+NS_OBJECT_ENSURE_REGISTERED(Ipv4DoppelgangerTag);
+
 Ipv4DoppelgangerTag::Ipv4DoppelgangerTag() {}
 
 TypeId
@@ -98,9 +100,10 @@ Ipv4DoppelgangerTag::GetReplica(uint32_t index)
 }
 
 
- void Ipv4DoppelgangerTag::SetTorQueueDepth(uint32_t index, uint32_t serverAddress, uint8_t depth){
+ void Ipv4DoppelgangerTag::SetTorQueueDepth(uint32_t index, uint32_t serverAddress, uint32_t depth){
    m_tor_ip[index]=serverAddress;
    m_tor_ip_queue_depth[index]=depth;
+   NS_LOG_WARN("Setting Addr " << serverAddress << " To depth: " << depth);
    return;
  }
 

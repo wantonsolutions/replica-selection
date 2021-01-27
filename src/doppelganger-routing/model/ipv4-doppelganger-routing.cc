@@ -428,6 +428,15 @@ uint64_t Ipv4DoppelgangerRouting::GetConstantDelay()
   return m_constant_information_delay;
 }
 
+
+void Ipv4DoppelgangerRouting::SetLoadSpreadInterval(uint64_t spread_interval){
+  m_load_spread_interval = spread_interval;
+}
+
+uint64_t Ipv4DoppelgangerRouting::GetLoadSpreadInterval() {
+  return m_load_spread_interval;
+}
+
 void Ipv4DoppelgangerRouting::SetGlobalTorQueueDepth(std::map<uint32_t,uint32_t> *tor_service_queue_depth){
   m_tor_service_queue_depth = tor_service_queue_depth;
   //cheating for now, this is also going to intialize the local tor Queue Depth
@@ -874,7 +883,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
           case piggyback:
           {
             tor_queue_depths=&m_local_tor_service_queue_depth;
-            UpdateLocalTorQueueDepth(tag);
+            //UpdateLocalTorQueueDepth(tag);
           }
         }
 
@@ -941,7 +950,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
         }
 
         
-        SetTagTorQueueDepth(&tag);
+        //SetTagTorQueueDepth(&tag);
       }
     }
     break;
@@ -985,7 +994,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
             case piggyback:
             {
               tor_queue_depths=&m_local_tor_service_queue_depth;
-              UpdateLocalTorQueueDepth(tag);
+              //UpdateLocalTorQueueDepth(tag);
             }
           }
           NS_LOG_INFO("Checking Tor Queue Depth");
@@ -997,7 +1006,7 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
             (*tor_queue_depths)[source.Get()]--;
             NS_LOG_INFO("Tor  queu depth now " << (*tor_queue_depths)[source.Get()]);
           }
-          SetTagTorQueueDepth(&tag);
+          //SetTagTorQueueDepth(&tag);
 
         }
         break;
@@ -1010,12 +1019,13 @@ bool Ipv4DoppelgangerRouting::RouteInput(Ptr<const Packet> p, const Ipv4Header &
   } 
   else if (tag.GetPacketType() == Ipv4DoppelgangerTag::tor_to_tor_load) {
     if (m_load_balencing_strategy == torQueueDepth && m_fattree_switch_type == edge){
-          NS_LOG_INFO("RECEIVED LOAD PACKET FROM " << stringIP(header.GetSource().Get()) << "Updateing local tor queue depth");
+          NS_LOG_INFO("RECEIVED LOAD PACKET FROM " << stringIP(header.GetSource().Get()) << "(tor to tor) Updateing local tor queue depth");
           UpdateLocalTorQueueDepth(tag);
+          return true;
     } else {
         NS_LOG_INFO("Not doing anything with tor load queue info");
     }
-    return true;
+    //return true;
   }
   else
   {
@@ -1069,8 +1079,9 @@ void Ipv4DoppelgangerRouting::SpreadLoadInfo(Ipv4Header header, UnicastForwardCa
         continue;
       }
 
-      if ((Simulator::Now().GetNanoSeconds() - last_msg) > m_load_spread_interval) {
-        NS_LOG_INFO(">>>>>>>>>> Last Message to " << stringIP(tor_ip) << " is " << Simulator::Now().GetNanoSeconds() << " ns out of date sending info");
+      //if ((Simulator::Now().GetNanoSeconds() - last_msg) >= m_load_spread_interval) {
+      if (true) {
+        NS_LOG_INFO(">>>>>>>>>> Last Message to " << stringIP(tor_ip) << " is " << Simulator::Now().GetNanoSeconds() - last_msg << " ns out of date sending info");
 
         //create a fake dest address
         //Set it to the first host under the selected TOR
@@ -1097,7 +1108,7 @@ void Ipv4DoppelgangerRouting::SpreadLoadInfo(Ipv4Header header, UnicastForwardCa
         // Generate the location of the next reuqest
         ipv4DoppelgangerTag.SetRequestID(0);
         for (uint i=0;i<MAX_REPLICAS;i++) {
-          ipv4DoppelgangerTag.SetReplica(0,destAddress.Get());
+          ipv4DoppelgangerTag.SetReplica(i,destAddress.Get());
         }
         SetTagTorQueueDepth(&ipv4DoppelgangerTag);
         p->AddPacketTag(ipv4DoppelgangerTag);
@@ -1122,6 +1133,8 @@ void Ipv4DoppelgangerRouting::SpreadLoadInfo(Ipv4Header header, UnicastForwardCa
         //ucb (route, packet, header);
         ucb(route, p, header);
         m_tor_msg_timer_map[tor_ip] = Simulator::Now().GetNanoSeconds();
+      } else {
+        NS_LOG_INFO("Not sending to " << stringIP(tor_ip) << " had a message sent just " << Simulator::Now().GetNanoSeconds() - last_msg << " ns ago");
       }
   }
   if (Simulator::Now().GetNanoSeconds() < NanoSeconds(m_duration)) {

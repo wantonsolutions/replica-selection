@@ -137,6 +137,9 @@ public:
   Ipv4Address GetAddress();
 
 
+
+  void SetLoadSpreadInterval(uint64_t spread_load_interval);
+  uint64_t GetLoadSpreadInterval();
   uint64_t GetInstantenousLoad(int server_id);
   uint64_t GetDuration(void);
   void SetDuration(uint64_t duration);

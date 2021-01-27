@@ -135,6 +135,11 @@ function QueueDelta() {
 	echo "--QueueDelta=${delta} "
 }
 
+function InformationSpread() {
+	local spread="$1"
+	echo "--InformationSpreadInterval=${spread} "
+}
+
 function RpcSelectionStrat() {
 	select=$1
 	echo "--RpcSelectionStrategy=${RpcSelectionStrategy[${select}]} "
@@ -420,6 +425,43 @@ function RunProportialLoadArgs {
 		#exit
 	done
 }
+
+function RunProportionalInformationSpread {
+	spread_interval=$1
+	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
+	local queueArgs=$(QueueDelta 0)
+	local informationSpreadArgs=$(InformationSpread ${spread_interval})
+	RunProportialLoadArgs "${networkArgs} ${queueArgs} ${informationSpreadArgs}"
+}
+
+function RunProportionalInformationSpread_500 {
+	RunProportionalInformationSpread "500000"
+}
+
+function RunProportionalInformationSpread_200 {
+	RunProportionalInformationSpread "200000"
+}
+
+function RunProportionalInformationSpread_150 {
+	RunProportionalInformationSpread "150000"
+}
+
+function RunProportionalInformationSpread_100 {
+	RunProportionalInformationSpread "100000"
+}
+
+function RunProportionalInformationSpread_50 {
+	RunProportionalInformationSpread "50000"
+}
+
+function RunProportionalInformationSpread_25 {
+	RunProportionalInformationSpread "25000"
+}
+
+function RunProportionalInformationSpread_10 {
+	RunProportionalInformationSpread "10000"
+}
+
 
 function RunProportionalDeltaQueueDepth0 {
 	local networkArgs=$(NetworkSelectionStrat torQueueDepth)
@@ -734,10 +776,12 @@ function  RunDebug {
 	#loadArgs=$(NormalServerLoad 50000 5000)
 	#selectionArgs=$(RpcSelectionStrat single)
 
-	queueArgs=$(QueueDelta 1)
 	selectionArgs=$(RpcSelectionStrat random)
 	#networkSelectionArgs=$(NetworkSelectionStrat coreForcedMinDistanceMinLoad)
 	networkSelectionArgs=$(NetworkSelectionStrat torQueueDepth)
+
+
+	local informationSpreadArgs=$(InformationSpread 5000)
 
 
 	local placementArgs=$(ReplicaPlacementStrat random)
@@ -748,7 +792,7 @@ function  RunDebug {
 	delayArgs=$(ConstantInformationDelay 0)
 	dirArgs=$(WorkingDirectory $currentdir)
 
-	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs} ${delayArgs} ${placementArgs} ${numReplicaArgs} ${queueArgs}"
+	args="${transmissionArgs} ${packetArgs} ${loadArgs} ${selectionArgs} ${networkSelectionArgs} ${configArgs} ${dirArgs} ${delayArgs} ${placementArgs} ${numReplicaArgs} ${queueArgs} ${informationSpreadArgs}"
 
 	pushd $topdir
 

@@ -47,7 +47,7 @@ public:
     void SetReplica(uint32_t index, uint32_t replicaAddress);
     uint32_t GetReplica(uint32_t index);
 
-    void SetTorQueueDepth(uint32_t index, uint32_t serverAddress, uint8_t depth);
+    void SetTorQueueDepth(uint32_t index, uint32_t serverAddress, uint32_t depth);
     uint32_t GetTorReplica(uint32_t index);
     uint8_t GetTorReplicaQueueDepth(uint32_t index);
     void SetTorQueuesNULL();

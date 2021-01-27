@@ -7,10 +7,13 @@ date=`date "+%F"`
 #dirs=("None" "Min" "Core" "MDML" "MDMLC" "Tor" "TorQ")
 #dirs=("None" "MDMLC" "TorQ")
 #dirs=("None" "MDMLC")
-dirs=("None" "TorQ")
+#dirs=("None" "TorQ")
 #dirs=("None" "TorQ_0" "TorQ_1" "TorQ_2" "TorQ_3" "TorQ_4" "TorQ_5")
 #dirs=("None" "TorQ_5")
 #dirs=("1" "2" "3" "4" "5")
+
+#load spread
+dirs=("None" "spread_500" "spread_200" "spread_150" "spread_100" "spread_50" "spread_25" "spread_10")
 
 #dirs=("None" "Random" "CrossCore" "SameTor")
 
@@ -53,6 +56,19 @@ function RunQueueDepth {
     ./run.sh -n="${prefix}_TorQ_3" -r="$RUNS" -f="RunProportionalDeltaQueueDepth3"
     ./run.sh -n="${prefix}_TorQ_4" -r="$RUNS" -f="RunProportionalDeltaQueueDepth4"
     ./run.sh -n="${prefix}_TorQ_5" -r="$RUNS" -f="RunProportionalDeltaQueueDepth5"
+}
+
+function RunLoadSpread {
+    ./run.sh -n="${prefix}_None" -r="$RUNS" -f="RunProportionalNone"
+    ./run.sh -n="${prefix}_spread_500" -r="$RUNS" -f="RunProportionalInformationSpread_500"
+    ./run.sh -n="${prefix}_spread_200" -r="$RUNS" -f="RunProportionalInformationSpread_200"
+    ./run.sh -n="${prefix}_spread_150" -r="$RUNS" -f="RunProportionalInformationSpread_150"
+    ./run.sh -n="${prefix}_spread_100" -r="$RUNS" -f="RunProportionalInformationSpread_100"
+    ./run.sh -n="${prefix}_spread_50" -r="$RUNS" -f="RunProportionalInformationSpread_50"
+    ./run.sh -n="${prefix}_spread_25" -r="$RUNS" -f="RunProportionalInformationSpread_25"
+    ./run.sh -n="${prefix}_spread_10" -r="$RUNS" -f="RunProportionalInformationSpread_10"
+    #./run.sh -n="${prefix}_spread_5" -r="$RUNS" -f="RunProportionalInformationSpread_5"
+    #./run.sh -n="${prefix}_spread_1" -r="$RUNS" -f="RunProportionalInformationSpread_1"
 }
 
 
@@ -214,11 +230,12 @@ fi
 
 if [ ! -z "$prefix" ]; then
     #RunDelay
-    RunNetLB
+    #RunNetLB
     #RunQueueDepth
     #RunSkew
     #RunReplicas
     #RunPlacement
+    RunLoadSpread
 fi
 #RunRandomLoad
 

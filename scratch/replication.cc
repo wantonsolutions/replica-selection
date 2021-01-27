@@ -144,6 +144,9 @@ double ServerLoadDistributionExponentialMin = 0.0;
 const char *QueueDeltaString = "QueueDelta";
 uint32_t QueueDelta = 0;
 
+const char *InformationSpreadIntervalString = "InformationSpreadInterval";
+uint64_t InformationSpreadInterval = 0; 
+
 const char *NumReplicasString= "NumReplicas";
 uint32_t NumReplicas = 2;
 
@@ -351,6 +354,7 @@ void parseArgs(int argc, char *argv[])
 
   //Queue Delta on the switches
   cmd.AddValue(QueueDeltaString, "The difference between a local and remote queue depth before a doppel switch will make a redirection", QueueDelta);
+  cmd.AddValue(InformationSpreadIntervalString, "Interval of time in ns at which TORs send load information to one another", InformationSpreadInterval);
 
   //Replica count and algorithm
   cmd.AddValue(NumReplicasString, "The number of replicas in the simulation", NumReplicas); 
@@ -680,7 +684,7 @@ Ipv4Address getNodeIP(Ptr<Node> node)
 //----------------------------------------------RPC Client----------------------------------------------------
 void SetDoppelgangerRoutingParameters(NodeContainer nodes, Ipv4DoppelgangerRouting::FatTreeSwitchType switchType, Ipv4DoppelgangerRouting::LoadBalencingStrategy strat, std::vector<std::vector<int>> rpcServices, 
 std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad_update, std::vector<std::vector<LoadEvent>> *serverLoad_log,
-    InformationDelayFunction idf,uint32_t information_delay, std::map<uint32_t,uint32_t> *tor_service_queue_depth, uint64_t duration, uint32_t queue_delta)
+    InformationDelayFunction idf,uint32_t information_delay, std::map<uint32_t,uint32_t> *tor_service_queue_depth, uint64_t duration, uint32_t queue_delta, uint64_t information_spread)
 {
   NodeContainer::Iterator i;
   for (i = nodes.Begin(); i != nodes.End(); ++i)
@@ -709,6 +713,7 @@ std::map<uint32_t, uint32_t> ipServerMap, uint64_t *serverLoad, Time *serverLoad
     doppelRouter->InitTorMsgTimerMap(*tor_service_queue_depth);
     doppelRouter->SetDuration(duration);
     doppelRouter->SetQueueDelta(queue_delta);
+    doppelRouter->SetLoadSpreadInterval(information_spread);
     //Start here we need to get the list routing protocol
   }
 }
@@ -1063,6 +1068,7 @@ int main(int argc, char *argv[])
     LogComponentEnable("VarClients", LOG_LEVEL_INFO);
     LogComponentEnable("VarClients", LOG_LEVEL_INFO);
     LogComponentEnable("Ipv4DoppelgangerRouting", LOG_LEVEL_INFO);
+    LogComponentEnable("Ipv4DoppelgangerTag", LOG_LEVEL_INFO);
   }
 
 
@@ -1143,7 +1149,7 @@ int main(int argc, char *argv[])
 
   TrafficControlHelper tch;
   //int linkrate = 1000;
-  int linkrate = 1000;
+  int linkrate = 10000;
   int queuedepth = 500;
 
   pointToPoint.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue(std::to_string(queuedepth) + "p"));
@@ -1468,7 +1474,7 @@ int main(int argc, char *argv[])
   uint16_t RpcClientPort = 25;
   //float duration = 5.0;
   //float duration = 1.5;
-  float duration = 0.1;
+  float duration = 0.5;
   uint64_t ns_duration = uint64_t(duration * 1000000000);
   //float duration = 0.003;
 
@@ -1610,10 +1616,10 @@ int main(int argc, char *argv[])
 
   //printf("setting custom load balencing strats\n");
 
-  SetDoppelgangerRoutingParameters(nodes, Ipv4DoppelgangerRouting::endhost, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay,&tor_service_queue_depth,ns_duration,QueueDelta);
-  SetDoppelgangerRoutingParameters(edge, Ipv4DoppelgangerRouting::edge, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay,&tor_service_queue_depth,ns_duration,QueueDelta);
-  SetDoppelgangerRoutingParameters(agg, Ipv4DoppelgangerRouting::agg, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay,&tor_service_queue_depth,ns_duration,QueueDelta);
-  SetDoppelgangerRoutingParameters(core, Ipv4DoppelgangerRouting::core, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay,&tor_service_queue_depth,ns_duration,QueueDelta);
+  SetDoppelgangerRoutingParameters(nodes, Ipv4DoppelgangerRouting::endhost, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay,&tor_service_queue_depth,ns_duration,QueueDelta,InformationSpreadInterval);
+  SetDoppelgangerRoutingParameters(edge, Ipv4DoppelgangerRouting::edge, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay,&tor_service_queue_depth,ns_duration,QueueDelta,InformationSpreadInterval);
+  SetDoppelgangerRoutingParameters(agg, Ipv4DoppelgangerRouting::agg, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay,&tor_service_queue_depth,ns_duration,QueueDelta,InformationSpreadInterval);
+  SetDoppelgangerRoutingParameters(core, Ipv4DoppelgangerRouting::core, networkSelectionStrategy, servicesPerServer, ipServerMap, serverLoad, serverLoad_update, &serverLoadLog,InformationDelayFunctionValue,ConstantInformationDelay,&tor_service_queue_depth,ns_duration,QueueDelta,InformationSpreadInterval);
 
   //printf("done setting custom load ballencing\n");
 
